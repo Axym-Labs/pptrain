@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 from dataclasses import dataclass, field
 
 from transformers import TrainingArguments
@@ -29,7 +30,7 @@ class RunConfig:
 
     def to_training_arguments(self, has_eval: bool) -> TrainingArguments:
         evaluation_strategy = "steps" if has_eval else "no"
-        return TrainingArguments(
+        kwargs = dict(
             output_dir=self.output_dir,
             seed=self.seed,
             per_device_train_batch_size=self.per_device_train_batch_size,
@@ -49,7 +50,11 @@ class RunConfig:
             bf16=self.bf16,
             gradient_checkpointing=self.gradient_checkpointing,
             report_to=list(self.report_to),
-            evaluation_strategy=evaluation_strategy,
             remove_unused_columns=False,
         )
-
+        signature = inspect.signature(TrainingArguments.__init__)
+        if "evaluation_strategy" in signature.parameters:
+            kwargs["evaluation_strategy"] = evaluation_strategy
+        else:
+            kwargs["eval_strategy"] = evaluation_strategy
+        return TrainingArguments(**kwargs)
