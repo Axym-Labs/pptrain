@@ -18,6 +18,7 @@ VARIANT_LABELS = {
     "compute_matched_baseline": "Compute-matched baseline",
     "step": "Comparison preset",
 }
+DIAGNOSTIC_VARIANTS = ("scratch", "transferred", "compute_matched_baseline", "step")
 
 
 def collect_representation_diagnostics(
@@ -41,32 +42,14 @@ def collect_representation_diagnostics(
         return {}
 
     features: dict[str, dict[str, np.ndarray]] = {}
-    variant_names = [name for name in ("scratch", "transferred", "compute_matched_baseline", "step") if name in variant_model_dirs]
+    variant_names = [name for name in DIAGNOSTIC_VARIANTS if name in variant_model_dirs]
     for variant_name in variant_names:
-        model = AutoModelForCausalLM.from_pretrained(
-            variant_model_dirs[variant_name],
+        features[variant_name] = _extract_model_features(
+            model_dir=variant_model_dirs[variant_name],
+            batches=batches,
             trust_remote_code=trust_remote_code,
-        ).to(device)
-        model.eval()
-        logits_chunks: list[np.ndarray] = []
-        hidden_chunks: list[np.ndarray] = []
-        with torch.no_grad():
-            for batch in batches:
-                outputs = model(
-                    input_ids=batch["input_ids"],
-                    attention_mask=batch["attention_mask"],
-                    output_hidden_states=True,
-                )
-                midpoint_index = len(outputs.hidden_states) // 2
-                hidden = outputs.hidden_states[midpoint_index]
-                logits_chunks.append(_gather_positions(outputs.logits, batch["positions"]).float().cpu().numpy())
-                hidden_chunks.append(_gather_positions(hidden, batch["positions"]).float().cpu().numpy())
-        del model
-        _maybe_clear_cuda()
-        features[variant_name] = {
-            "logits": np.concatenate(logits_chunks, axis=0) if logits_chunks else np.zeros((0, 1), dtype=np.float32),
-            "hidden": np.concatenate(hidden_chunks, axis=0) if hidden_chunks else np.zeros((0, 1), dtype=np.float32),
-        }
+            device=device,
+        )
 
     if "compute_matched_baseline" not in features:
         return {}
@@ -105,6 +88,56 @@ def collect_representation_diagnostics(
         "activation_effective_rank": activation_effective_rank,
         "pairwise_logit_divergence": pairwise_logit,
         "pairwise_activation_cka": pairwise_activation,
+    }
+
+
+def collect_cross_mechanism_representation_diagnostics(
+    *,
+    variant_model_dirs_by_mechanism: dict[str, dict[str, str]],
+    downstream_bundle: DatasetBundle,
+    trust_remote_code: bool,
+    max_batches: int,
+    max_positions_per_batch: int,
+) -> dict[str, Any]:
+    if downstream_bundle.eval_dataset is None or downstream_bundle.data_collator is None:
+        return {}
+    device = _resolve_device()
+    batches = _collect_eval_batches(
+        downstream_bundle=downstream_bundle,
+        max_batches=max_batches,
+        max_positions_per_batch=max_positions_per_batch,
+        device=device,
+    )
+    if not batches:
+        return {}
+
+    features_by_variant: dict[str, dict[str, dict[str, np.ndarray]]] = {}
+    for variant_name in DIAGNOSTIC_VARIANTS:
+        features_by_variant[variant_name] = {}
+        for mechanism_name, variant_dirs in variant_model_dirs_by_mechanism.items():
+            model_dir = variant_dirs.get(variant_name)
+            if model_dir is None:
+                continue
+            features_by_variant[variant_name][mechanism_name] = _extract_model_features(
+                model_dir=model_dir,
+                batches=batches,
+                trust_remote_code=trust_remote_code,
+                device=device,
+            )
+
+    return {
+        "pairwise_logit_divergence_by_variant": _build_cross_mechanism_matrix_bundle(
+            features_by_variant,
+            key="logits",
+            metric=_symmetric_kl_divergence,
+            diagonal_value=0.0,
+        ),
+        "pairwise_activation_cka_by_variant": _build_cross_mechanism_matrix_bundle(
+            features_by_variant,
+            key="hidden",
+            metric=_linear_cka,
+            diagonal_value=1.0,
+        ),
     }
 
 
@@ -193,6 +226,39 @@ def _gather_positions(tensor: torch.Tensor, positions: torch.Tensor) -> torch.Te
     return tensor[positions[:, 0], positions[:, 1]]
 
 
+def _extract_model_features(
+    *,
+    model_dir: str,
+    batches: list[dict[str, torch.Tensor]],
+    trust_remote_code: bool,
+    device: torch.device,
+) -> dict[str, np.ndarray]:
+    model = AutoModelForCausalLM.from_pretrained(
+        model_dir,
+        trust_remote_code=trust_remote_code,
+    ).to(device)
+    model.eval()
+    logits_chunks: list[np.ndarray] = []
+    hidden_chunks: list[np.ndarray] = []
+    with torch.no_grad():
+        for batch in batches:
+            outputs = model(
+                input_ids=batch["input_ids"],
+                attention_mask=batch["attention_mask"],
+                output_hidden_states=True,
+            )
+            midpoint_index = len(outputs.hidden_states) // 2
+            hidden = outputs.hidden_states[midpoint_index]
+            logits_chunks.append(_gather_positions(outputs.logits, batch["positions"]).float().cpu().numpy())
+            hidden_chunks.append(_gather_positions(hidden, batch["positions"]).float().cpu().numpy())
+    del model
+    _maybe_clear_cuda()
+    return {
+        "logits": np.concatenate(logits_chunks, axis=0) if logits_chunks else np.zeros((0, 1), dtype=np.float32),
+        "hidden": np.concatenate(hidden_chunks, axis=0) if hidden_chunks else np.zeros((0, 1), dtype=np.float32),
+    }
+
+
 def _reference_kl_divergence(reference_logits: np.ndarray, other_logits: np.ndarray) -> float:
     reference = torch.from_numpy(reference_logits)
     other = torch.from_numpy(other_logits)
@@ -257,6 +323,37 @@ def _pairwise_matrix(
         "labels": [VARIANT_LABELS.get(name, name) for name in variant_names],
         "matrix": matrix.tolist(),
     }
+
+
+def _build_cross_mechanism_matrix_bundle(
+    features_by_variant: dict[str, dict[str, dict[str, np.ndarray]]],
+    *,
+    key: str,
+    metric,
+    diagonal_value: float,
+) -> dict[str, Any]:
+    bundle: dict[str, Any] = {}
+    for variant_name, mechanism_features in features_by_variant.items():
+        mechanism_names = sorted(mechanism_features)
+        if len(mechanism_names) < 2:
+            continue
+        matrix = np.zeros((len(mechanism_names), len(mechanism_names)), dtype=np.float64)
+        for row_index, row_name in enumerate(mechanism_names):
+            for col_index, col_name in enumerate(mechanism_names):
+                if row_index == col_index:
+                    matrix[row_index, col_index] = diagonal_value
+                elif row_index < col_index:
+                    matrix[row_index, col_index] = metric(
+                        mechanism_features[row_name][key],
+                        mechanism_features[col_name][key],
+                    )
+                    matrix[col_index, row_index] = matrix[row_index, col_index]
+        bundle[variant_name] = {
+            "mechanisms": mechanism_names,
+            "labels": mechanism_names,
+            "matrix": matrix.tolist(),
+        }
+    return bundle
 
 
 def _resolve_device() -> torch.device:

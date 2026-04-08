@@ -77,6 +77,7 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
         output_path=output / "transfer_gap_vs_scratch.png",
         xlabel="Perplexity difference compared to pre-training from scratch (positive is better)",
         title="Perplexity difference compared to pre-training from scratch",
+        annotate_values=False,
     )
     convergence_plot_path = _save_errorbar_plot(
         payload,
@@ -86,43 +87,44 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
     )
     probe_plot_path = _save_probe_gain_plot(payload, output / "probe_gains.png")
     loss_overlay_path = _save_loss_overlay_plot(payload, output / "loss_overlays.png")
-    logit_baseline_plot_path = _save_variant_diagnostic_plot(
+    logit_baseline_plot_path = _save_variant_category_plot(
         payload,
         diagnostic_key="logit_divergence_to_baseline",
         output_path=output / "logit_divergence_to_baseline.png",
         top_label="Reference KL divergence to compute-matched baseline (x1e4 nats, lower is better)",
         scale=1.0e4,
-        annotate_values=False,
+        include_variants=("scratch", "transferred", "step"),
     )
-    activation_cka_plot_path = _save_variant_diagnostic_plot(
+    activation_cka_plot_path = _save_variant_category_plot(
         payload,
         diagnostic_key="activation_cka_to_baseline",
         output_path=output / "activation_cka_to_baseline.png",
         top_label="Mid-layer linear CKA to compute-matched baseline (higher is better)",
-        value_format="{value:.3f}",
         zero_floor=True,
-        annotate_values=False,
+        include_variants=("scratch", "transferred", "step"),
     )
-    activation_rank_plot_path = _save_variant_diagnostic_plot(
+    activation_rank_plot_path = _save_variant_category_plot(
         payload,
         diagnostic_key="activation_effective_rank",
         output_path=output / "activation_effective_rank.png",
         top_label="Mid-layer effective rank (higher is better)",
-        value_format="{value:.1f}",
         zero_floor=True,
+        include_variants=("compute_matched_baseline", "scratch", "transferred", "step"),
     )
-    pairwise_logit_plot_path = _save_pairwise_matrix_grid(
+    pairwise_logit_plot_path = _save_cross_mechanism_matrix_grid(
         payload,
-        diagnostic_key="pairwise_logit_divergence",
+        cross_key="pairwise_logit_divergence_by_variant",
         output_path=output / "pairwise_logit_divergence.png",
         value_format="{value:.2f}",
         scale=1.0e4,
+        top_label="Across-mechanism symmetric KL divergence on the shared diagnostic text bundle (x1e4 nats, lower is better)",
     )
-    pairwise_activation_plot_path = _save_pairwise_matrix_grid(
+    pairwise_activation_plot_path = _save_cross_mechanism_matrix_grid(
         payload,
-        diagnostic_key="pairwise_activation_cka",
+        cross_key="pairwise_activation_cka_by_variant",
         output_path=output / "pairwise_activation_cka.png",
         value_format="{value:.2f}",
+        top_label="Across-mechanism midpoint linear CKA on the shared diagnostic text bundle (higher is better)",
     )
     summary_plot_path = _save_effect_summary_plot(payload, output / "effect_summary.png")
     if probe_plot_path is None:
@@ -276,13 +278,13 @@ def _build_report_markdown(
             "",
             f"![Logit divergence to baseline]({logit_baseline_plot_path.name})",
             "",
-            "This figure compares each model variant to the compute-matched baseline using reference KL divergence over held-out downstream tokens. Values are plotted in x1e4 nats for readability. Lower values mean the variant's predictive distribution is closer to the baseline model.",
+            "Each subplot corresponds to one model category. Bars are mechanisms, and each value compares that mechanism's category-specific model against its own compute-matched baseline. The baseline itself is omitted because comparing it to itself is not informative here. Values are plotted in x1e4 nats for readability.",
             "",
             "### Activation CKA To Baseline",
             "",
             f"![Activation CKA to baseline]({activation_cka_plot_path.name})",
             "",
-            "This figure compares midpoint hidden representations to the compute-matched baseline using linear CKA. Higher values mean the internal representation geometry is more similar to the baseline despite different parameter initializations.",
+            "Each subplot corresponds to one model category. Bars are mechanisms, and each value compares midpoint hidden representations against that mechanism's own compute-matched baseline using linear CKA. Higher values mean the internal representation geometry is more similar despite different parameter initializations.",
             "",
             "### Activation Effective Rank",
             "",
@@ -294,13 +296,13 @@ def _build_report_markdown(
             "",
             f"![Pairwise logit divergence matrices]({pairwise_logit_plot_path.name})",
             "",
-            "These heatmaps show pairwise symmetric KL divergence between model variants within each mechanism, including the compute-matched baseline. Values are shown as mean plus-or-minus standard deviation in x1e4 nats across seeds. Lower values indicate more similar predictive distributions.",
+            "Each subplot corresponds to one model category and shows pairwise symmetric KL divergence between mechanisms on one shared diagnostic text bundle. Values are shown as mean plus-or-minus standard deviation in x1e4 nats across seeds. Lower values indicate more similar predictive distributions.",
             "",
             "### Pairwise Activation CKA Matrices",
             "",
             f"![Pairwise activation CKA matrices]({pairwise_activation_plot_path.name})",
             "",
-            "These heatmaps show pairwise linear CKA between midpoint hidden states within each mechanism, including the compute-matched baseline. Higher values indicate more similar internal representation structure.",
+            "Each subplot corresponds to one model category and shows pairwise linear CKA between mechanisms on one shared diagnostic text bundle. Higher values indicate more similar internal representation structure.",
             "",
             "### Effect Summary",
             "",
@@ -363,6 +365,7 @@ def _save_errorbar_plot(
     output_path: Path,
     xlabel: str,
     title: str | None = None,
+    annotate_values: bool = True,
 ) -> Path:
     items = []
     for mechanism_name, result in payload["mechanisms"].items():
@@ -379,7 +382,8 @@ def _save_errorbar_plot(
         positions = np.arange(len(items))
         axis.barh(positions, values, xerr=errors, color="#8fb3cf", ecolor="#577c98", capsize=3)
         axis.scatter(values, positions, color="#4d7798", s=20, zorder=3)
-        _annotate_horizontal_values(axis, values, positions, errors=errors)
+        if annotate_values:
+            _annotate_horizontal_values(axis, values, positions, errors=errors)
         axis.axvline(0.0, color="#444444", linewidth=0.8)
         axis.set_yticks(positions)
         axis.set_yticklabels(labels)
@@ -463,48 +467,66 @@ def _save_loss_overlay_plot(payload: dict[str, Any], output_path: Path) -> Path:
     return output_path
 
 
-def _save_variant_diagnostic_plot(
+def _save_variant_category_plot(
     payload: dict[str, Any],
     *,
     diagnostic_key: str,
     output_path: Path,
     top_label: str,
-    value_format: str = "{value:.2f}",
     zero_floor: bool = False,
     scale: float = 1.0,
-    annotate_values: bool = True,
+    include_variants: tuple[str, ...] = ("scratch", "transferred", "step"),
 ) -> Path:
-    items = [(name, result.get("diagnostics", {}).get(diagnostic_key)) for name, result in payload["mechanisms"].items()]
-    items = [(name, diagnostic) for name, diagnostic in items if diagnostic]
-    _set_plot_style()
-    figure, axes = plt.subplots(2, 3, figsize=(11, 6), sharey=False)
-    flat_axes = axes.flatten()
-    palette = {
-        "Scratch": "#8d79a7",
-        "Transferred": "#3f8f8c",
-        "Compute-matched baseline": "#d7ad5b",
-        "Comparison preset": "#c9775f",
+    color_map = {
+        "scratch": "#6f86a6",
+        "transferred": "#c57a5f",
+        "compute_matched_baseline": "#7e9f8d",
+        "step": "#b79b63",
     }
-    for axis, (mechanism_name, diagnostic) in zip(flat_axes, items):
-        labels = [entry["label"] for _, entry in diagnostic.items()]
-        values = np.asarray([float(entry["mean"]) for entry in diagnostic.values()], dtype=float) * scale
-        errors = np.asarray([float(entry.get("std") or 0.0) for entry in diagnostic.values()], dtype=float) * scale
-        positions = np.arange(len(labels))
-        colors = [palette.get(label, "#8fb3cf") for label in labels]
-        axis.bar(positions, values, yerr=errors, color=colors, ecolor="#577c98", capsize=3)
-        axis.scatter(positions, values, color="#2f4b5f", s=16, zorder=3)
-        if annotate_values:
-            for position, value in zip(positions.tolist(), values.tolist()):
-                error_height = float(errors.max()) if errors.size else 0.0
-                axis.text(position, value + max(error_height, 0.02) + 0.01 * max(abs(value), 1.0), value_format.format(value=value), ha="center", va="bottom", fontsize=6.5)
-        axis.set_xticks(positions)
-        axis.set_xticklabels(labels, rotation=20, ha="right")
-        axis.set_title(MECHANISM_LABELS.get(mechanism_name, mechanism_name), fontsize=8)
-        axis.grid(axis="y", alpha=0.15)
+    categories: list[tuple[str, list[tuple[str, float, float]]]] = []
+    for variant_name in include_variants:
+        rows = []
+        for mechanism_name, result in payload["mechanisms"].items():
+            summary = result.get("diagnostics", {}).get(diagnostic_key)
+            if summary is None or variant_name not in summary:
+                continue
+            entry = summary[variant_name]
+            rows.append(
+                (
+                    MECHANISM_LABELS.get(mechanism_name, mechanism_name),
+                    float(entry["mean"]) * scale,
+                    float(entry.get("std") or 0.0) * scale,
+                )
+            )
+        if rows:
+            categories.append((variant_name, rows))
+    _set_plot_style()
+    num_categories = max(len(categories), 1)
+    figure, axes = plt.subplots(1, num_categories, figsize=(4.2 * num_categories, 4.6), sharex=False, sharey=False)
+    flat_axes = np.atleast_1d(axes).flatten()
+    for axis, (variant_name, rows) in zip(flat_axes, categories):
+        labels = [row[0] for row in rows]
+        values = np.asarray([row[1] for row in rows], dtype=float)
+        errors = np.asarray([row[2] for row in rows], dtype=float)
+        positions = np.arange(len(rows))
+        axis.barh(
+            positions,
+            values,
+            xerr=errors,
+            color=color_map.get(variant_name, "#8fb3cf"),
+            ecolor="#577c98",
+            capsize=3,
+        )
+        axis.scatter(values, positions, color="#3e576d", s=18, zorder=3)
+        axis.set_yticks(positions)
+        axis.set_yticklabels(labels)
+        axis.invert_yaxis()
+        axis.set_title(VARIANT_LABELS.get(variant_name, variant_name), fontsize=8)
+        axis.grid(axis="x", alpha=0.15)
         if zero_floor:
             upper = max(np.max(values + errors), 1.0)
-            axis.set_ylim(0.0, upper * 1.18)
-    for axis in flat_axes[len(items) :]:
+            axis.set_xlim(0.0, upper * 1.12)
+    for axis in flat_axes[len(categories) :]:
         axis.axis("off")
     figure.suptitle(top_label, fontsize=8, y=0.98)
     figure.tight_layout(rect=(0.0, 0.0, 1.0, 0.95))
@@ -513,19 +535,21 @@ def _save_variant_diagnostic_plot(
     return output_path
 
 
-def _save_pairwise_matrix_grid(
+def _save_cross_mechanism_matrix_grid(
     payload: dict[str, Any],
     *,
-    diagnostic_key: str,
+    cross_key: str,
     output_path: Path,
     value_format: str = "{value:.2f}",
     scale: float = 1.0,
+    top_label: str,
 ) -> Path:
-    items = [(name, result.get("diagnostics", {}).get(diagnostic_key)) for name, result in payload["mechanisms"].items()]
-    items = [(name, diagnostic) for name, diagnostic in items if diagnostic]
+    diagnostics = payload.get("cross_mechanism_diagnostics", {}).get(cross_key, {})
+    items = [(variant_name, diagnostic) for variant_name, diagnostic in diagnostics.items() if diagnostic]
     _set_plot_style()
-    figure, axes = plt.subplots(2, 3, figsize=(11, 6))
-    flat_axes = axes.flatten()
+    num_categories = max(len(items), 1)
+    figure, axes = plt.subplots(1, num_categories, figsize=(4.2 * num_categories, 4.6))
+    flat_axes = np.atleast_1d(axes).flatten()
     all_values = []
     for _, diagnostic in items:
         all_values.append(np.asarray(diagnostic["mean"], dtype=float) * scale)
@@ -535,16 +559,16 @@ def _save_pairwise_matrix_grid(
     else:
         global_min = 0.0
         global_max = 1.0
-    for axis, (mechanism_name, diagnostic) in zip(flat_axes, items):
+    for axis, (variant_name, diagnostic) in zip(flat_axes, items):
         matrix = np.asarray(diagnostic["mean"], dtype=float) * scale
         std_matrix = np.asarray(diagnostic.get("std"), dtype=float) * scale if diagnostic.get("std") is not None else None
         axis.imshow(matrix, cmap="Blues", aspect="auto", vmin=global_min, vmax=global_max if global_max > global_min else None)
-        labels = diagnostic["labels"]
+        labels = [MECHANISM_LABELS.get(name, name) for name in diagnostic["labels"]]
         axis.set_xticks(range(len(labels)))
         axis.set_yticks(range(len(labels)))
         axis.set_xticklabels(labels, rotation=25, ha="right")
         axis.set_yticklabels(labels)
-        axis.set_title(MECHANISM_LABELS.get(mechanism_name, mechanism_name), fontsize=8)
+        axis.set_title(VARIANT_LABELS.get(variant_name, variant_name), fontsize=8)
         for row_index in range(matrix.shape[0]):
             for col_index in range(matrix.shape[1]):
                 if std_matrix is not None and std_matrix.shape == matrix.shape:
@@ -554,7 +578,8 @@ def _save_pairwise_matrix_grid(
                 axis.text(col_index, row_index, label, ha="center", va="center", fontsize=5.5, color="#1f2f3a")
     for axis in flat_axes[len(items) :]:
         axis.axis("off")
-    figure.tight_layout()
+    figure.suptitle(top_label, fontsize=8, y=0.98)
+    figure.tight_layout(rect=(0.0, 0.0, 1.0, 0.95))
     figure.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(figure)
     return output_path

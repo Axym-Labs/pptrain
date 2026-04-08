@@ -18,6 +18,7 @@ from pptrain.integrations.hf import HFCausalLMAdapter, HFModelConfig
 from pptrain.replication.data import build_text_sequence_bundle, build_text_train_eval_bundle
 from pptrain.replication.diagnostics import (
     VARIANT_LABELS,
+    collect_cross_mechanism_representation_diagnostics,
     collect_representation_diagnostics,
     compute_nca_synthetic_token_accuracy,
 )
@@ -99,6 +100,14 @@ def run_replication_campaign(
             output_dir=output_path / study.mechanism_name,
             seed_values=seed_values,
         )
+
+    payload["cross_mechanism_diagnostics"] = _collect_cross_mechanism_diagnostics(
+        payload=payload,
+        profile=profile,
+        hf_config=hf_config,
+        tokenizer=tokenizer,
+        seed_values=seed_values,
+    )
 
     artifacts = save_replication_reports(payload, output_path)
     payload["artifacts"] = {name: str(path) for name, path in artifacts.items()}
@@ -587,6 +596,59 @@ def _aggregate_diagnostics(seed_runs: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _collect_cross_mechanism_diagnostics(
+    *,
+    payload: dict[str, Any],
+    profile: ReplicationProfile,
+    hf_config: HFModelConfig,
+    tokenizer,
+    seed_values: tuple[int, ...],
+) -> dict[str, Any]:
+    if "general_text" not in profile.datasets:
+        return {}
+    diagnostic_bundle = build_text_train_eval_bundle(
+        tokenizer=tokenizer,
+        dataset_spec=profile.datasets["general_text"],
+        block_size=profile.context_length,
+    )
+    per_seed: list[dict[str, Any]] = []
+    mechanism_items = payload.get("mechanisms", {})
+    for seed_index, _seed_value in enumerate(seed_values):
+        variant_dirs_by_mechanism: dict[str, dict[str, str]] = {}
+        for mechanism_name, result in mechanism_items.items():
+            seed_runs = result.get("seed_runs", [])
+            if seed_index >= len(seed_runs):
+                continue
+            variant_dirs = {
+                variant_name: variant_payload["model_dir"]
+                for variant_name, variant_payload in seed_runs[seed_index].get("variants", {}).items()
+                if variant_payload.get("model_dir")
+            }
+            if variant_dirs:
+                variant_dirs_by_mechanism[mechanism_name] = variant_dirs
+        if not variant_dirs_by_mechanism:
+            continue
+        per_seed.append(
+            collect_cross_mechanism_representation_diagnostics(
+                variant_model_dirs_by_mechanism=variant_dirs_by_mechanism,
+                downstream_bundle=diagnostic_bundle,
+                trust_remote_code=hf_config.trust_remote_code,
+                max_batches=profile.diagnostic_max_batches,
+                max_positions_per_batch=profile.diagnostic_max_positions_per_batch,
+            )
+        )
+    return {
+        "pairwise_logit_divergence_by_variant": _aggregate_cross_variant_matrices(
+            per_seed,
+            "pairwise_logit_divergence_by_variant",
+        ),
+        "pairwise_activation_cka_by_variant": _aggregate_cross_variant_matrices(
+            per_seed,
+            "pairwise_activation_cka_by_variant",
+        ),
+    }
+
+
 def _aggregate_named_diagnostic(seed_runs: list[dict[str, Any]], key: str) -> dict[str, Any] | None:
     per_seed = [seed_run.get("diagnostics", {}).get(key) for seed_run in seed_runs if seed_run.get("diagnostics", {}).get(key)]
     if not per_seed:
@@ -616,6 +678,29 @@ def _aggregate_matrix_diagnostic(seed_runs: list[dict[str, Any]], key: str) -> d
         "mean": np.mean(matrices, axis=0).tolist(),
         "std": np.std(matrices, axis=0, ddof=1).tolist() if len(per_seed) > 1 else np.zeros_like(matrices[0]).tolist(),
     }
+
+
+def _aggregate_cross_variant_matrices(seed_payloads: list[dict[str, Any]], key: str) -> dict[str, Any]:
+    variant_names = sorted(
+        {
+            variant_name
+            for item in seed_payloads
+            for variant_name in item.get(key, {}).keys()
+        }
+    )
+    aggregated: dict[str, Any] = {}
+    for variant_name in variant_names:
+        per_seed_variant = [item.get(key, {}).get(variant_name) for item in seed_payloads if item.get(key, {}).get(variant_name)]
+        if not per_seed_variant:
+            continue
+        matrices = np.asarray([entry["matrix"] for entry in per_seed_variant], dtype=np.float64)
+        aggregated[variant_name] = {
+            "mechanisms": per_seed_variant[0]["mechanisms"],
+            "labels": list(per_seed_variant[0]["labels"]),
+            "mean": np.mean(matrices, axis=0).tolist(),
+            "std": np.std(matrices, axis=0, ddof=1).tolist() if len(per_seed_variant) > 1 else np.zeros_like(matrices[0]).tolist(),
+        }
+    return aggregated
 
 
 def _probe_metric(variant: dict[str, Any] | None, probe_name: str, metric_name: str) -> float | None:
