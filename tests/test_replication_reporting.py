@@ -26,3 +26,8 @@ def test_replication_reporting_writes_matrix_and_plots(tmp_path: Path) -> None:
     assert paths["markdown"].exists()
     assert paths["claim_plot"].exists()
     assert paths["metric_plot"].exists()
+    report_text = paths["markdown"].read_text(encoding="utf-8")
+    assert "### Key Results" in report_text
+    assert "![Claim matrix](claim_matrix.png)" in report_text
+    assert "![Primary deltas](primary_deltas.png)" in report_text
+    assert "➖" in report_text

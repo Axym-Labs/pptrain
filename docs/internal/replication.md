@@ -40,7 +40,7 @@ The command writes:
 
 - `replication_results.json`: full raw payload with environment info, per-run metrics, log histories, probe results, transfer reports, and artifact paths
 - `claim_matrix.csv`: pandas dataframe export
-- `claim_matrix.md`: markdown table with `✅` / `❌` / `➖`
+- `replication_report.md`: paper-style markdown summary with the claim matrix, plot embeds, and short plot descriptions
 - `claim_matrix.png`: heatmap view of the claim matrix
 - `primary_deltas.png`: per-mechanism primary delta bar plot
 
@@ -93,4 +93,4 @@ If time and validity matter more than budget:
 
 `❌` means the proxy claim was not met.
 
-`➖` means that claim category does not apply to that mechanism in the current profile.
+`➖` means that claim category was intentionally not evaluated for that mechanism in the current profile. It is not missing data, and it can appear in real runs.
