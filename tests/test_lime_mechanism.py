@@ -1,5 +1,5 @@
 from pptrain.mechanisms import LIMEConfig, LIMEMechanism
-from pptrain.mechanisms.lime.generator import apply_substitutions
+from pptrain.mechanisms.lime import apply_substitutions
 
 
 def test_lime_mechanism_builds_sequences() -> None:

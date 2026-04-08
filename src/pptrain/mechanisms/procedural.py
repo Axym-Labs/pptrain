@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 
 from pptrain.core.base import ExecutedSymbolicTask, SymbolicTask, SymbolicTaskMechanism, TokenizerSpec
+from pptrain.core.presets import MechanismPreset, sequence_preset
 from pptrain.core.registry import register_mechanism
 from pptrain.mechanisms._shared import (
     TokenVocabulary,
@@ -14,10 +15,64 @@ from pptrain.mechanisms._shared import (
     require_subset,
     require_supported,
 )
-from pptrain.mechanisms.procedural.config import PROCEDURAL_PRESETS, ProceduralConfig
 
 BASE_CHARSET = "abcdefghijklmnopqrstuvwxyz0123456789:+=>,;|-_ "
-SUPPORTED_TASKS = {"copy", "identity", "reverse", "sort", "addition", "set", "union", "delete"}
+SUPPORTED_PROCEDURAL_TASKS = {"copy", "identity", "reverse", "sort", "addition", "set", "union", "delete"}
+
+
+@dataclass(slots=True)
+class ProceduralConfig:
+    tasks: tuple[str, ...] = field(default_factory=lambda: ("copy", "reverse", "sort", "addition"))
+    min_symbol_length: int = 4
+    max_symbol_length: int = 24
+    alphabet: str = "abcdefghijklmnopqrstuvwxyz"
+    max_number: int = 9999
+    sequence_count: int = 512
+    eval_sequence_count: int = 64
+    max_length: int = 128
+
+
+_PROCEDURAL_REFERENCE = "Jiang et al. 2026"
+_PROCEDURAL_LENGTHS = (16, 32, 64)
+_PROCEDURAL_TASKS = ("identity", "reverse", "sort", "set", "union", "delete")
+
+
+def _paper_task_preset(task: str, *, max_length: int) -> MechanismPreset:
+    return sequence_preset(
+        f"paper_{task}_len{max_length}",
+        f"Procedural-pretraining {task} preset at sequence length {max_length}.",
+        sequence_count=160_064,
+        eval_sequence_count=4_096,
+        reference=_PROCEDURAL_REFERENCE,
+        tasks=(task,),
+        min_symbol_length=4,
+        max_symbol_length=max(8, max_length // 2),
+        max_length=max_length,
+    )
+
+
+def _paper_task_presets() -> tuple[MechanismPreset, ...]:
+    return tuple(
+        _paper_task_preset(task, max_length=max_length)
+        for max_length in _PROCEDURAL_LENGTHS
+        for task in _PROCEDURAL_TASKS
+    )
+
+
+PROCEDURAL_PRESETS: tuple[MechanismPreset, ...] = (
+    sequence_preset(
+        "smoke",
+        "Tiny procedural smoke run.",
+        sequence_count=128,
+        eval_sequence_count=32,
+        reference="pptrain",
+        tasks=("copy", "reverse", "sort"),
+        min_symbol_length=4,
+        max_symbol_length=16,
+        max_length=64,
+    ),
+    *_paper_task_presets(),
+)
 
 
 @dataclass(slots=True)
@@ -41,7 +96,7 @@ class ProceduralMechanism(SymbolicTaskMechanism):
         if self.config.max_number < 1:
             raise ValueError("max_number must be positive.")
         require_non_empty("tasks", self.config.tasks)
-        require_supported("procedural tasks", self.config.tasks, SUPPORTED_TASKS)
+        require_supported("procedural tasks", self.config.tasks, SUPPORTED_PROCEDURAL_TASKS)
         require_non_empty("alphabet", self.config.alphabet)
         require_subset("alphabet", self.config.alphabet, BASE_CHARSET)
         self._vocabulary = self._build_vocabulary()
@@ -59,7 +114,11 @@ class ProceduralMechanism(SymbolicTaskMechanism):
         return ExecutedSymbolicTask(name=task.name, payload=text)
 
     def serialize_task(self, executed: ExecutedSymbolicTask, spec: TokenizerSpec) -> list[int]:
-        return [spec.bos_token_id or 0, *self._vocabulary.encode_group("char", executed.payload), spec.eos_token_id or 1]
+        return [
+            spec.bos_token_id or 0,
+            *self._vocabulary.encode_group("char", executed.payload),
+            spec.eos_token_id or 1,
+        ]
 
     def _sample_program(self, rng: np.random.Generator, task: str) -> ProceduralProgram:
         if task == "addition":
@@ -114,13 +173,13 @@ class ProceduralMechanism(SymbolicTaskMechanism):
         return builder.build()
 
 
+def _stable_unique_string(text: str) -> str:
+    return "".join(dict.fromkeys(text))
+
+
 register_mechanism(
     "procedural",
     lambda config: ProceduralMechanism(ProceduralConfig(**config)),
     description=ProceduralMechanism.description,
     presets=PROCEDURAL_PRESETS,
 )
-
-
-def _stable_unique_string(text: str) -> str:
-    return "".join(dict.fromkeys(text))
