@@ -30,6 +30,11 @@ Recommended 2k-context proxy run on Hopper-class GPUs:
 python -m pptrain.cli replicate --profile paper_proxy_2048 --context-length 2048 --model-name-or-path EleutherAI/pythia-410m-deduped --output-dir runs/replication-2048
 ```
 
+Hardware-aware note:
+
+- `paper_proxy_2048` now enables gradient checkpointing automatically.
+- On GPUs with about `120 GB` or more of memory, the runner also raises the microbatch size and lowers gradient accumulation to use the extra headroom without changing the effective batch size.
+
 Resume a partial or interrupted campaign:
 
 ```powershell

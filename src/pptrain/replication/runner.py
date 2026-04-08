@@ -4,7 +4,7 @@ import json
 import math
 import random
 from itertools import product
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 from typing import Any
 
@@ -66,13 +66,8 @@ def run_replication_campaign(
         context_length=context_length,
     )
     seed_values = tuple(seeds or profile.seed_values)
-    hf_config = HFModelConfig(
-        model_name_or_path=profile.model_name_or_path,
-        config_overrides=dict(profile.config_overrides),
-    )
-    adapter = HFCausalLMAdapter(hf_config)
-    tokenizer = load_tokenizer(hf_config)
     environment = _collect_environment_info()
+    profile = _optimize_profile_for_hardware(profile=profile, environment=environment)
     existing_payload = (
         _load_resume_payload(
             output_path=output_path,
@@ -83,6 +78,12 @@ def run_replication_campaign(
         if resume
         else None
     )
+    hf_config = HFModelConfig(
+        model_name_or_path=profile.model_name_or_path,
+        config_overrides=dict(profile.config_overrides),
+    )
+    adapter = HFCausalLMAdapter(hf_config)
+    tokenizer = load_tokenizer(hf_config)
 
     selected_studies = [
         study
@@ -817,6 +818,55 @@ def _collect_environment_info() -> dict[str, Any]:
         "cuda_available": torch.cuda.is_available(),
         "cuda_devices": cuda_devices,
     }
+
+
+def _optimize_profile_for_hardware(
+    *,
+    profile: ReplicationProfile,
+    environment: dict[str, Any],
+) -> ReplicationProfile:
+    if profile.name != "paper_proxy_2048":
+        return profile
+    optimized = replace(
+        profile,
+        synthetic_run_config=_with_gradient_checkpointing(profile.synthetic_run_config),
+        downstream_run_config=_with_gradient_checkpointing(profile.downstream_run_config),
+        natural_warmup_run_config=_with_gradient_checkpointing(profile.natural_warmup_run_config),
+    )
+    max_memory_gb = max(
+        (
+            float(device.get("total_memory_gb", 0.0))
+            for device in environment.get("cuda_devices", [])
+            if isinstance(device, dict)
+        ),
+        default=0.0,
+    )
+    if max_memory_gb >= 120.0 and profile.context_length <= 2048:
+        optimized = replace(
+            optimized,
+            synthetic_run_config=_scale_run_config_for_headroom(optimized.synthetic_run_config),
+            downstream_run_config=_scale_run_config_for_headroom(optimized.downstream_run_config),
+            natural_warmup_run_config=_scale_run_config_for_headroom(optimized.natural_warmup_run_config),
+        )
+    return optimized
+
+
+def _with_gradient_checkpointing(run_config: RunConfig) -> RunConfig:
+    if run_config.gradient_checkpointing:
+        return run_config
+    return replace(run_config, gradient_checkpointing=True)
+
+
+def _scale_run_config_for_headroom(run_config: RunConfig) -> RunConfig:
+    effective_batch = run_config.per_device_train_batch_size * run_config.gradient_accumulation_steps
+    target_train_batch = min(4, effective_batch)
+    target_gradient_accumulation = max(1, effective_batch // target_train_batch)
+    return replace(
+        run_config,
+        per_device_train_batch_size=target_train_batch,
+        per_device_eval_batch_size=max(run_config.per_device_eval_batch_size, target_train_batch),
+        gradient_accumulation_steps=target_gradient_accumulation,
+    )
 
 
 def _write_replication_snapshot(payload: dict[str, Any], output_path: Path) -> None:

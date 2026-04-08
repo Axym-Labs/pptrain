@@ -7,7 +7,7 @@ import pytest
 
 from pptrain.core.config import RunConfig
 from pptrain.replication import runner
-from pptrain.replication.specs import MechanismStudySpec, ReplicationProfile
+from pptrain.replication.specs import MechanismStudySpec, ReplicationProfile, build_replication_profile
 
 
 def _dummy_profile(tmp_path: Path) -> ReplicationProfile:
@@ -126,3 +126,20 @@ def test_replication_resume_rejects_mismatched_profile(monkeypatch, tmp_path: Pa
             seed_values=profile.seed_values,
             test_mode=True,
         )
+
+
+def test_paper_proxy_hardware_optimization_uses_gradient_checkpointing_and_h200_headroom(tmp_path: Path) -> None:
+    profile = build_replication_profile("paper_proxy_2048", output_dir=str(tmp_path), test_mode=False)
+    optimized = runner._optimize_profile_for_hardware(
+        profile=profile,
+        environment={
+            "cuda_available": True,
+            "cuda_devices": [{"index": 0, "name": "NVIDIA H200", "total_memory_gb": 141.0}],
+        },
+    )
+    assert optimized.synthetic_run_config.gradient_checkpointing is True
+    assert optimized.downstream_run_config.gradient_checkpointing is True
+    assert optimized.natural_warmup_run_config.gradient_checkpointing is True
+    assert optimized.synthetic_run_config.per_device_train_batch_size == 4
+    assert optimized.synthetic_run_config.per_device_eval_batch_size == 4
+    assert optimized.synthetic_run_config.gradient_accumulation_steps == 2

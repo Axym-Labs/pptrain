@@ -67,6 +67,9 @@ class PrePreTrainer:
         datasets = self.mechanism.build_datasets(seed=self.run_config.seed)
         tokenizer_spec = self.mechanism.tokenizer_spec()
         model = self.model_adapter.create_prepretrain_model(tokenizer_spec)
+        if self.run_config.gradient_checkpointing and getattr(model, "config", None) is not None:
+            if hasattr(model.config, "use_cache"):
+                model.config.use_cache = False
         refresh_callback = None
         if self.mechanism.uses_epoch_train_dataset_refresh():
             refresh_callback = EpochTrainDatasetRefreshCallback(

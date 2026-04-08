@@ -66,6 +66,9 @@ def train_downstream_stage(
 ) -> DownstreamStageResult:
     output_dir.mkdir(parents=True, exist_ok=True)
     stage_run_config = RunConfig(**{**asdict(run_config), "output_dir": str(output_dir)})
+    if stage_run_config.gradient_checkpointing and getattr(model, "config", None) is not None:
+        if hasattr(model.config, "use_cache"):
+            model.config.use_cache = False
     trainer = Trainer(
         model=model,
         args=stage_run_config.to_training_arguments(has_eval=datasets.eval_dataset is not None),
