@@ -1,12 +1,13 @@
 # `pptrain`
 
-`pptrain` is a small PyTorch library for pre-pre-training language models on synthetic upstream mechanisms before ordinary language pretraining.
+`pptrain` is a small PyTorch library for pre-pre-training language models on synthetic upstream mechanisms before standard language pretraining.
 
-It is built around one path:
+Core features:
 
-- pick a mechanism family or preset
-- train an upstream causal LM
-- export a transfer bundle for downstream pretraining
+- built-in mechanism families with paper-backed presets
+- a small extension API for custom mechanisms and model adapters
+- transfer bundles for downstream pretraining
+- lightweight evaluation and replication utilities
 
 ## Install
 
@@ -68,29 +69,11 @@ Use a paper-backed preset as the starting point, then override only the few valu
 
 Inspect them with `pptrain mechanisms`, `pptrain mechanisms summarization`, or `pptrain mechanisms --json`.
 
-To build your own mechanism, you usually only need to define how tasks are sampled, executed, and serialized. The library already provides the trainer path, tokenizer spec plumbing, transfer bundle export, preset registration, and Hugging Face integration. Most symbolic or transduction-style additions can start from `SymbolicTaskMechanism`; lower-level simulators can implement `Mechanism` directly. See [docs/extending.md](docs/extending.md).
+## Custom Mechanisms
 
-Citations:
+To add a mechanism, define how tasks are sampled, executed, and serialized, then register presets around that family. `pptrain` handles the trainer path, tokenizer-spec plumbing, transfer-bundle export, and Hugging Face integration.
 
-- [1] Lee et al. 2026. [*Training Language Models via Neural Cellular Automata*](https://arxiv.org/abs/2603.10055).
-- [2] Ri and Tsuruoka. 2022. [*Pretraining with Artificial Language: Studying Transferable Knowledge in Language Models*](https://aclanthology.org/2022.acl-long.504/).
-- [3] Jiang et al. 2026. [*Procedural Pretraining: Warming Up Language Models with Abstract Data*](https://arxiv.org/abs/2601.21725).
-- [4] Wu et al. 2022. [*Insights into Pre-training via Simpler Synthetic Tasks*](https://arxiv.org/abs/2206.10139).
-- [5] Wu et al. 2021. [*LIME: Learning Inductive Bias for Primitives of Mathematical Reasoning*](https://proceedings.mlr.press/v139/wu21c.html).
-- [6] Krishna et al. 2021. [*Does Pretraining for Summarization Require Knowledge Transfer?*](https://aclanthology.org/2021.findings-emnlp.273/) and Nath et al. 2021 for the STEP-style synthetic summarization family.
-
-## CLI
-
-```bash
-pptrain fit configs/nca_minimal.yaml
-pptrain fit configs/nca_minimal.yaml --eval-config configs/eval_perplexity_smoke.yaml
-```
-
-The eval hook is intentionally lightweight. It is mainly there to sanity-check transfer and compare a transferred checkpoint against the downstream baseline with a small task list.
-
-## Custom Models
-
-For non-Hugging-Face architectures, use `CallableCausalLMAdapter` when you want full control over model construction, or `VocabSizeCausalLMAdapter` when the upstream model only needs the synthetic tokenizer vocab size. A minimal example lives in [examples/custom_adapter.py](examples/custom_adapter.py).
+Most symbolic or transduction-style additions can start from `SymbolicTaskMechanism`; lower-level simulators can implement `Mechanism` directly. For non-Hugging-Face architectures, use `CallableCausalLMAdapter` when you want full control over model construction, or `VocabSizeCausalLMAdapter` when the upstream model only depends on the synthetic tokenizer vocab size. See [docs/extending.md](docs/extending.md) and [examples/custom_adapter.py](examples/custom_adapter.py).
 
 ## Transfer
 
@@ -104,8 +87,37 @@ print(report.loaded_parameter_count)
 
 For custom modules where embedding names do not follow the HF interface, `SkipParametersTransferPolicy` lets you skip explicit parameter prefixes instead.
 
+## Evaluation
+
+The evaluation layer is intentionally lightweight. It is there to sanity-check transfer, compare a transferred checkpoint against the downstream baseline on a small task list, and run the internal multi-seed replication campaign when you want a more structured comparison.
+
+```bash
+pptrain fit configs/nca_minimal.yaml --eval-config configs/eval_perplexity_smoke.yaml
+pptrain replicate --test
+```
+
+The replication suite can also run larger paper-proxy campaigns with streamed natural-data baselines, seeded aggregation, plots, and markdown/CSV reports.
+
+## CLI
+
+```bash
+pptrain fit configs/nca_minimal.yaml
+pptrain fit configs/nca_minimal.yaml --eval-config configs/eval_perplexity_smoke.yaml
+pptrain mechanisms
+pptrain replicate --test
+```
+
 ## Examples
 
 - Preset-first smoke configs live in [configs](configs)
 - Minimal Python examples live in [examples](examples)
 - Notes for adding or widening a mechanism family live in [docs/extending.md](docs/extending.md)
+
+## Citations
+
+- [1] Lee et al. 2026. [*Training Language Models via Neural Cellular Automata*](https://arxiv.org/abs/2603.10055).
+- [2] Ri and Tsuruoka. 2022. [*Pretraining with Artificial Language: Studying Transferable Knowledge in Language Models*](https://aclanthology.org/2022.acl-long.504/).
+- [3] Jiang et al. 2026. [*Procedural Pretraining: Warming Up Language Models with Abstract Data*](https://arxiv.org/abs/2601.21725).
+- [4] Wu et al. 2022. [*Insights into Pre-training via Simpler Synthetic Tasks*](https://arxiv.org/abs/2206.10139).
+- [5] Wu et al. 2021. [*LIME: Learning Inductive Bias for Primitives of Mathematical Reasoning*](https://proceedings.mlr.press/v139/wu21c.html).
+- [6] Krishna et al. 2021. [*Does Pretraining for Summarization Require Knowledge Transfer?*](https://aclanthology.org/2021.findings-emnlp.273/) and Nath et al. 2021 for the STEP-style synthetic summarization family.
