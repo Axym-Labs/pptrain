@@ -25,9 +25,11 @@ dependencies = [
 [project.optional-dependencies]
 eval = [
   "datasets>=2.18",
+  "pandas>=2.2",
 ]
 dev = [
   "datasets>=2.18",
+  "pandas>=2.2",
   "pytest>=8.0",
   "ruff>=0.5",
 ]

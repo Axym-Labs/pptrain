@@ -147,6 +147,21 @@ def test_cli_fit_can_run_eval(tmp_path: Path, monkeypatch, capsys) -> None:
     assert "eval_path:" in output
 
 
+def test_cli_replicate_prints_artifact_summary(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(
+        cli,
+        "run_replication_campaign",
+        lambda **kwargs: {
+            "profile": {"name": "smoke"},
+            "artifacts": {"csv": "runs/replication/claim_matrix.csv"},
+        },
+    )
+    cli.main(["replicate", "--test"])
+    output = capsys.readouterr().out
+    assert "profile: smoke" in output
+    assert "claim_matrix.csv" in output
+
+
 def test_cli_module_entrypoint() -> None:
     result = subprocess.run(
         [sys.executable, "-m", "pptrain.cli", "mechanisms", "--json"],

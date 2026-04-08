@@ -11,3 +11,4 @@ runs/
 artifacts/
 docs/internal/*
 !docs/internal/TODO.md
+!docs/internal/replication.md

@@ -13,6 +13,7 @@ from pptrain.core.runner import PrePreTrainer
 from pptrain.core.registry import create_mechanism
 from pptrain.eval.runner import run_transfer_evaluation
 from pptrain.integrations import HFCausalLMAdapter, HFModelConfig
+from pptrain.replication import run_replication_campaign
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -132,6 +133,43 @@ def build_parser() -> argparse.ArgumentParser:
     )
     mechanisms_parser.add_argument("name", nargs="?", help="Optional mechanism name filter.")
     mechanisms_parser.add_argument("--json", action="store_true", help="Print mechanism info as JSON.")
+
+    replicate_parser = subparsers.add_parser(
+        "replicate",
+        help="Run the built-in replication or paper-proxy campaign.",
+    )
+    replicate_parser.add_argument(
+        "--profile",
+        default="paper_proxy_2048",
+        help="Replication profile name. Use 'smoke' or 'paper_proxy_2048'.",
+    )
+    replicate_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("runs/replication"),
+        help="Directory to store replication artifacts.",
+    )
+    replicate_parser.add_argument(
+        "--test",
+        action="store_true",
+        help="Run the very low-compute smoke validation profile.",
+    )
+    replicate_parser.add_argument(
+        "--mechanism",
+        action="append",
+        dest="mechanisms",
+        help="Optional mechanism name filter. Can be passed multiple times.",
+    )
+    replicate_parser.add_argument(
+        "--model-name-or-path",
+        help="Optional model override for the replication campaign.",
+    )
+    replicate_parser.add_argument(
+        "--context-length",
+        type=int,
+        help="Optional context-length override for the replication campaign.",
+    )
+    replicate_parser.add_argument("--json", action="store_true", help="Print the top-level campaign payload as JSON.")
     return parser
 
 
@@ -145,6 +183,23 @@ def main(argv: list[str] | None = None) -> None:
         _print_fit_summary(_fit_summary(trainer, run, eval_path=eval_path), json_output=args.json)
     elif args.command == "mechanisms":
         _print_mechanisms(json_output=args.json, mechanism_name=args.name)
+    elif args.command == "replicate":
+        payload = run_replication_campaign(
+            profile_name=args.profile,
+            output_dir=str(args.output_dir),
+            test_mode=bool(args.test),
+            mechanisms=args.mechanisms,
+            model_name_or_path=args.model_name_or_path,
+            context_length=args.context_length,
+        )
+        if args.json:
+            print(json.dumps(payload, indent=2, sort_keys=True))
+        else:
+            print(f"profile: {payload['profile']['name']}")
+            print(f"output_dir: {args.output_dir}")
+            print("artifacts:")
+            for name, path in sorted(payload.get("artifacts", {}).items()):
+                print(f"  {name}: {path}")
 
 
 if __name__ == "__main__":
