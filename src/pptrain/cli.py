@@ -169,6 +169,10 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         help="Optional context-length override for the replication campaign.",
     )
+    replicate_parser.add_argument(
+        "--seeds",
+        help="Optional comma-separated seed list for the replication campaign.",
+    )
     replicate_parser.add_argument("--json", action="store_true", help="Print the top-level campaign payload as JSON.")
     return parser
 
@@ -184,6 +188,9 @@ def main(argv: list[str] | None = None) -> None:
     elif args.command == "mechanisms":
         _print_mechanisms(json_output=args.json, mechanism_name=args.name)
     elif args.command == "replicate":
+        seed_values = None
+        if args.seeds:
+            seed_values = tuple(int(part.strip()) for part in args.seeds.split(",") if part.strip())
         payload = run_replication_campaign(
             profile_name=args.profile,
             output_dir=str(args.output_dir),
@@ -191,6 +198,7 @@ def main(argv: list[str] | None = None) -> None:
             mechanisms=args.mechanisms,
             model_name_or_path=args.model_name_or_path,
             context_length=args.context_length,
+            seeds=seed_values,
         )
         if args.json:
             print(json.dumps(payload, indent=2, sort_keys=True))

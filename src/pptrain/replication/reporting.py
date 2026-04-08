@@ -10,6 +10,7 @@ from matplotlib.colors import ListedColormap
 matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
+import numpy as np
 
 from pptrain.replication.specs import CLAIM_COLUMNS
 
@@ -29,11 +30,11 @@ STATUS_TO_PLOT_TEXT = {True: "Yes", False: "No", None: "N/A"}
 CLAIM_LABELS = {
     "transfer_signal": "Transfer beats scratch",
     "convergence_gain": "Converges faster",
-    "compute_matched_gain": "Beats compute-matched natural baseline",
+    "compute_matched_gain": "Beats compute-matched baseline",
     "reasoning_transfer": "Reasoning transfer",
     "algorithmic_transfer": "Algorithmic transfer",
     "synthetic_ordering": "Preferred synthetic preset",
-    "near_real_baseline": "Close to natural-text baseline",
+    "near_real_baseline": "Close to matched baseline",
 }
 
 MECHANISM_LABELS = {
@@ -59,24 +60,51 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
     dataframe.to_csv(csv_path)
 
     claim_plot_path = _save_claim_matrix_plot(payload, output / "claim_matrix.png")
-    metric_plot_path = _save_primary_metric_plot(payload, output / "primary_deltas.png")
+    compute_plot_path = _save_errorbar_plot(
+        payload,
+        metric_key="compute_matched_gap_perplexity",
+        output_path=output / "compute_matched_baseline_gap.png",
+        xlabel="Perplexity delta vs compute-matched baseline (positive is better)",
+    )
+    scratch_plot_path = _save_errorbar_plot(
+        payload,
+        metric_key="transfer_gap_perplexity",
+        output_path=output / "transfer_gap_vs_scratch.png",
+        xlabel="Perplexity delta vs scratch (positive is better)",
+    )
+    convergence_plot_path = _save_errorbar_plot(
+        payload,
+        metric_key="convergence_step_delta",
+        output_path=output / "convergence_step_delta.png",
+        xlabel="Step delta to scratch target loss (positive is better)",
+    )
+    probe_plot_path = _save_probe_gain_plot(payload, output / "probe_gains.png")
+
     markdown_path = output / "replication_report.md"
     markdown_path.write_text(
         _build_report_markdown(
             payload=payload,
             dataframe=dataframe,
             claim_plot_path=claim_plot_path,
-            metric_plot_path=metric_plot_path,
+            compute_plot_path=compute_plot_path,
+            scratch_plot_path=scratch_plot_path,
+            convergence_plot_path=convergence_plot_path,
+            probe_plot_path=probe_plot_path,
         ),
         encoding="utf-8",
     )
-    return {
+    artifacts = {
         "raw_json": raw_path,
         "csv": csv_path,
         "markdown": markdown_path,
         "claim_plot": claim_plot_path,
-        "metric_plot": metric_plot_path,
+        "compute_matched_plot": compute_plot_path,
+        "scratch_gap_plot": scratch_plot_path,
+        "convergence_plot": convergence_plot_path,
     }
+    if probe_plot_path is not None:
+        artifacts["probe_plot"] = probe_plot_path
+    return artifacts
 
 
 def _build_claim_dataframe(pd, payload: dict[str, Any]):
@@ -102,39 +130,75 @@ def _dataframe_to_markdown(dataframe) -> str:
     return "\n".join(rows) + "\n"
 
 
-def _build_report_markdown(*, payload: dict[str, Any], dataframe, claim_plot_path: Path, metric_plot_path: Path) -> str:
+def _build_report_markdown(
+    *,
+    payload: dict[str, Any],
+    dataframe,
+    claim_plot_path: Path,
+    compute_plot_path: Path,
+    scratch_plot_path: Path,
+    convergence_plot_path: Path,
+    probe_plot_path: Path | None,
+) -> str:
     table_markdown = _dataframe_to_markdown(dataframe)
     metrics_table_markdown = _build_metrics_table_markdown(payload)
-    return "\n".join(
+    sections = [
+        "# Replication Report",
+        "",
+        "This report summarizes a bounded multi-seed replication campaign across the current pre-pre-training mechanisms.",
+        "The goal is not exact paper reproduction, but a consistent check of whether each mechanism transfers in the expected direction under one shared setup.",
+        "All mechanisms are additionally evaluated against a compute-matched baseline built from natural-text warm-up on the same downstream text family.",
+        "In the table, `✅` means the aggregated proxy claim was met, `❌` means it was not met, and `➖` means the claim was not evaluated for that mechanism in this profile rather than missing data.",
+        "",
+        "### Key Results",
+        "",
+        table_markdown.rstrip(),
+        "",
+        "### Claim Matrix Plot",
+        "",
+        f"![Claim matrix]({claim_plot_path.name})",
+        "",
+        "This matrix shows the aggregated claim outcomes. Rows are mechanisms, columns are natural-language claim categories, and each cell reports whether the corresponding proxy claim was supported after aggregating across seeds.",
+        "",
+        "### Compute-Matched Baseline Gap",
+        "",
+        f"![Compute-matched baseline gap]({compute_plot_path.name})",
+        "",
+        "This plot shows the mean perplexity-point gap between each transferred run and its compute-matched baseline, with standard deviation across seeds. Positive values mean the synthetic pre-pre-training path outperformed the matched natural-text baseline.",
+        "",
+        "### Transfer Gap Vs Scratch",
+        "",
+        f"![Transfer gap versus scratch]({scratch_plot_path.name})",
+        "",
+        "This plot shows the mean perplexity-point gain over scratch training, with standard deviation across seeds. It is the most direct generic transfer signal across mechanisms.",
+        "",
+        "### Convergence Step Delta",
+        "",
+        f"![Convergence step delta]({convergence_plot_path.name})",
+        "",
+        "This plot shows how many optimization steps earlier the transferred model reaches the scratch model's final loss level. Positive values indicate faster convergence.",
+        "",
+    ]
+    if probe_plot_path is not None:
+        sections.extend(
+            [
+                "### Probe Accuracy Gains",
+                "",
+                f"![Probe gains]({probe_plot_path.name})",
+                "",
+                "This plot shows mean accuracy-point gains on the reasoning and algorithmic probes, with standard deviation across seeds. These probe metrics are only shown for mechanisms whose papers motivate those capabilities directly.",
+                "",
+            ]
+        )
+    sections.extend(
         [
-            "# Replication Report",
-            "",
-            "This report summarizes a bounded replication campaign across the current pre-pre-training mechanisms.",
-            "The goal is not exact paper reproduction, but a consistent check of whether each mechanism transfers in the expected direction under one shared setup.",
-            "In the table, `✅` means the proxy claim was met, `❌` means it was not met, and `➖` means the claim was not evaluated for that mechanism in this profile rather than missing data.",
-            "",
-            "### Key Results",
-            "",
-            table_markdown.rstrip(),
-            "",
-            "### Claim Matrix Plot",
-            "",
-            f"![Claim matrix]({claim_plot_path.name})",
-            "",
-            "This matrix shows the claim outcomes in a compact visual form. Rows are mechanisms, columns are natural-language claim categories, and each cell reports whether the corresponding proxy claim was supported in the run.",
-            "",
-            "### Primary Delta Plot",
-            "",
-            f"![Primary deltas]({metric_plot_path.name})",
-            "",
-            "This plot shows the primary change versus scratch on a percentage scale. For perplexity-based studies, positive values indicate relative perplexity reduction. For reasoning and algorithmic studies, positive values indicate accuracy gain on a percentage scale.",
-            "",
             "### Run Metrics",
             "",
             metrics_table_markdown.rstrip(),
             "",
         ]
     )
+    return "\n".join(sections)
 
 
 def _save_claim_matrix_plot(payload: dict[str, Any], output_path: Path) -> Path:
@@ -143,15 +207,7 @@ def _save_claim_matrix_plot(payload: dict[str, Any], output_path: Path) -> Path:
         [STATUS_TO_NUMERIC[payload["mechanisms"][name]["claims"].get(column, {}).get("replicated")] for column in CLAIM_COLUMNS]
         for name in mechanisms
     ]
-    plt.rcParams.update(
-        {
-            "font.family": "serif",
-            "font.size": 8,
-            "axes.labelsize": 8,
-            "xtick.labelsize": 7,
-            "ytick.labelsize": 7,
-        }
-    )
+    _set_plot_style()
     figure, axis = plt.subplots(1, 1, figsize=(10, max(2.8, 0.5 * len(mechanisms))))
     axis.imshow(
         matrix,
@@ -178,13 +234,113 @@ def _save_claim_matrix_plot(payload: dict[str, Any], output_path: Path) -> Path:
     return output_path
 
 
-def _save_primary_metric_plot(payload: dict[str, Any], output_path: Path) -> Path:
+def _save_errorbar_plot(
+    payload: dict[str, Any],
+    *,
+    metric_key: str,
+    output_path: Path,
+    xlabel: str,
+) -> Path:
     items = []
     for mechanism_name, result in payload["mechanisms"].items():
-        primary_delta = _primary_metric_percent_change(result)
-        if primary_delta is None:
+        metric = result.get("metrics", {}).get(metric_key)
+        if metric is None or metric.get("mean") is None:
             continue
-        items.append((mechanism_name, float(primary_delta)))
+        items.append((MECHANISM_LABELS.get(mechanism_name, mechanism_name), float(metric["mean"]), float(metric.get("std") or 0.0)))
+    _set_plot_style()
+    figure, axis = plt.subplots(1, 1, figsize=(9, max(2.8, 0.45 * max(len(items), 1))))
+    if items:
+        labels = [item[0] for item in items]
+        values = np.asarray([item[1] for item in items], dtype=float)
+        errors = np.asarray([item[2] for item in items], dtype=float)
+        positions = np.arange(len(items))
+        axis.barh(positions, values, xerr=errors, color="#8fb3cf", ecolor="#577c98", capsize=3)
+        axis.axvline(0.0, color="#444444", linewidth=0.8)
+        axis.set_yticks(positions)
+        axis.set_yticklabels(labels)
+        axis.set_xlabel(xlabel)
+        limit = max(np.max(np.abs(values) + errors), 1.0)
+        axis.set_xlim(-1.15 * limit, 1.15 * limit)
+    figure.tight_layout()
+    figure.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close(figure)
+    return output_path
+
+
+def _save_probe_gain_plot(payload: dict[str, Any], output_path: Path) -> Path | None:
+    items = []
+    for mechanism_name, result in payload["mechanisms"].items():
+        metrics = result.get("metrics", {})
+        reasoning = metrics.get("reasoning_accuracy_gain")
+        algorithmic = metrics.get("algorithmic_accuracy_gain")
+        if reasoning is not None and reasoning.get("mean") is not None:
+            items.append((f"{MECHANISM_LABELS.get(mechanism_name, mechanism_name)} reasoning", float(reasoning["mean"]), float(reasoning.get("std") or 0.0)))
+        if algorithmic is not None and algorithmic.get("mean") is not None:
+            items.append((f"{MECHANISM_LABELS.get(mechanism_name, mechanism_name)} algorithmic", float(algorithmic["mean"]), float(algorithmic.get("std") or 0.0)))
+    if not items:
+        return None
+    _set_plot_style()
+    figure, axis = plt.subplots(1, 1, figsize=(9, max(2.8, 0.4 * len(items))))
+    labels = [item[0] for item in items]
+    values = np.asarray([item[1] for item in items], dtype=float)
+    errors = np.asarray([item[2] for item in items], dtype=float)
+    positions = np.arange(len(items))
+    axis.barh(positions, values, xerr=errors, color="#8fb3cf", ecolor="#577c98", capsize=3)
+    axis.axvline(0.0, color="#444444", linewidth=0.8)
+    axis.set_yticks(positions)
+    axis.set_yticklabels(labels)
+    axis.set_xlabel("Probe accuracy-point gain vs scratch (positive is better)")
+    limit = max(np.max(np.abs(values) + errors), 1.0)
+    axis.set_xlim(-1.15 * limit, 1.15 * limit)
+    figure.tight_layout()
+    figure.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close(figure)
+    return output_path
+
+
+def _build_metrics_table_markdown(payload: dict[str, Any]) -> str:
+    columns = [
+        "mechanism",
+        "preset",
+        "seeds",
+        "scratch ppl",
+        "transferred ppl",
+        "baseline ppl",
+        "transfer gap",
+        "baseline gap",
+        "convergence delta",
+        "reasoning gain",
+        "algorithmic gain",
+    ]
+    rows = ["| " + " | ".join(columns) + " |", "| " + " | ".join(["---"] * len(columns)) + " |"]
+    for mechanism_name, result in payload["mechanisms"].items():
+        metrics = result.get("metrics", {})
+        row = [
+            MECHANISM_LABELS.get(mechanism_name, mechanism_name),
+            str(result.get("preset", "")),
+            str(len(result.get("seed_values", []))),
+            _format_summary(metrics.get("scratch_perplexity")),
+            _format_summary(metrics.get("transferred_perplexity")),
+            _format_summary(metrics.get("baseline_perplexity")),
+            _format_summary(metrics.get("transfer_gap_perplexity")),
+            _format_summary(metrics.get("compute_matched_gap_perplexity")),
+            _format_summary(metrics.get("convergence_step_delta")),
+            _format_summary(metrics.get("reasoning_accuracy_gain"), suffix=" pts"),
+            _format_summary(metrics.get("algorithmic_accuracy_gain"), suffix=" pts"),
+        ]
+        rows.append("| " + " | ".join(row) + " |")
+    return "\n".join(rows) + "\n"
+
+
+def _format_summary(summary: dict[str, Any] | None, *, suffix: str = "") -> str:
+    if summary is None or summary.get("mean") is None:
+        return "N/A"
+    mean = float(summary["mean"])
+    std = float(summary.get("std") or 0.0)
+    return f"{mean:.3f} ± {std:.3f}{suffix}"
+
+
+def _set_plot_style() -> None:
     plt.rcParams.update(
         {
             "font.family": "serif",
@@ -194,106 +350,3 @@ def _save_primary_metric_plot(payload: dict[str, Any], output_path: Path) -> Pat
             "ytick.labelsize": 7,
         }
     )
-    figure, axis = plt.subplots(1, 1, figsize=(9, max(2.8, 0.45 * max(len(items), 1))))
-    if items:
-        labels = [MECHANISM_LABELS.get(item[0], item[0]) for item in items]
-        values = [item[1] for item in items]
-        axis.barh(labels, values, color="#8fb3cf")
-        axis.axvline(0.0, color="#444444", linewidth=0.8)
-        axis.set_xlabel("Primary change vs scratch (%)")
-        limit = max((abs(value) for value in values), default=1.0)
-        axis.set_xlim(min(-1.0, -0.15 * limit), max(1.0, 1.15 * limit))
-    figure.tight_layout()
-    figure.savefig(output_path, dpi=150, bbox_inches="tight")
-    plt.close(figure)
-    return output_path
-
-
-def _primary_metric_percent_change(result: dict[str, Any]) -> float | None:
-    claims = result.get("claims", {})
-    if "algorithmic_transfer" in claims:
-        scratch = claims["algorithmic_transfer"].get("scratch_accuracy")
-        transferred = claims["algorithmic_transfer"].get("transferred_accuracy")
-        if scratch is None or transferred is None:
-            return None
-        return 100.0 * (float(transferred) - float(scratch))
-    if "reasoning_transfer" in claims:
-        scratch = claims["reasoning_transfer"].get("scratch_accuracy")
-        transferred = claims["reasoning_transfer"].get("transferred_accuracy")
-        if scratch is None or transferred is None:
-            return None
-        return 100.0 * (float(transferred) - float(scratch))
-    if "transfer_signal" in claims:
-        scratch = claims["transfer_signal"].get("scratch_perplexity")
-        transferred = claims["transfer_signal"].get("transferred_perplexity")
-        if scratch is None or transferred is None or float(scratch) == 0.0:
-            return None
-        return 100.0 * (float(scratch) - float(transferred)) / float(scratch)
-    if "synthetic_ordering" in claims:
-        primary = claims["synthetic_ordering"].get("primary_perplexity")
-        comparison = claims["synthetic_ordering"].get("comparison_perplexity")
-        if comparison is None or primary is None or float(comparison) == 0.0:
-            return None
-        return 100.0 * (float(comparison) - float(primary)) / float(comparison)
-    if "near_real_baseline" in claims:
-        synthetic = claims["near_real_baseline"].get("synthetic_perplexity")
-        natural = claims["near_real_baseline"].get("natural_warmup_perplexity")
-        if natural is None or synthetic is None or float(natural) == 0.0:
-            return None
-        return 100.0 * (float(natural) - float(synthetic)) / float(natural)
-    return None
-
-
-def _build_metrics_table_markdown(payload: dict[str, Any]) -> str:
-    columns = [
-        "mechanism",
-        "preset",
-        "scratch ppl",
-        "transferred ppl",
-        "natural baseline ppl",
-        "comparison ppl",
-        "scratch reasoning",
-        "transferred reasoning",
-        "scratch algorithmic",
-        "transferred algorithmic",
-        "primary change (%)",
-    ]
-    rows = ["| " + " | ".join(columns) + " |", "| " + " | ".join(["---"] * len(columns)) + " |"]
-    for mechanism_name, result in payload["mechanisms"].items():
-        claims = result.get("claims", {})
-        transfer_claim = claims.get("transfer_signal", {})
-        reasoning_claim = claims.get("reasoning_transfer", {})
-        algorithmic_claim = claims.get("algorithmic_transfer", {})
-        compute_claim = claims.get("compute_matched_gain", {})
-        ordering_claim = claims.get("synthetic_ordering", {})
-        near_real_claim = claims.get("near_real_baseline", {})
-        comparison_ppl = ordering_claim.get("comparison_perplexity")
-        if comparison_ppl is None:
-            comparison_ppl = near_real_claim.get("natural_warmup_perplexity")
-        row = [
-            MECHANISM_LABELS.get(mechanism_name, mechanism_name),
-            str(result.get("preset", "")),
-            _format_number(transfer_claim.get("scratch_perplexity")),
-            _format_number(transfer_claim.get("transferred_perplexity") or ordering_claim.get("primary_perplexity") or near_real_claim.get("synthetic_perplexity")),
-            _format_number(compute_claim.get("natural_warmup_perplexity") or near_real_claim.get("natural_warmup_perplexity")),
-            _format_number(comparison_ppl),
-            _format_percentage(reasoning_claim.get("scratch_accuracy")),
-            _format_percentage(reasoning_claim.get("transferred_accuracy")),
-            _format_percentage(algorithmic_claim.get("scratch_accuracy")),
-            _format_percentage(algorithmic_claim.get("transferred_accuracy")),
-            _format_number(_primary_metric_percent_change(result)),
-        ]
-        rows.append("| " + " | ".join(row) + " |")
-    return "\n".join(rows) + "\n"
-
-
-def _format_number(value: Any) -> str:
-    if value is None:
-        return "N/A"
-    return f"{float(value):.3f}"
-
-
-def _format_percentage(value: Any) -> str:
-    if value is None:
-        return "N/A"
-    return f"{100.0 * float(value):.1f}%"

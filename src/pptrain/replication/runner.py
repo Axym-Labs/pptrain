@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import json
 import math
+import random
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import torch
+from transformers import set_seed as hf_set_seed
 
 from pptrain.core.config import RunConfig
 from pptrain.core.registry import create_mechanism
@@ -17,6 +20,7 @@ from pptrain.replication.probes import run_arithmetic_probe, run_gsm8k_probe, ru
 from pptrain.replication.reporting import save_replication_reports
 from pptrain.replication.specs import (
     CLAIM_ALGORITHMIC_TRANSFER,
+    CLAIM_COLUMNS,
     CLAIM_COMPUTE_MATCHED_GAIN,
     CLAIM_CONVERGENCE_GAIN,
     CLAIM_NEAR_REAL_BASELINE,
@@ -43,6 +47,7 @@ def run_replication_campaign(
     mechanisms: list[str] | None = None,
     model_name_or_path: str | None = None,
     context_length: int | None = None,
+    seeds: tuple[int, ...] | None = None,
 ) -> dict[str, Any]:
     output_path = Path(output_dir)
     profile = build_replication_profile(
@@ -52,6 +57,7 @@ def run_replication_campaign(
         model_name_or_path=model_name_or_path,
         context_length=context_length,
     )
+    seed_values = tuple(seeds or profile.seed_values)
     hf_config = HFModelConfig(
         model_name_or_path=profile.model_name_or_path,
         config_overrides=dict(profile.config_overrides),
@@ -72,6 +78,7 @@ def run_replication_campaign(
             "model_name_or_path": profile.model_name_or_path,
             "context_length": profile.context_length,
             "test_mode": test_mode,
+            "seed_values": list(seed_values),
         },
         "environment": environment,
         "mechanisms": {},
@@ -85,6 +92,7 @@ def run_replication_campaign(
             adapter=adapter,
             tokenizer=tokenizer,
             output_dir=output_path / study.mechanism_name,
+            seed_values=seed_values,
         )
 
     artifacts = save_replication_reports(payload, output_path)
@@ -101,6 +109,41 @@ def _run_study(
     adapter: HFCausalLMAdapter,
     tokenizer,
     output_dir: Path,
+    seed_values: tuple[int, ...],
+) -> dict[str, Any]:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    seed_runs = [
+        _run_seeded_study(
+            study=study,
+            profile=profile,
+            hf_config=hf_config,
+            adapter=adapter,
+            tokenizer=tokenizer,
+            output_dir=output_dir / f"seed_{seed}",
+            seed=seed,
+        )
+        for seed in seed_values
+    ]
+    return {
+        "paper_source": study.paper_source,
+        "paper_note": study.paper_note,
+        "preset": study.primary_preset,
+        "seed_values": list(seed_values),
+        "seed_runs": seed_runs,
+        "claims": _aggregate_claims(seed_runs),
+        "metrics": _aggregate_metrics(seed_runs),
+    }
+
+
+def _run_seeded_study(
+    *,
+    study: MechanismStudySpec,
+    profile: ReplicationProfile,
+    hf_config: HFModelConfig,
+    adapter: HFCausalLMAdapter,
+    tokenizer,
+    output_dir: Path,
+    seed: int,
 ) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     downstream_bundle = build_text_train_eval_bundle(
@@ -110,6 +153,7 @@ def _run_study(
     )
     variants: dict[str, Any] = {}
 
+    _set_global_seed(seed)
     scratch_model = build_random_init_downstream_model(
         model_config=hf_config,
         tokenizer=tokenizer,
@@ -118,9 +162,9 @@ def _run_study(
     scratch_result = train_downstream_stage(
         model=scratch_model,
         datasets=downstream_bundle,
-        run_config=_with_auto_precision(profile.downstream_run_config, output_dir / "scratch"),
+        run_config=_with_auto_precision(profile.downstream_run_config, output_dir / "scratch", seed=seed),
         output_dir=output_dir / "scratch",
-        metadata={"variant": "scratch", "study": study.mechanism_name},
+        metadata={"variant": "scratch", "study": study.mechanism_name, "seed": seed},
     )
     variants["scratch"] = _serialize_variant_result(
         stage_result=scratch_result,
@@ -139,6 +183,7 @@ def _run_study(
         tokenizer=tokenizer,
         downstream_bundle=downstream_bundle,
         output_dir=output_dir / "transferred",
+        seed=seed,
     )
 
     for alias, preset_name in study.comparison_presets.items():
@@ -152,6 +197,7 @@ def _run_study(
             tokenizer=tokenizer,
             downstream_bundle=downstream_bundle,
             output_dir=output_dir / alias,
+            seed=seed,
         )
 
     if study.compare_against_natural_warmup:
@@ -162,6 +208,7 @@ def _run_study(
             split="warmup",
         )
         if len(warmup_bundle.dataset_bundle.train_dataset) > 0:
+            _set_global_seed(seed)
             warmup_model = build_random_init_downstream_model(
                 model_config=hf_config,
                 tokenizer=tokenizer,
@@ -170,18 +217,18 @@ def _run_study(
             warmup_stage = train_downstream_stage(
                 model=warmup_model,
                 datasets=warmup_bundle.dataset_bundle,
-                run_config=_with_auto_precision(profile.natural_warmup_run_config, output_dir / "natural_warmup_stage1"),
-                output_dir=output_dir / "natural_warmup_stage1",
-                metadata={"variant": "natural_warmup_stage1", "study": study.mechanism_name},
+                run_config=_with_auto_precision(profile.natural_warmup_run_config, output_dir / "baseline_stage1", seed=seed),
+                output_dir=output_dir / "baseline_stage1",
+                metadata={"variant": "baseline_stage1", "study": study.mechanism_name, "seed": seed},
             )
             continuation_stage = train_downstream_stage(
                 model=warmup_model,
                 datasets=downstream_bundle,
-                run_config=_with_auto_precision(profile.downstream_run_config, output_dir / "natural_warmup"),
-                output_dir=output_dir / "natural_warmup",
-                metadata={"variant": "natural_warmup", "study": study.mechanism_name},
+                run_config=_with_auto_precision(profile.downstream_run_config, output_dir / "compute_matched_baseline", seed=seed),
+                output_dir=output_dir / "compute_matched_baseline",
+                metadata={"variant": "compute_matched_baseline", "study": study.mechanism_name, "seed": seed},
             )
-            variants["natural_warmup"] = _serialize_variant_result(
+            variants["compute_matched_baseline"] = _serialize_variant_result(
                 stage_result=continuation_stage,
                 probes=_run_probes(study=study, profile=profile, model=warmup_model, tokenizer=tokenizer),
                 warmup_stage=warmup_stage,
@@ -190,14 +237,10 @@ def _run_study(
             _maybe_clear_cuda()
 
     claims = _evaluate_claims(study=study, variants=variants)
-    primary_metric_delta = _primary_metric_delta(study=study, variants=variants)
     return {
-        "paper_source": study.paper_source,
-        "paper_note": study.paper_note,
-        "preset": study.primary_preset,
+        "seed": seed,
         "variants": variants,
         "claims": claims,
-        "primary_metric_delta": primary_metric_delta,
     }
 
 
@@ -212,6 +255,7 @@ def _run_transferred_variant(
     tokenizer,
     downstream_bundle,
     output_dir: Path,
+    seed: int,
 ) -> dict[str, Any]:
     mechanism = create_mechanism(
         study.mechanism_name,
@@ -222,7 +266,8 @@ def _run_transferred_variant(
             "max_length": study.max_length_override,
         },
     )
-    synthetic_run_config = _with_auto_precision(profile.synthetic_run_config, output_dir / "synthetic")
+    synthetic_run_config = _with_auto_precision(profile.synthetic_run_config, output_dir / "synthetic", seed=seed)
+    _set_global_seed(seed)
     trainer = PrePreTrainer(
         mechanism=mechanism,
         model_adapter=adapter,
@@ -231,6 +276,7 @@ def _run_transferred_variant(
     synthetic_run = trainer.fit()
     bundle = synthetic_run.load_transfer_bundle()
 
+    _set_global_seed(seed)
     transferred_model = build_random_init_downstream_model(
         model_config=hf_config,
         tokenizer=tokenizer,
@@ -240,9 +286,9 @@ def _run_transferred_variant(
     continuation_result = train_downstream_stage(
         model=transferred_model,
         datasets=downstream_bundle,
-        run_config=_with_auto_precision(profile.downstream_run_config, output_dir / "downstream"),
+        run_config=_with_auto_precision(profile.downstream_run_config, output_dir / "downstream", seed=seed),
         output_dir=output_dir / "downstream",
-        metadata={"variant": variant_name, "study": study.mechanism_name, "preset": preset_name},
+        metadata={"variant": variant_name, "study": study.mechanism_name, "preset": preset_name, "seed": seed},
     )
     payload = _serialize_variant_result(
         stage_result=continuation_result,
@@ -307,7 +353,7 @@ def _evaluate_claims(*, study: MechanismStudySpec, variants: dict[str, Any]) -> 
     claims: dict[str, Any] = {}
     scratch = variants.get("scratch")
     transferred = variants.get("transferred")
-    natural_warmup = variants.get("natural_warmup")
+    baseline = variants.get("compute_matched_baseline")
     step_variant = variants.get("step")
 
     if CLAIM_TRANSFER_SIGNAL in study.claim_categories:
@@ -317,27 +363,32 @@ def _evaluate_claims(*, study: MechanismStudySpec, variants: dict[str, Any]) -> 
             "replicated": _both_present_and(transferred_ppl, scratch_ppl, lambda a, b: a < b),
             "scratch_perplexity": scratch_ppl,
             "transferred_perplexity": transferred_ppl,
+            "effect": _diff(scratch_ppl, transferred_ppl),
+            "effect_unit": "perplexity",
         }
 
-    if CLAIM_CONVERGENCE_GAIN in study.claim_categories:
-        if scratch is not None and transferred is not None:
-            target_loss = float(scratch["metrics"].get("eval_loss", math.inf))
-            scratch_step = _first_step_at_or_below(scratch["log_history"], target_loss)
-            transferred_step = _first_step_at_or_below(transferred["log_history"], target_loss)
-            claims[CLAIM_CONVERGENCE_GAIN] = {
-                "replicated": transferred_step is not None and scratch_step is not None and transferred_step < scratch_step,
-                "target_eval_loss": target_loss,
-                "scratch_step": scratch_step,
-                "transferred_step": transferred_step,
-            }
+    if CLAIM_CONVERGENCE_GAIN in study.claim_categories and scratch is not None and transferred is not None:
+        target_loss = float(scratch["metrics"].get("eval_loss", math.inf))
+        scratch_step = _first_step_at_or_below(scratch["log_history"], target_loss)
+        transferred_step = _first_step_at_or_below(transferred["log_history"], target_loss)
+        claims[CLAIM_CONVERGENCE_GAIN] = {
+            "replicated": transferred_step is not None and scratch_step is not None and transferred_step < scratch_step,
+            "target_eval_loss": target_loss,
+            "scratch_step": scratch_step,
+            "transferred_step": transferred_step,
+            "effect": _diff(scratch_step, transferred_step),
+            "effect_unit": "steps",
+        }
 
     if CLAIM_COMPUTE_MATCHED_GAIN in study.claim_categories:
         transferred_ppl = _perplexity_from_metrics(transferred["metrics"]) if transferred is not None else None
-        warmup_ppl = _perplexity_from_metrics(natural_warmup["metrics"]) if natural_warmup is not None else None
+        baseline_ppl = _perplexity_from_metrics(baseline["metrics"]) if baseline is not None else None
         claims[CLAIM_COMPUTE_MATCHED_GAIN] = {
-            "replicated": _both_present_and(transferred_ppl, warmup_ppl, lambda a, b: a < b),
+            "replicated": _both_present_and(transferred_ppl, baseline_ppl, lambda a, b: a < b),
             "transferred_perplexity": transferred_ppl,
-            "natural_warmup_perplexity": warmup_ppl,
+            "baseline_perplexity": baseline_ppl,
+            "effect": _diff(baseline_ppl, transferred_ppl),
+            "effect_unit": "perplexity",
         }
 
     if CLAIM_REASONING_TRANSFER in study.claim_categories:
@@ -347,6 +398,8 @@ def _evaluate_claims(*, study: MechanismStudySpec, variants: dict[str, Any]) -> 
             "replicated": _both_present_and(transferred_accuracy, scratch_accuracy, lambda a, b: a > b),
             "scratch_accuracy": scratch_accuracy,
             "transferred_accuracy": transferred_accuracy,
+            "effect": _diff(transferred_accuracy, scratch_accuracy),
+            "effect_unit": "accuracy",
         }
 
     if CLAIM_ALGORITHMIC_TRANSFER in study.claim_categories:
@@ -356,6 +409,8 @@ def _evaluate_claims(*, study: MechanismStudySpec, variants: dict[str, Any]) -> 
             "replicated": _both_present_and(transferred_accuracy, scratch_accuracy, lambda a, b: a > b),
             "scratch_accuracy": scratch_accuracy,
             "transferred_accuracy": transferred_accuracy,
+            "effect": _diff(transferred_accuracy, scratch_accuracy),
+            "effect_unit": "accuracy",
         }
 
     if CLAIM_SYNTHETIC_ORDERING in study.claim_categories:
@@ -365,39 +420,109 @@ def _evaluate_claims(*, study: MechanismStudySpec, variants: dict[str, Any]) -> 
             "replicated": _both_present_and(transferred_ppl, step_ppl, lambda a, b: a <= b),
             "primary_perplexity": transferred_ppl,
             "comparison_perplexity": step_ppl,
+            "effect": _diff(step_ppl, transferred_ppl),
+            "effect_unit": "perplexity",
         }
 
     if CLAIM_NEAR_REAL_BASELINE in study.claim_categories:
         transferred_ppl = _perplexity_from_metrics(transferred["metrics"]) if transferred is not None else None
-        warmup_ppl = _perplexity_from_metrics(natural_warmup["metrics"]) if natural_warmup is not None else None
+        baseline_ppl = _perplexity_from_metrics(baseline["metrics"]) if baseline is not None else None
+        tolerance = 1.10
+        effect = (tolerance * baseline_ppl - transferred_ppl) if baseline_ppl is not None and transferred_ppl is not None else None
         claims[CLAIM_NEAR_REAL_BASELINE] = {
-            "replicated": _both_present_and(transferred_ppl, warmup_ppl, lambda a, b: a <= b * 1.10),
+            "replicated": _both_present_and(transferred_ppl, baseline_ppl, lambda a, b: a <= b * tolerance),
             "synthetic_perplexity": transferred_ppl,
-            "natural_warmup_perplexity": warmup_ppl,
-            "tolerance": 1.10,
+            "baseline_perplexity": baseline_ppl,
+            "tolerance": tolerance,
+            "effect": effect,
+            "effect_unit": "perplexity_margin",
         }
 
     return claims
 
 
-def _primary_metric_delta(*, study: MechanismStudySpec, variants: dict[str, Any]) -> float | None:
-    scratch = variants.get("scratch")
-    transferred = variants.get("transferred")
-    if CLAIM_ALGORITHMIC_TRANSFER in study.claim_categories:
-        scratch_accuracy = _probe_metric(scratch, "algorithmic", "accuracy")
-        transferred_accuracy = _probe_metric(transferred, "algorithmic", "accuracy")
-        if scratch_accuracy is not None and transferred_accuracy is not None:
-            return transferred_accuracy - scratch_accuracy
-    if CLAIM_REASONING_TRANSFER in study.claim_categories:
-        scratch_accuracy = _probe_metric(scratch, "reasoning", "accuracy")
-        transferred_accuracy = _probe_metric(transferred, "reasoning", "accuracy")
-        if scratch_accuracy is not None and transferred_accuracy is not None:
-            return transferred_accuracy - scratch_accuracy
-    scratch_ppl = _perplexity_from_metrics(scratch["metrics"]) if scratch is not None else None
-    transferred_ppl = _perplexity_from_metrics(transferred["metrics"]) if transferred is not None else None
-    if scratch_ppl is not None and transferred_ppl is not None:
-        return scratch_ppl - transferred_ppl
-    return None
+def _aggregate_claims(seed_runs: list[dict[str, Any]]) -> dict[str, Any]:
+    aggregated: dict[str, Any] = {}
+    for claim_name in CLAIM_COLUMNS:
+        claim_values = [seed_run["claims"].get(claim_name) for seed_run in seed_runs if claim_name in seed_run["claims"]]
+        if not claim_values:
+            continue
+        replicated_values = [item.get("replicated") for item in claim_values if item.get("replicated") is not None]
+        effect_values = [float(item["effect"]) for item in claim_values if item.get("effect") is not None]
+        summary: dict[str, Any] = {
+            "replicated": None,
+            "success_rate": None,
+            "num_valid_seeds": len(replicated_values),
+            "effect_mean": _mean(effect_values),
+            "effect_std": _std(effect_values),
+            "effect_unit": next((item.get("effect_unit") for item in claim_values if item.get("effect_unit")), None),
+        }
+        if replicated_values:
+            success_rate = sum(bool(value) for value in replicated_values) / len(replicated_values)
+            summary["success_rate"] = success_rate
+            if effect_values:
+                summary["replicated"] = bool(_mean(effect_values) > 0 and success_rate >= (2.0 / 3.0))
+            else:
+                summary["replicated"] = bool(success_rate >= (2.0 / 3.0))
+        numeric_fields = sorted(
+            {
+                key
+                for item in claim_values
+                for key, value in item.items()
+                if key not in {"replicated", "effect", "effect_unit"} and isinstance(value, (int, float))
+            }
+        )
+        for field in numeric_fields:
+            values = [float(item[field]) for item in claim_values if item.get(field) is not None]
+            summary[field] = {
+                "mean": _mean(values),
+                "std": _std(values),
+                "num_seeds": len(values),
+            }
+        aggregated[claim_name] = summary
+    return aggregated
+
+
+def _aggregate_metrics(seed_runs: list[dict[str, Any]]) -> dict[str, Any]:
+    metrics = {
+        "transfer_gap_perplexity": _aggregate_seed_values(seed_runs, CLAIM_TRANSFER_SIGNAL, "effect"),
+        "compute_matched_gap_perplexity": _aggregate_seed_values(seed_runs, CLAIM_COMPUTE_MATCHED_GAIN, "effect"),
+        "convergence_step_delta": _aggregate_seed_values(seed_runs, CLAIM_CONVERGENCE_GAIN, "effect"),
+        "reasoning_accuracy_gain": _aggregate_seed_values(seed_runs, CLAIM_REASONING_TRANSFER, "effect", scale=100.0),
+        "algorithmic_accuracy_gain": _aggregate_seed_values(seed_runs, CLAIM_ALGORITHMIC_TRANSFER, "effect", scale=100.0),
+        "synthetic_ordering_gap_perplexity": _aggregate_seed_values(seed_runs, CLAIM_SYNTHETIC_ORDERING, "effect"),
+        "near_baseline_margin_perplexity": _aggregate_seed_values(seed_runs, CLAIM_NEAR_REAL_BASELINE, "effect"),
+    }
+    metrics["scratch_perplexity"] = _aggregate_seed_values(seed_runs, CLAIM_TRANSFER_SIGNAL, "scratch_perplexity")
+    metrics["transferred_perplexity"] = _aggregate_seed_values(seed_runs, CLAIM_TRANSFER_SIGNAL, "transferred_perplexity")
+    metrics["baseline_perplexity"] = _aggregate_seed_values(seed_runs, CLAIM_COMPUTE_MATCHED_GAIN, "baseline_perplexity")
+    metrics["scratch_reasoning_accuracy"] = _aggregate_seed_values(seed_runs, CLAIM_REASONING_TRANSFER, "scratch_accuracy", scale=100.0)
+    metrics["transferred_reasoning_accuracy"] = _aggregate_seed_values(seed_runs, CLAIM_REASONING_TRANSFER, "transferred_accuracy", scale=100.0)
+    metrics["scratch_algorithmic_accuracy"] = _aggregate_seed_values(seed_runs, CLAIM_ALGORITHMIC_TRANSFER, "scratch_accuracy", scale=100.0)
+    metrics["transferred_algorithmic_accuracy"] = _aggregate_seed_values(seed_runs, CLAIM_ALGORITHMIC_TRANSFER, "transferred_accuracy", scale=100.0)
+    return metrics
+
+
+def _aggregate_seed_values(
+    seed_runs: list[dict[str, Any]],
+    claim_name: str,
+    field_name: str,
+    *,
+    scale: float = 1.0,
+) -> dict[str, Any] | None:
+    values = [
+        float(seed_run["claims"][claim_name][field_name]) * scale
+        for seed_run in seed_runs
+        if claim_name in seed_run["claims"] and seed_run["claims"][claim_name].get(field_name) is not None
+    ]
+    if not values:
+        return None
+    return {
+        "mean": _mean(values),
+        "std": _std(values),
+        "num_seeds": len(values),
+        "values": values,
+    }
 
 
 def _probe_metric(variant: dict[str, Any] | None, probe_name: str, metric_name: str) -> float | None:
@@ -431,9 +556,10 @@ def _both_present_and(left: float | None, right: float | None, predicate) -> boo
     return bool(predicate(left, right))
 
 
-def _with_auto_precision(run_config: RunConfig, output_dir: Path) -> RunConfig:
+def _with_auto_precision(run_config: RunConfig, output_dir: Path, *, seed: int) -> RunConfig:
     payload = asdict(run_config)
     payload["output_dir"] = str(output_dir)
+    payload["seed"] = seed
     if torch.cuda.is_available():
         payload["bf16"] = bool(getattr(torch.cuda, "is_bf16_supported", lambda: False)())
         payload["fp16"] = not payload["bf16"]
@@ -462,6 +588,33 @@ def _collect_environment_info() -> dict[str, Any]:
     }
 
 
+def _set_global_seed(seed: int) -> None:
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    hf_set_seed(seed)
+
+
 def _maybe_clear_cuda() -> None:
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
+
+
+def _diff(left: float | int | None, right: float | int | None) -> float | None:
+    if left is None or right is None:
+        return None
+    return float(left) - float(right)
+
+
+def _mean(values: list[float]) -> float | None:
+    if not values:
+        return None
+    return float(np.mean(values))
+
+
+def _std(values: list[float]) -> float | None:
+    if len(values) < 2:
+        return 0.0 if values else None
+    return float(np.std(values, ddof=1))

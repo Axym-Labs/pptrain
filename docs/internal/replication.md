@@ -42,7 +42,10 @@ The command writes:
 - `claim_matrix.csv`: pandas dataframe export
 - `replication_report.md`: paper-style markdown summary with the claim matrix, plot embeds, and short plot descriptions
 - `claim_matrix.png`: heatmap view of the claim matrix
-- `primary_deltas.png`: per-mechanism primary delta bar plot
+- `compute_matched_baseline_gap.png`: mean perplexity-point delta versus the compute-matched baseline, with standard deviation across seeds
+- `transfer_gap_vs_scratch.png`: mean perplexity-point delta versus scratch, with standard deviation across seeds
+- `convergence_step_delta.png`: mean step improvement to the scratch target loss, with standard deviation across seeds
+- `probe_gains.png`: mean accuracy-point gains for reasoning and algorithmic probes, with standard deviation across seeds when those probes apply
 
 Each mechanism also gets its own subdirectory with scratch, transferred, comparison, and natural-warmup runs when applicable.
 
@@ -52,12 +55,12 @@ This runner does not claim exact reproduction. It checks a bounded proxy that st
 
 | Mechanism | Paper claim to check | Implemented presets | Proxy success criterion |
 | --- | --- | --- | --- |
-| `nca` | NCA upstream warm-up improves downstream LM performance, converges faster, and beats compute-matched natural warm-up baselines; the paper reports gains on web/code continuation and downstream `GSM8K` / `HumanEval` / `BBL` style tasks. | `paper_web_text`, `paper_code` | `transfer_signal`: transferred perplexity beats scratch. `convergence_gain`: transferred reaches scratch final eval loss earlier. `compute_matched_gain`: transferred beats natural warm-up. `reasoning_transfer`: transferred reasoning accuracy beats scratch. |
-| `lime` | LIME-style primitives improve mathematical reasoning transfer. | `paper_benchmark_100k`, `paper_benchmark_1m`, `paper_mixed_5m`, `paper_individual_*` | `reasoning_transfer`: transferred reasoning accuracy beats scratch. |
-| `simpler_tasks` | Very simple synthetic tasks still produce non-trivial downstream transfer; in the follow-up comparison, simple families capture much of the benefit of earlier synthetic schemes. | `paper_unary_core_100k`, `paper_unary_core_1m`, `paper_binary_1m`, `paper_set_1m`, `paper_copy_1m`, `paper_identity_1m` | `transfer_signal`: transferred perplexity beats scratch. |
-| `procedural` | Procedural abstract tasks improve downstream transfer and produce stronger long-context algorithmic behavior. | `paper_identity_len*`, `paper_reverse_len*`, `paper_sort_len*`, `paper_set_len*`, `paper_union_len*`, `paper_delete_len*` | `transfer_signal`: transferred perplexity beats scratch. `algorithmic_transfer`: transferred needle-style accuracy beats scratch. |
-| `dyck` | Dyck-style abstract syntax training should help long-context symbolic retrieval / structure-sensitive probes. | `paper_k8`, `paper_k16`, `paper_k32`, `paper_k64` | `algorithmic_transfer`: transferred needle-style accuracy beats scratch. |
-| `summarization` | Synthetic summarization-style pretraining can transfer, and synthetic tasks can get close to natural warm-up baselines. | `paper_step_tasks_100k`, `paper_sentence_reordering_100k`, `paper_next_sentence_100k`, `paper_masked_document_100k`, `paper_nonsense_copy_ops_100k`, `paper_nonsense_keyword_100k`, `paper_ourtasks_subset_100k` | `near_real_baseline`: synthetic transfer stays within 10% perplexity of natural warm-up. `synthetic_ordering`: the selected synthetic preset is at least as good as the comparison preset used in the profile. |
+| `nca` | NCA upstream warm-up improves downstream LM performance, converges faster, and beats compute-matched natural-text baselines; the paper reports gains on web/code continuation and downstream `GSM8K` / `HumanEval` / `BBL` style tasks. | `paper_web_text`, `paper_code` | Generic claims for all mechanisms: `transfer_signal`, `convergence_gain`, `compute_matched_gain`. NCA-specific proxy: `reasoning_transfer`. |
+| `lime` | LIME-style primitives improve mathematical reasoning transfer. | `paper_benchmark_100k`, `paper_benchmark_1m`, `paper_mixed_5m`, `paper_individual_*` | Generic claims for all mechanisms plus `reasoning_transfer`. |
+| `simpler_tasks` | Very simple synthetic tasks still produce non-trivial downstream transfer; in the follow-up comparison, simple families capture much of the benefit of earlier synthetic schemes. | `paper_unary_core_100k`, `paper_unary_core_1m`, `paper_binary_1m`, `paper_set_1m`, `paper_copy_1m`, `paper_identity_1m` | Generic claims for all mechanisms. |
+| `procedural` | Procedural abstract tasks improve downstream transfer and produce stronger long-context algorithmic behavior. | `paper_identity_len*`, `paper_reverse_len*`, `paper_sort_len*`, `paper_set_len*`, `paper_union_len*`, `paper_delete_len*` | Generic claims for all mechanisms plus `algorithmic_transfer`. |
+| `dyck` | Dyck-style abstract syntax training should help long-context symbolic retrieval / structure-sensitive probes. | `paper_k8`, `paper_k16`, `paper_k32`, `paper_k64` | Generic claims for all mechanisms plus `algorithmic_transfer`. |
+| `summarization` | Synthetic summarization-style pretraining can transfer, and synthetic tasks can get close to natural-text baselines. | `paper_step_tasks_100k`, `paper_sentence_reordering_100k`, `paper_next_sentence_100k`, `paper_masked_document_100k`, `paper_nonsense_copy_ops_100k`, `paper_nonsense_keyword_100k`, `paper_ourtasks_subset_100k` | Generic claims for all mechanisms plus `synthetic_ordering` and `near_real_baseline`. |
 
 ### Current full-profile preset mapping
 
@@ -77,6 +80,29 @@ This runner does not claim exact reproduction. It checks a bounded proxy that st
 - reasoning probe: `GSM8K` when enabled, otherwise a small local arithmetic probe
 
 This is intentionally smaller than the original papers. It is meant to rank mechanisms and detect broken or missing transfer, not to claim paper-level headline numbers.
+
+Default seeds:
+
+- `smoke`: `41`
+- `paper_proxy_2048`: `11, 23, 37`
+
+Override if needed:
+
+```powershell
+python -m pptrain.cli replicate --profile paper_proxy_2048 --seeds 11,23,37,47,59 --output-dir runs/replication-5seeds
+```
+
+## Claim Coverage Limits
+
+The current suite covers the major shared transfer claims and a subset of mechanism-specific claims, but not every headline result in every paper.
+
+Major claims still not covered directly:
+
+- NCA code-domain continuation results
+- NCA `HumanEval` and `BigBench-Lite` downstream evaluation
+- Summarization task metrics such as ROUGE on real summarization benchmarks
+- Exact long-context downstream tasks used by procedural-pretraining papers beyond the local needle proxy
+- Formal significance tests beyond seed-level aggregation
 
 ## GPU Guidance
 
