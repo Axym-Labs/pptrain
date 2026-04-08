@@ -14,10 +14,10 @@ from pptrain.mechanisms._shared import (
     require_subset,
     require_supported,
 )
-from pptrain.mechanisms.procedural.config import ProceduralConfig
+from pptrain.mechanisms.procedural.config import PROCEDURAL_PRESETS, ProceduralConfig
 
 BASE_CHARSET = "abcdefghijklmnopqrstuvwxyz0123456789:+=>,;|-_ "
-SUPPORTED_TASKS = {"copy", "reverse", "sort", "addition"}
+SUPPORTED_TASKS = {"copy", "identity", "reverse", "sort", "addition", "set", "union", "delete"}
 
 
 class ProceduralMechanism(TokenSequenceMechanism):
@@ -58,15 +58,28 @@ class ProceduralMechanism(TokenSequenceMechanism):
         return {f"{split}_task_counts": dict(task_counts)}
 
     def _sample_task_text(self, rng: np.random.Generator, task: str) -> str:
-        if task == "copy":
+        if task == "copy" or task == "identity":
             symbol = self._sample_symbol_string(rng)
-            return f"copy:{symbol}=>{symbol}"
+            label = "identity" if task == "identity" else "copy"
+            return f"{label}:{symbol}=>{symbol}"
         if task == "reverse":
             symbol = self._sample_symbol_string(rng)
             return f"reverse:{symbol}=>{symbol[::-1]}"
         if task == "sort":
             symbol = self._sample_symbol_string(rng)
             return f"sort:{symbol}=>{''.join(sorted(symbol))}"
+        if task == "set":
+            symbol = self._sample_symbol_string(rng)
+            return f"set:{symbol}=>{_stable_unique_string(symbol)}"
+        if task == "union":
+            left = self._sample_symbol_string(rng)
+            right = self._sample_symbol_string(rng)
+            return f"union:{left}|{right}=>{_stable_unique_string(left + right)}"
+        if task == "delete":
+            source = self._sample_symbol_string(rng)
+            query = self._sample_symbol_string(rng)
+            filtered = "".join(char for char in source if char not in set(query))
+            return f"delete:{source}|{query}=>{filtered}"
         if task == "addition":
             left = int(rng.integers(0, self.config.max_number + 1))
             right = int(rng.integers(0, self.config.max_number + 1))
@@ -93,4 +106,9 @@ register_mechanism(
     "procedural",
     lambda config: ProceduralMechanism(ProceduralConfig(**config)),
     description=ProceduralMechanism.description,
+    presets=PROCEDURAL_PRESETS,
 )
+
+
+def _stable_unique_string(text: str) -> str:
+    return "".join(dict.fromkeys(text))

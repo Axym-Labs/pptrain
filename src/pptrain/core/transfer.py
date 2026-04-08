@@ -63,7 +63,7 @@ class ReinitializeEmbeddingTransferPolicy:
     def apply_state_dict(
         self,
         source_state_dict: dict[str, torch.Tensor],
-        target_model: PreTrainedModel,
+        target_model: torch.nn.Module,
     ) -> TransferReport:
         target_state = target_model.state_dict()
         skip_names = self._embedding_parameter_names(target_model)
@@ -95,7 +95,9 @@ class ReinitializeEmbeddingTransferPolicy:
         raise FileNotFoundError(f"No model weights found in {model_dir}")
 
     @staticmethod
-    def _embedding_parameter_names(model: PreTrainedModel) -> set[str]:
+    def _embedding_parameter_names(model: torch.nn.Module) -> set[str]:
+        if not hasattr(model, "get_input_embeddings") or not hasattr(model, "get_output_embeddings"):
+            return set()
         skip_ids: set[int] = set()
         input_embeddings = model.get_input_embeddings()
         if input_embeddings is not None:
@@ -110,3 +112,40 @@ class ReinitializeEmbeddingTransferPolicy:
                 names.add(name)
         return names
 
+
+class SkipParametersTransferPolicy:
+    def __init__(
+        self,
+        *,
+        skip_parameter_names: tuple[str, ...] = (),
+        skip_parameter_prefixes: tuple[str, ...] = (),
+    ) -> None:
+        self.skip_parameter_names = tuple(skip_parameter_names)
+        self.skip_parameter_prefixes = tuple(skip_parameter_prefixes)
+
+    def apply_state_dict(
+        self,
+        source_state_dict: dict[str, torch.Tensor],
+        target_model: torch.nn.Module,
+    ) -> TransferReport:
+        target_state = target_model.state_dict()
+        compatible: dict[str, torch.Tensor] = {}
+        skipped: list[str] = []
+        for name, tensor in source_state_dict.items():
+            if name in self.skip_parameter_names or name.startswith(self.skip_parameter_prefixes):
+                skipped.append(name)
+                continue
+            if name not in target_state or target_state[name].shape != tensor.shape:
+                skipped.append(name)
+                continue
+            compatible[name] = tensor
+        load_result = target_model.load_state_dict(compatible, strict=False)
+        return TransferReport(
+            loaded_parameter_count=len(compatible),
+            skipped_parameters=sorted(skipped),
+            missing_parameters=sorted(load_result.missing_keys),
+        )
+
+    def apply_bundle(self, bundle: TransferBundle, target_model: torch.nn.Module) -> TransferReport:
+        state_dict = ReinitializeEmbeddingTransferPolicy._load_state_dict(bundle.model_dir)
+        return self.apply_state_dict(state_dict, target_model)

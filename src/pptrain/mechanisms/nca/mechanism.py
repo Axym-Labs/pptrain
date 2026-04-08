@@ -8,7 +8,7 @@ from pptrain.core.base import DatasetBundle, Mechanism, TokenizerSpec
 from pptrain.core.collator import CausalLMCollator
 from pptrain.core.datasets import ListSequenceDataset
 from pptrain.core.registry import register_mechanism
-from pptrain.mechanisms.nca.config import NCAConfig
+from pptrain.mechanisms.nca.config import NCAConfig, NCA_PRESETS
 from pptrain.mechanisms.nca.generator import (
     create_training_example,
     generate_rule_pool,
@@ -155,4 +155,5 @@ register_mechanism(
     "nca",
     lambda config: NCAMechanism(NCAConfig(**config)),
     description=NCAMechanism.description,
+    presets=NCA_PRESETS,
 )

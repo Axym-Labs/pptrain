@@ -1,18 +1,17 @@
-# Adding Mechanisms
+# Extending `pptrain`
 
-Most mechanisms fit one of two patterns:
+Most additions should stay local to one mechanism family.
 
-- subclass `TokenSequenceMechanism` when you can sample one token sequence and shift it into `input_ids` / `labels`
-- subclass `Mechanism` directly when you need custom masking, packing, or labels
+Use `TokenSequenceMechanism` when one sampled token sequence can be shifted into `input_ids` and `labels`. Use `Mechanism` directly only when the family needs custom masking, packing, or labels.
 
-Minimal example:
+Minimal registry pattern:
 
 ```python
 from dataclasses import dataclass
 
 import numpy as np
 
-from pptrain.core import TokenSequenceMechanism, TokenizerSpec, register_mechanism
+from pptrain.core import MechanismPreset, TokenSequenceMechanism, TokenizerSpec, register_mechanism
 
 
 @dataclass(slots=True)
@@ -21,6 +20,21 @@ class RepeatConfig:
     eval_sequence_count: int = 64
     max_length: int = 64
     alphabet_size: int = 8
+
+
+REPEAT_PRESETS = (
+    MechanismPreset(
+        name="paper_small",
+        description="Paper-backed starting point.",
+        reference="Author et al. 20XX",
+        config={
+            "sequence_count": 100_000,
+            "eval_sequence_count": 10_000,
+            "max_length": 64,
+            "alphabet_size": 8,
+        },
+    ),
+)
 
 
 class RepeatMechanism(TokenSequenceMechanism):
@@ -42,20 +56,20 @@ class RepeatMechanism(TokenSequenceMechanism):
     ) -> tuple[list[int], dict[str, int]]:
         symbol = int(rng.integers(0, self.config.alphabet_size))
         repeat_count = int(rng.integers(2, 6))
-        tokens = [spec.bos_token_id, *([symbol] * repeat_count), spec.eos_token_id]
-        return tokens, {"repeat_count": repeat_count}
+        return [spec.bos_token_id, *([symbol] * repeat_count), spec.eos_token_id], {"repeat_count": repeat_count}
 
 
 register_mechanism(
     "repeat",
     lambda config: RepeatMechanism(RepeatConfig(**config)),
     description=RepeatMechanism.description,
+    presets=REPEAT_PRESETS,
 )
 ```
 
 Guidelines:
 
-- keep mechanism logic inside its own module
-- keep configs explicit and bounded
-- add options only when there is a plausible use case
-- avoid changing the trainer when a new mechanism can stay local
+- Add paper-backed presets first. Users should rarely need to start from raw knobs.
+- Keep configs bounded. Add options only when there is a real paper or usage case behind them.
+- Prefer widening an existing family over adding a new top-level mechanism when the sampling pattern is already the same.
+- Avoid trainer changes unless the new family truly needs a different data or loss path.

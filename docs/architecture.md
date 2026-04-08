@@ -1,9 +1,9 @@
 # Notes
 
-`pptrain` stays useful by keeping the upstream training path small:
+Keep the default path simple:
 
-1. build synthetic upstream data
-2. train a causal LM on it
+1. choose a mechanism family or preset
+2. train an upstream causal LM
 3. export a transfer bundle
 
-Everything else should stay secondary to that path.
+Presets, adapters, and small eval hooks exist to reduce glue code around that path, not to replace it.

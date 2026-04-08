@@ -9,4 +9,5 @@ dist/
 *.pyc
 runs/
 artifacts/
-
+docs/internal/*
+!docs/internal/TODO.md

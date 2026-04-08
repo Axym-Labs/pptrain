@@ -1,10 +1,7 @@
 mechanism:
   name: summarization
   config:
-    tasks:
-      - sentence_reordering
-      - next_sentence
-      - masked_document
+    preset: smoke
     vocab_size: 96
     min_sentences: 4
     max_sentences: 6
@@ -14,8 +11,6 @@ mechanism:
     next_sentence_target_sentences: 1
     masked_span_min_words: 3
     masked_span_max_words: 6
-    sequence_count: 256
-    eval_sequence_count: 64
     max_length: 160
 
 model:

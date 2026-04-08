@@ -11,6 +11,7 @@ from pptrain.core.config import RunConfig
 from pptrain.core.registry import registered_mechanisms
 from pptrain.core.runner import PrePreTrainer
 from pptrain.core.registry import create_mechanism
+from pptrain.eval.runner import run_transfer_evaluation
 from pptrain.integrations import HFCausalLMAdapter, HFModelConfig
 
 
@@ -34,12 +35,18 @@ def _build_trainer(config: dict[str, Any]) -> PrePreTrainer:
     )
 
 
-def _fit_summary(trainer: PrePreTrainer, run) -> dict[str, Any]:
+def _fit_summary(
+    trainer: PrePreTrainer,
+    run,
+    *,
+    eval_path: Path | None = None,
+) -> dict[str, Any]:
     return {
         "mechanism": trainer.mechanism.name,
         "run_dir": str(run.run_dir),
         "model_dir": str(run.model_dir),
         "plot_path": str(run.plot_path) if run.plot_path is not None else None,
+        "eval_path": str(eval_path) if eval_path is not None else None,
         "metrics": run.metrics,
     }
 
@@ -53,6 +60,8 @@ def _print_fit_summary(summary: dict[str, Any], *, json_output: bool) -> None:
     print(f"model_dir: {summary['model_dir']}")
     if summary["plot_path"] is not None:
         print(f"plot_path: {summary['plot_path']}")
+    if summary["eval_path"] is not None:
+        print(f"eval_path: {summary['eval_path']}")
     metrics = summary["metrics"]
     if metrics:
         print("metrics:")
@@ -62,7 +71,18 @@ def _print_fit_summary(summary: dict[str, Any], *, json_output: bool) -> None:
 
 def _print_mechanisms(*, json_output: bool) -> None:
     mechanisms = [
-        {"name": item.name, "description": item.description}
+        {
+            "name": item.name,
+            "description": item.description,
+            "presets": [
+                {
+                    "name": preset.name,
+                    "description": preset.description,
+                    "reference": preset.reference,
+                }
+                for preset in item.presets
+            ],
+        }
         for item in registered_mechanisms()
     ]
     if json_output:
@@ -71,6 +91,22 @@ def _print_mechanisms(*, json_output: bool) -> None:
     width = max((len(item["name"]) for item in mechanisms), default=0)
     for item in mechanisms:
         print(f"{item['name']:<{width}}  {item['description']}")
+        presets = item["presets"]
+        if presets:
+            preset_names = ", ".join(preset["name"] for preset in presets)
+            print(f"{'':<{width}}  presets: {preset_names}")
+
+
+def _maybe_run_eval(args: argparse.Namespace, trainer: PrePreTrainer, run) -> Path | None:
+    if args.eval_config is None:
+        return None
+    eval_config = _load_yaml(args.eval_config)
+    return run_transfer_evaluation(
+        bundle=run.load_transfer_bundle(),
+        model_adapter=trainer.model_adapter,
+        eval_config=eval_config,
+        output_dir=run.run_dir / "eval",
+    )
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -79,6 +115,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     fit_parser = subparsers.add_parser("fit", help="Run pre-pre-training from a YAML config.")
     fit_parser.add_argument("config", type=Path)
+    fit_parser.add_argument(
+        "--eval-config",
+        type=Path,
+        help="Optional YAML config for a lightweight post-transfer evaluation pass.",
+    )
     fit_parser.add_argument("--json", action="store_true", help="Print run summary as JSON.")
 
     mechanisms_parser = subparsers.add_parser(
@@ -95,7 +136,8 @@ def main(argv: list[str] | None = None) -> None:
     if args.command == "fit":
         trainer = _build_trainer(_load_yaml(args.config))
         run = trainer.fit()
-        _print_fit_summary(_fit_summary(trainer, run), json_output=args.json)
+        eval_path = _maybe_run_eval(args, trainer, run)
+        _print_fit_summary(_fit_summary(trainer, run, eval_path=eval_path), json_output=args.json)
     elif args.command == "mechanisms":
         _print_mechanisms(json_output=args.json)
 

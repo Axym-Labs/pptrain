@@ -11,7 +11,7 @@ from pptrain.core.base import Mechanism
 from pptrain.core.config import RunConfig
 from pptrain.core.plotting import save_training_summary_plot
 from pptrain.core.transfer import TransferBundle
-from pptrain.integrations.hf import HFCausalLMAdapter
+from pptrain.integrations.base import CausalLMAdapter
 
 
 @dataclass(slots=True)
@@ -29,7 +29,7 @@ class PrePreTrainer:
     def __init__(
         self,
         mechanism: Mechanism,
-        model_adapter: HFCausalLMAdapter,
+        model_adapter: CausalLMAdapter,
         run_config: RunConfig,
     ) -> None:
         self.mechanism = mechanism

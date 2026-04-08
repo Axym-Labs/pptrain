@@ -4,7 +4,7 @@ import numpy as np
 
 from pptrain.core.base import TokenSequenceMechanism, TokenizerSpec
 from pptrain.core.registry import register_mechanism
-from pptrain.mechanisms.dyck.config import DyckConfig
+from pptrain.mechanisms.dyck.config import DYCK_PRESETS, DyckConfig
 
 
 class DyckMechanism(TokenSequenceMechanism):
@@ -77,4 +77,5 @@ register_mechanism(
     "dyck",
     lambda config: DyckMechanism(DyckConfig(**config)),
     description=DyckMechanism.description,
+    presets=DYCK_PRESETS,
 )

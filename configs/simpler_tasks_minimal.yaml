@@ -1,6 +1,7 @@
 mechanism:
   name: simpler_tasks
   config:
+    preset: smoke
     tasks:
       - copy
       - reverse
@@ -10,12 +11,8 @@ mechanism:
       - search
       - union
       - intersect
-    min_symbols: 4
-    max_symbols: 16
     min_query_symbols: 1
     max_query_symbols: 3
-    sequence_count: 256
-    eval_sequence_count: 64
     max_length: 96
 
 model:

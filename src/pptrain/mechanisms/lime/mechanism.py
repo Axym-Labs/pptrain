@@ -14,7 +14,7 @@ from pptrain.mechanisms._shared import (
     require_supported,
     require_unique_characters,
 )
-from pptrain.mechanisms.lime.config import LIMEConfig
+from pptrain.mechanisms.lime.config import LIME_PRESETS, LIMEConfig
 from pptrain.mechanisms.lime.generator import LIMEExample, sample_lime_example
 
 
@@ -192,4 +192,5 @@ register_mechanism(
     "lime",
     lambda config: LIMEMechanism(LIMEConfig(**config)),
     description=LIMEMechanism.description,
+    presets=LIME_PRESETS,
 )

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from transformers import AutoConfig, AutoModelForCausalLM
+from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer
 
 from pptrain.core.base import TokenizerSpec
 
@@ -47,3 +47,11 @@ class HFCausalLMAdapter:
             trust_remote_code=self.config.trust_remote_code,
         )
 
+    def load_downstream_tokenizer(self):
+        tokenizer = AutoTokenizer.from_pretrained(
+            self.config.model_name_or_path,
+            trust_remote_code=self.config.trust_remote_code,
+        )
+        if tokenizer.pad_token_id is None and tokenizer.eos_token_id is not None:
+            tokenizer.pad_token = tokenizer.eos_token
+        return tokenizer

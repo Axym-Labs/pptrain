@@ -1,0 +1,8 @@
+compare_baseline: true
+tasks:
+  - type: perplexity
+    dataset_name: wikitext
+    dataset_config_name: wikitext-2-raw-v1
+    split: validation[:32]
+    text_field: text
+    max_length: 128

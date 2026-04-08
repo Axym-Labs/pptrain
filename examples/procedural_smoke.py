@@ -1,17 +1,16 @@
-from pptrain import PrePreTrainer, RunConfig
+from pptrain import PrePreTrainer, RunConfig, create_mechanism
 from pptrain.integrations import HFCausalLMAdapter, HFModelConfig
-from pptrain.mechanisms.procedural import ProceduralConfig, ProceduralMechanism
 
 
 def main() -> None:
     trainer = PrePreTrainer(
-        mechanism=ProceduralMechanism(
-            ProceduralConfig(
-                tasks=("copy", "reverse", "sort", "addition"),
-                sequence_count=256,
-                eval_sequence_count=64,
-                max_length=96,
-            )
+        mechanism=create_mechanism(
+            "procedural",
+            {
+                "preset": "smoke",
+                "tasks": ("identity", "reverse", "sort", "set", "union", "delete", "addition"),
+                "max_length": 96,
+            },
         ),
         model_adapter=HFCausalLMAdapter(
             HFModelConfig(
@@ -36,4 +35,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

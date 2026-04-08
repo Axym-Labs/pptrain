@@ -15,15 +15,21 @@ from pptrain.mechanisms._shared import (
     require_supported,
     require_unique_characters,
 )
-from pptrain.mechanisms.simpler_tasks.config import SimplerTasksConfig
+from pptrain.mechanisms.simpler_tasks.config import SIMPLER_TASKS_PRESETS, SimplerTasksConfig
 from pptrain.mechanisms.simpler_tasks.tasks import (
-    BINARY_QUERY_TASKS,
     BINARY_SET_TASKS,
+    ORDER_QUERY_TASKS,
+    REPLACEMENT_TASKS,
+    SINGLE_SYMBOL_QUERY_TASKS,
+    SUBSEQUENCE_QUERY_TASKS,
     SUPPORTED_SIMPLER_TASKS,
     UNARY_TASKS,
     apply_binary_task,
     apply_unary_task,
+    sample_count_query,
+    sample_replacement_query,
     sample_search_query,
+    sample_sort_order,
     sample_symbols,
 )
 
@@ -97,7 +103,27 @@ class SimplerTasksMechanism(TokenSequenceMechanism):
             ]
             return tokens, len(target), len(sequence)
 
-        if task in BINARY_QUERY_TASKS:
+        if task in SINGLE_SYMBOL_QUERY_TASKS:
+            sequence = self._sample_sequence(rng)
+            query = sample_count_query(
+                rng,
+                sequence,
+                self.config.alphabet,
+            )
+            target = apply_binary_task(task, sequence, query)
+            tokens = [
+                spec.bos_token_id or 0,
+                self._vocabulary.token(self._task_token_name(task)),
+                *self._encode_symbols(sequence),
+                self._vocabulary.token("input_sep"),
+                *self._encode_symbols(query),
+                self._vocabulary.token("output_sep"),
+                *self._encode_payload(target),
+                spec.eos_token_id or 1,
+            ]
+            return tokens, len(target), len(sequence) + len(query)
+
+        if task in SUBSEQUENCE_QUERY_TASKS:
             sequence = self._sample_sequence(rng)
             query = sample_search_query(
                 rng,
@@ -106,6 +132,43 @@ class SimplerTasksMechanism(TokenSequenceMechanism):
                 min_query_symbols=self.config.min_query_symbols,
                 max_query_symbols=self.config.max_query_symbols,
                 positive_probability=self.config.positive_search_probability,
+            )
+            target = apply_binary_task(task, sequence, query)
+            tokens = [
+                spec.bos_token_id or 0,
+                self._vocabulary.token(self._task_token_name(task)),
+                *self._encode_symbols(sequence),
+                self._vocabulary.token("input_sep"),
+                *self._encode_symbols(query),
+                self._vocabulary.token("output_sep"),
+                *self._encode_payload(target),
+                spec.eos_token_id or 1,
+            ]
+            return tokens, len(target), len(sequence) + len(query)
+
+        if task in ORDER_QUERY_TASKS:
+            sequence = self._sample_sequence(rng)
+            query = sample_sort_order(rng, sequence)
+            target = apply_binary_task(task, sequence, query)
+            tokens = [
+                spec.bos_token_id or 0,
+                self._vocabulary.token(self._task_token_name(task)),
+                *self._encode_symbols(sequence),
+                self._vocabulary.token("input_sep"),
+                *self._encode_symbols(query),
+                self._vocabulary.token("output_sep"),
+                *self._encode_payload(target),
+                spec.eos_token_id or 1,
+            ]
+            return tokens, len(target), len(sequence) + len(query)
+
+        if task in REPLACEMENT_TASKS:
+            sequence = self._sample_sequence(rng)
+            query = sample_replacement_query(
+                rng,
+                sequence,
+                self.config.alphabet,
+                many=task == "replace_many",
             )
             target = apply_binary_task(task, sequence, query)
             tokens = [
@@ -157,7 +220,7 @@ class SimplerTasksMechanism(TokenSequenceMechanism):
     def _build_vocabulary(self) -> TokenVocabulary:
         builder = TokenVocabularyBuilder()
         builder.add_group("symbol", list(self.config.alphabet))
-        builder.add_group("digit", list("0123456789"))
+        builder.add_group("digit", list("-0123456789"))
         builder.add_tokens(*self._task_token_names(), "yes", "no", "input_sep", "output_sep", "bos", "eos", "pad")
         return builder.build()
 
@@ -173,4 +236,5 @@ register_mechanism(
     "simpler_tasks",
     lambda config: SimplerTasksMechanism(SimplerTasksConfig(**config)),
     description=SimplerTasksMechanism.description,
+    presets=SIMPLER_TASKS_PRESETS,
 )

@@ -13,7 +13,7 @@ from pptrain.mechanisms._shared import (
     require_positive_range,
     require_supported,
 )
-from pptrain.mechanisms.summarization.config import SummarizationConfig
+from pptrain.mechanisms.summarization.config import SUMMARIZATION_PRESETS, SummarizationConfig
 from pptrain.mechanisms.summarization.generator import (
     DocumentExample,
     masked_document_example,
@@ -165,4 +165,5 @@ register_mechanism(
     "summarization",
     lambda config: SummarizationMechanism(SummarizationConfig(**config)),
     description=SummarizationMechanism.description,
+    presets=SUMMARIZATION_PRESETS,
 )

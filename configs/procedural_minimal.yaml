@@ -1,16 +1,16 @@
 mechanism:
   name: procedural
   config:
+    preset: smoke
     tasks:
-      - copy
+      - identity
       - reverse
       - sort
+      - set
+      - union
+      - delete
       - addition
-    min_symbol_length: 4
-    max_symbol_length: 16
     max_number: 999
-    sequence_count: 256
-    eval_sequence_count: 64
     max_length: 96
 
 model:

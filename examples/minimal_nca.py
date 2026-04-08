@@ -1,18 +1,15 @@
-from pptrain import PrePreTrainer, RunConfig
+from pptrain import PrePreTrainer, RunConfig, create_mechanism
 from pptrain.integrations import HFCausalLMAdapter, HFModelConfig
-from pptrain.mechanisms import NCAConfig, NCAMechanism
 
 
 def main() -> None:
     trainer = PrePreTrainer(
-        mechanism=NCAMechanism(
-            NCAConfig(
-                grid_size=8,
-                sequence_count=64,
-                eval_sequence_count=16,
-                hidden_dim=16,
-                init_rollout_steps=4,
-            )
+        mechanism=create_mechanism(
+            "nca",
+            {
+                "preset": "smoke",
+                "init_rollout_steps": 4,
+            },
         ),
         model_adapter=HFCausalLMAdapter(
             HFModelConfig(

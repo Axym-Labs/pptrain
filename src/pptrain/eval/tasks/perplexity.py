@@ -22,6 +22,7 @@ def _require_datasets() -> Any:
 @dataclass(slots=True)
 class PerplexityTask(EvalTask):
     dataset_name: str
+    dataset_config_name: str | None = None
     split: str = "validation[:128]"
     text_field: str = "text"
     max_length: int = 256
@@ -35,7 +36,10 @@ class PerplexityTask(EvalTask):
         **_: Any,
     ) -> EvalResult:
         load_dataset = _require_datasets()
-        dataset = load_dataset(self.dataset_name, split=self.split)
+        if self.dataset_config_name is None:
+            dataset = load_dataset(self.dataset_name, split=self.split)
+        else:
+            dataset = load_dataset(self.dataset_name, self.dataset_config_name, split=self.split)
         losses = []
         device = resolve_device(model)
         model.eval()
@@ -61,4 +65,3 @@ class PerplexityTask(EvalTask):
             },
             artifacts={"num_examples": len(losses)},
         )
-

@@ -1,11 +1,11 @@
 # `pptrain`
 
-`pptrain` is a PyTorch library for pre-pre-training language models on synthetic upstream mechanisms before ordinary language pretraining.
+`pptrain` is a small PyTorch library for pre-pre-training language models on synthetic upstream mechanisms before ordinary language pretraining.
 
-It is built for a narrow use case:
+It is built around one path:
 
-- generate synthetic upstream data
-- train an upstream causal LM with Hugging Face
+- pick a mechanism family or preset
+- train an upstream causal LM
 - export a transfer bundle for downstream pretraining
 
 ## Install
@@ -25,9 +25,10 @@ from pptrain.integrations import HFCausalLMAdapter, HFModelConfig
 mechanism = create_mechanism(
     "simpler_tasks",
     {
-        "sequence_count": 64,
-        "eval_sequence_count": 16,
-        "max_length": 96,
+        "preset": "paper_binary_1m",
+        "sequence_count": 256,
+        "eval_sequence_count": 64,
+        "max_length": 128,
     },
 )
 
@@ -36,7 +37,7 @@ trainer = PrePreTrainer(
     model_adapter=HFCausalLMAdapter(
         HFModelConfig(
             model_name_or_path="sshleifer/tiny-gpt2",
-            config_overrides={"n_positions": 96},
+            config_overrides={"n_positions": 128},
         )
     ),
     run_config=RunConfig(
@@ -54,16 +55,31 @@ run = trainer.fit()
 bundle = run.load_transfer_bundle()
 ```
 
-## Built-in Mechanism Families
+Use a paper-backed preset as the starting point, then override only the few values you actually need for a local run or a variant experiment.
 
-- `nca`: neural cellular automata trajectories
-- `dyck`: balanced-bracket sequence generation
-- `procedural`: short procedural string tasks
-- `simpler_tasks`: set/copy/query tasks from the simpler synthetic-task line
-- `lime`: induction, deduction, and abduction substitution tasks
-- `summarization`: synthetic document tasks such as sentence reordering and masked reconstruction
+## Built-in Families
 
-Use `registered_mechanisms()` or `pptrain mechanisms` to inspect what is available.
+- `nca`: neural cellular automata trajectories with paper presets for web-text and code bands
+- `dyck`: Dyck-style balanced-bracket generation with a long-context `k=64` preset
+- `procedural`: short procedural tasks such as identity, reverse, sort, set, union, delete, and addition
+- `simpler_tasks`: copy/set/query/set-op tasks from the simpler synthetic-task benchmark
+- `lime`: induction, deduction, and abduction tasks with benchmark and 5M mixed presets
+- `summarization`: STEP-style sentence reordering, next-sentence, and masked-document tasks
+
+Inspect them with `pptrain mechanisms` or `pptrain mechanisms --json`.
+
+## CLI
+
+```bash
+pptrain fit configs/nca_minimal.yaml
+pptrain fit configs/nca_minimal.yaml --eval-config configs/eval_perplexity_smoke.yaml
+```
+
+The eval hook is intentionally lightweight. It is mainly there to sanity-check transfer and compare a transferred checkpoint against the downstream baseline with a small task list.
+
+## Custom Models
+
+For non-Hugging-Face architectures, use `CallableCausalLMAdapter` and keep the same trainer and transfer flow. A minimal example lives in [examples/custom_adapter.py](examples/custom_adapter.py).
 
 ## Transfer
 
@@ -75,14 +91,10 @@ report = ReinitializeEmbeddingTransferPolicy().apply_bundle(bundle, target_model
 print(report.loaded_parameter_count)
 ```
 
-## Optional Utilities
+For custom modules where embedding names do not follow the HF interface, `SkipParametersTransferPolicy` lets you skip explicit parameter prefixes instead.
 
-- CLI: `pptrain fit configs/nca_minimal.yaml`
-- Evaluation helpers: `pptrain.eval`
-- Example configs: [configs](configs)
+## Examples
 
-These are convenience layers. The main interface is the Python API.
-
-## Adding Mechanisms
-
-Most new mechanisms should only need a config dataclass, a mechanism class, and a registry entry. Contributor notes live in [docs/extending.md](docs/extending.md).
+- Preset-first smoke configs live in [configs](configs)
+- Minimal Python examples live in [examples](examples)
+- Notes for adding or widening a mechanism family live in [docs/extending.md](docs/extending.md)

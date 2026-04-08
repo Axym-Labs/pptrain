@@ -1,13 +1,11 @@
 mechanism:
   name: dyck
   config:
+    preset: smoke
     num_bracket_types: 4
     min_pairs: 8
     max_pairs: 32
     max_depth: 8
-    close_probability: 0.45
-    sequence_count: 128
-    eval_sequence_count: 32
     max_length: 96
 
 model:

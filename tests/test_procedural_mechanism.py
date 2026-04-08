@@ -4,7 +4,7 @@ from pptrain.mechanisms import ProceduralConfig, ProceduralMechanism
 def test_procedural_mechanism_builds_sequences() -> None:
     mechanism = ProceduralMechanism(
         ProceduralConfig(
-            tasks=("copy", "reverse", "sort", "addition"),
+            tasks=("identity", "reverse", "sort", "set", "union", "delete", "addition"),
             sequence_count=8,
             eval_sequence_count=3,
             max_length=64,
@@ -18,4 +18,3 @@ def test_procedural_mechanism_builds_sequences() -> None:
     sample = bundle.train_dataset[0]
     assert sample["input_ids"].shape[0] <= 64
     assert sample["labels"].shape[0] <= 64
-
