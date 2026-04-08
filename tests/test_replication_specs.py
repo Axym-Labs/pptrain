@@ -1,3 +1,4 @@
+from pptrain.replication.runner import _perplexity_from_metrics
 from pptrain.replication.specs import build_replication_profile
 
 
@@ -21,3 +22,7 @@ def test_full_replication_profile_defaults_to_2048_context(tmp_path) -> None:
     assert profile.datasets["general_text"].dataset_name == "HuggingFaceFW/fineweb-edu"
     assert profile.datasets["math_text"].dataset_name == "HuggingFaceTB/finemath"
     assert profile.datasets["summary_text"].dataset_name == "vblagoje/cc_news"
+
+
+def test_perplexity_from_metrics_saturates_on_large_eval_loss() -> None:
+    assert _perplexity_from_metrics({"eval_loss": 1_000.0}) == float("inf")

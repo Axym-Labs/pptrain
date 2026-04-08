@@ -784,7 +784,11 @@ def _probe_metric(variant: dict[str, Any] | None, probe_name: str, metric_name: 
 def _perplexity_from_metrics(metrics: dict[str, Any]) -> float | None:
     if "eval_loss" not in metrics:
         return None
-    return math.exp(float(metrics["eval_loss"]))
+    eval_loss = float(metrics["eval_loss"])
+    try:
+        return math.exp(eval_loss)
+    except OverflowError:
+        return float("inf")
 
 
 def _first_step_at_or_below(log_history: list[dict[str, Any]], target_loss: float) -> int | None:
