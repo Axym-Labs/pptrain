@@ -1,6 +1,6 @@
 # `pptrain`
 
-`pptrain` is a small PyTorch library for pre-pre-training language models on synthetic tasks before standard language pretraining.
+`pptrain` is a the PyTorch- and HuggingFace-native library for pre-pre-training language models on synthetic tasks before standard language pretraining.
 
 Use a paper-backed preset as the starting point, then override only the few values you actually need for a local run or experiment. Alternatively, define custom task families by extending a flexible task abstraction and plugging in your own model adapter. Assess downstream transfer and benefit with a built-in analytics suite that compares against baselines and produces plots plus reports.
 
@@ -36,7 +36,7 @@ trainer = PrePreTrainer(
 bundle = trainer.fit().load_transfer_bundle()
 ```
 
-A full runnable version of this example lives in [docs/quickstart.md](docs/quickstart.md).
+For a full runnable version of this example, go to [docs/quickstart.md](docs/quickstart.md).
 
 ## Examples
 
@@ -47,14 +47,14 @@ A full runnable version of this example lives in [docs/quickstart.md](docs/quick
 
 ## Analytics
 
-Assess downstream transfer, compute-matched baseline comparisons, reasoning and algorithmic probes, and multi-seed replications with a built-in analytics suite that produces plots plus markdown/CSV reports.
+Assess downstream transfer, compute-matched baseline comparisons, reasoning and algorithmic probes with a built-in analytics suite that produces plots plus markdown/CSV reports.
 
 ```bash
 pptrain fit configs/nca_minimal.yaml --eval-config configs/eval_perplexity_smoke.yaml
 pptrain replicate --test
 ```
 
-The same tooling can also run larger paper replications with baseline corpora, seeded aggregation, plots, and markdown/CSV reports.
+The same tooling can also run larger paper replications with baseline corpora and seeded aggregation.
 
 ## Custom Task Families
 
