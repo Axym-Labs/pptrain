@@ -100,6 +100,7 @@ class PrePreTrainer:
         model_dir = run_dir / "prepretrained_model"
         trainer.save_model(str(model_dir))
         trainer.save_state()
+        self._remove_trainer_checkpoints(run_dir)
         plot_path = save_training_summary_plot(
             log_history=trainer.state.log_history,
             metrics=metrics,
@@ -143,3 +144,13 @@ class PrePreTrainer:
             "metrics": metrics,
         }
         (run_dir / "run_metadata.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    def _remove_trainer_checkpoints(self, run_dir: Path) -> None:
+        for checkpoint_dir in run_dir.glob("checkpoint-*"):
+            if checkpoint_dir.is_dir():
+                for path in sorted(checkpoint_dir.rglob("*"), reverse=True):
+                    if path.is_file() or path.is_symlink():
+                        path.unlink()
+                    elif path.is_dir():
+                        path.rmdir()
+                checkpoint_dir.rmdir()

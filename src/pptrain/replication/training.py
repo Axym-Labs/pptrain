@@ -84,6 +84,7 @@ def train_downstream_stage(
     model_dir = output_dir / "model"
     trainer.save_model(str(model_dir))
     trainer.save_state()
+    _remove_trainer_checkpoints(output_dir)
     plot_path = save_training_summary_plot(
         log_history=trainer.state.log_history,
         metrics=metrics,
@@ -123,3 +124,14 @@ def _apply_context_length(config: Any, context_length: int) -> None:
     for attribute in ("max_position_embeddings", "n_positions", "n_ctx"):
         if hasattr(config, attribute):
             setattr(config, attribute, context_length)
+
+
+def _remove_trainer_checkpoints(output_dir: Path) -> None:
+    for checkpoint_dir in output_dir.glob("checkpoint-*"):
+        if checkpoint_dir.is_dir():
+            for path in sorted(checkpoint_dir.rglob("*"), reverse=True):
+                if path.is_file() or path.is_symlink():
+                    path.unlink()
+                elif path.is_dir():
+                    path.rmdir()
+            checkpoint_dir.rmdir()
