@@ -75,7 +75,8 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
         payload,
         metric_key="transfer_gap_perplexity",
         output_path=output / "transfer_gap_vs_scratch.png",
-        xlabel="Perplexity delta vs scratch (positive is better)",
+        xlabel="Perplexity difference compared to pre-training from scratch (positive is better)",
+        title="Perplexity difference compared to pre-training from scratch",
     )
     convergence_plot_path = _save_errorbar_plot(
         payload,
@@ -89,22 +90,24 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
         payload,
         diagnostic_key="logit_divergence_to_baseline",
         output_path=output / "logit_divergence_to_baseline.png",
-        ylabel="Reference KL divergence to compute-matched baseline (x1e4 nats, lower is better)",
+        top_label="Reference KL divergence to compute-matched baseline (x1e4 nats, lower is better)",
         scale=1.0e4,
+        annotate_values=False,
     )
     activation_cka_plot_path = _save_variant_diagnostic_plot(
         payload,
         diagnostic_key="activation_cka_to_baseline",
         output_path=output / "activation_cka_to_baseline.png",
-        ylabel="Mid-layer linear CKA to compute-matched baseline (higher is better)",
+        top_label="Mid-layer linear CKA to compute-matched baseline (higher is better)",
         value_format="{value:.3f}",
         zero_floor=True,
+        annotate_values=False,
     )
     activation_rank_plot_path = _save_variant_diagnostic_plot(
         payload,
         diagnostic_key="activation_effective_rank",
         output_path=output / "activation_effective_rank.png",
-        ylabel="Mid-layer effective rank (higher is better)",
+        top_label="Mid-layer effective rank (higher is better)",
         value_format="{value:.1f}",
         zero_floor=True,
     )
@@ -236,7 +239,7 @@ def _build_report_markdown(
         "",
         "This plot shows the mean perplexity-point gap between each transferred run and its compute-matched baseline, with standard deviation across seeds. Positive values mean the synthetic pre-pre-training path outperformed the matched natural-text baseline.",
         "",
-        "### Transfer Gap Vs Scratch",
+        "### Perplexity Difference Compared To Pre-Training From Scratch",
         "",
         f"![Transfer gap versus scratch]({scratch_plot_path.name})",
         "",
@@ -359,6 +362,7 @@ def _save_errorbar_plot(
     metric_key: str,
     output_path: Path,
     xlabel: str,
+    title: str | None = None,
 ) -> Path:
     items = []
     for mechanism_name, result in payload["mechanisms"].items():
@@ -375,11 +379,13 @@ def _save_errorbar_plot(
         positions = np.arange(len(items))
         axis.barh(positions, values, xerr=errors, color="#8fb3cf", ecolor="#577c98", capsize=3)
         axis.scatter(values, positions, color="#4d7798", s=20, zorder=3)
-        _annotate_horizontal_values(axis, values, positions)
+        _annotate_horizontal_values(axis, values, positions, errors=errors)
         axis.axvline(0.0, color="#444444", linewidth=0.8)
         axis.set_yticks(positions)
         axis.set_yticklabels(labels)
         axis.set_xlabel(xlabel)
+        if title:
+            axis.set_title(title, fontsize=8)
         limit = max(np.max(np.abs(values) + errors), 1.0)
         axis.set_xlim(-1.15 * limit, 1.15 * limit)
     figure.tight_layout()
@@ -408,7 +414,7 @@ def _save_probe_gain_plot(payload: dict[str, Any], output_path: Path) -> Path | 
     positions = np.arange(len(items))
     axis.barh(positions, values, xerr=errors, color="#8fb3cf", ecolor="#577c98", capsize=3)
     axis.scatter(values, positions, color="#4d7798", s=20, zorder=3)
-    _annotate_horizontal_values(axis, values, positions, fmt="{value:.1f}")
+    _annotate_horizontal_values(axis, values, positions, errors=errors, fmt="{value:.1f}")
     axis.axvline(0.0, color="#444444", linewidth=0.8)
     axis.set_yticks(positions)
     axis.set_yticklabels(labels)
@@ -462,10 +468,11 @@ def _save_variant_diagnostic_plot(
     *,
     diagnostic_key: str,
     output_path: Path,
-    ylabel: str,
+    top_label: str,
     value_format: str = "{value:.2f}",
     zero_floor: bool = False,
     scale: float = 1.0,
+    annotate_values: bool = True,
 ) -> Path:
     items = [(name, result.get("diagnostics", {}).get(diagnostic_key)) for name, result in payload["mechanisms"].items()]
     items = [(name, diagnostic) for name, diagnostic in items if diagnostic]
@@ -473,10 +480,10 @@ def _save_variant_diagnostic_plot(
     figure, axes = plt.subplots(2, 3, figsize=(11, 6), sharey=False)
     flat_axes = axes.flatten()
     palette = {
-        "Scratch": "#8b96a3",
-        "Transferred": "#4d7798",
-        "Compute-matched baseline": "#6c8f6b",
-        "Comparison preset": "#b48b5e",
+        "Scratch": "#8d79a7",
+        "Transferred": "#3f8f8c",
+        "Compute-matched baseline": "#d7ad5b",
+        "Comparison preset": "#c9775f",
     }
     for axis, (mechanism_name, diagnostic) in zip(flat_axes, items):
         labels = [entry["label"] for _, entry in diagnostic.items()]
@@ -486,9 +493,10 @@ def _save_variant_diagnostic_plot(
         colors = [palette.get(label, "#8fb3cf") for label in labels]
         axis.bar(positions, values, yerr=errors, color=colors, ecolor="#577c98", capsize=3)
         axis.scatter(positions, values, color="#2f4b5f", s=16, zorder=3)
-        for position, value in zip(positions.tolist(), values.tolist()):
-            error_height = float(errors.max()) if errors.size else 0.0
-            axis.text(position, value + max(error_height, 0.02) + 0.01 * max(abs(value), 1.0), value_format.format(value=value), ha="center", va="bottom", fontsize=7)
+        if annotate_values:
+            for position, value in zip(positions.tolist(), values.tolist()):
+                error_height = float(errors.max()) if errors.size else 0.0
+                axis.text(position, value + max(error_height, 0.02) + 0.01 * max(abs(value), 1.0), value_format.format(value=value), ha="center", va="bottom", fontsize=6.5)
         axis.set_xticks(positions)
         axis.set_xticklabels(labels, rotation=20, ha="right")
         axis.set_title(MECHANISM_LABELS.get(mechanism_name, mechanism_name), fontsize=8)
@@ -498,8 +506,8 @@ def _save_variant_diagnostic_plot(
             axis.set_ylim(0.0, upper * 1.18)
     for axis in flat_axes[len(items) :]:
         axis.axis("off")
-    figure.supylabel(ylabel, x=0.01, fontsize=8)
-    figure.tight_layout(rect=(0.03, 0.0, 1.0, 1.0))
+    figure.suptitle(top_label, fontsize=8, y=0.98)
+    figure.tight_layout(rect=(0.0, 0.0, 1.0, 0.95))
     figure.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(figure)
     return output_path
@@ -708,10 +716,10 @@ def _set_plot_style() -> None:
     plt.rcParams.update(
         {
             "font.family": "serif",
-            "font.size": 8,
-            "axes.labelsize": 8,
-            "xtick.labelsize": 7,
-            "ytick.labelsize": 7,
+            "font.size": 7.5,
+            "axes.labelsize": 7.5,
+            "xtick.labelsize": 6.5,
+            "ytick.labelsize": 6.5,
         }
     )
 
@@ -721,13 +729,15 @@ def _annotate_horizontal_values(
     values: np.ndarray,
     positions: np.ndarray,
     *,
+    errors: np.ndarray | None = None,
     fmt: str = "{value:.2f}",
 ) -> None:
-    for value, position in zip(values.tolist(), positions.tolist()):
-        offset = 0.03 * max(abs(value), 1.0)
+    error_values = errors.tolist() if errors is not None else [0.0] * len(values)
+    for value, position, error in zip(values.tolist(), positions.tolist(), error_values):
+        offset = float(error) + 0.04 * max(abs(value), 1.0)
         ha = "left" if value >= 0 else "right"
         x = value + offset if value >= 0 else value - offset
-        axis.text(x, position, fmt.format(value=value), va="center", ha=ha, fontsize=7, color="#2f4b5f")
+        axis.text(x, position, fmt.format(value=value), va="center", ha=ha, fontsize=6.5, color="#2f4b5f")
 
 
 def _collect_loss_curves(seed_runs: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
