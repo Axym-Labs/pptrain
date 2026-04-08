@@ -12,55 +12,49 @@ python -m venv .venv
 pip install -e .[dev]
 ```
 
+## Built-in Task Families
+
+- `nca`: Pre-train on synthetic cellular-automata rollouts. The built-in presets follow the paper's web-text and code-oriented complexity bands [1].
+- `dyck`: Pre-train on balanced-bracket sequences that emphasize nested structure. The built-in presets scale the Dyck family across `k=8/16/32/64` and longer symbolic contexts [2].
+- `procedural`: Pre-train on short algorithmic text tasks such as reverse, sort, set, union, and delete. The built-in presets mirror the procedural-pretraining paper's task-by-length setup [3].
+- `simpler_tasks`: Pre-train on compact symbolic tasks like copy, search, set operations, and related transformations. The built-in presets cover both mixed-task and broader single-task settings from the simpler synthetic-task benchmark [4].
+- `lime`: Pre-train on induction, deduction, and abduction tasks aimed at mathematical reasoning. The built-in presets include both mixed and single-mode configurations from the LIME line of work [5].
+- `summarization`: Pre-train on synthetic document-transduction tasks that teach compression and selection. The built-in presets cover both STEP-style tasks and bounded nonsense-style `OurTasks` variants [6].
+
+Each family ships with paper-backed presets and can also serve as a template for your own additions.
+
 ## Quick Start
 
 ```python
 from pptrain import PrePreTrainer, RunConfig, create_mechanism
 from pptrain.integrations import HFCausalLMAdapter, HFModelConfig
-
-mechanism = create_mechanism(
-    "simpler_tasks",
-    {
-        "preset": "paper_binary_1m",
-        "sequence_count": 256,
-        "eval_sequence_count": 64,
-        "max_length": 128,
-    },
-)
-
 trainer = PrePreTrainer(
-    mechanism=mechanism,
-    model_adapter=HFCausalLMAdapter(
-        HFModelConfig(
-            model_name_or_path="sshleifer/tiny-gpt2",
-            config_overrides={"n_positions": 128},
-        )
-    ),
-    run_config=RunConfig(
-        output_dir="runs/smoke",
-        max_steps=20,
-        per_device_train_batch_size=8,
-        per_device_eval_batch_size=8,
-        logging_steps=5,
-        save_steps=20,
-        eval_steps=20,
-    ),
+    mechanism=create_mechanism("simpler_tasks", {"preset": "paper_binary_1m", "sequence_count": 256, "eval_sequence_count": 64, "max_length": 128}),
+    model_adapter=HFCausalLMAdapter(HFModelConfig(model_name_or_path="sshleifer/tiny-gpt2", config_overrides={"n_positions": 128})),
+    run_config=RunConfig(output_dir="runs/smoke", max_steps=20, per_device_train_batch_size=8, per_device_eval_batch_size=8, logging_steps=5, save_steps=20, eval_steps=20),
 )
-
-run = trainer.fit()
-bundle = run.load_transfer_bundle()
+bundle = trainer.fit().load_transfer_bundle()
 ```
 
-## Built-in Task Families
+A full runnable version of this example lives in [docs/quickstart.md](docs/quickstart.md).
 
-- `nca`: neural cellular automata trajectories with paper presets for web-text and code bands [1]
-- `dyck`: Dyck-style balanced-bracket generation with paper presets for `k=8/16/32/64` [2]
-- `procedural`: short procedural tasks such as identity, reverse, sort, set, union, delete, and addition, with paper length presets [3]
-- `simpler_tasks`: copy/set/query/set-op tasks from the simpler synthetic-task benchmark, including broader single-task presets [4]
-- `lime`: induction, deduction, and abduction tasks with mixed and single-mode paper presets [5]
-- `summarization`: STEP-style and nonsense-style document transduction tasks, including an `OurTasks`-style bounded subset [6]
+## Examples
 
-Inspect them with `pptrain mechanisms`, `pptrain mechanisms summarization`, or `pptrain mechanisms --json`.
+- [Preset-first test configs](configs)
+- [Minimal Python examples](examples)
+- [Full quickstart example](docs/quickstart.md)
+- [Notes on adding or extending a task family](docs/extending.md)
+
+## Analytics
+
+Assess downstream transfer, compute-matched baseline comparisons, reasoning and algorithmic probes, and multi-seed replications with a built-in analytics suite that produces plots plus markdown/CSV reports.
+
+```bash
+pptrain fit configs/nca_minimal.yaml --eval-config configs/eval_perplexity_smoke.yaml
+pptrain replicate --test
+```
+
+The same tooling can also run larger paper replications with baseline corpora, seeded aggregation, plots, and markdown/CSV reports.
 
 ## Custom Task Families
 
@@ -81,23 +75,6 @@ print(report.loaded_parameter_count)
 ```
 
 For custom modules where embedding names do not follow the HF interface, `SkipParametersTransferPolicy` lets you skip explicit parameter prefixes instead.
-
-## Analytics
-
-Assess downstream transfer, compute-matched baseline comparisons, reasoning and algorithmic probes, and multi-seed replications with a built-in analytics suite that produces plots plus markdown/CSV reports.
-
-```bash
-pptrain fit configs/nca_minimal.yaml --eval-config configs/eval_perplexity_smoke.yaml
-pptrain replicate --test
-```
-
-The same tooling can also run larger paper-proxy replications with streamed baseline corpora, seeded aggregation, plots, and markdown/CSV reports.
-
-## Examples
-
-- [Preset-first test configs](configs)
-- [Minimal Python examples](examples)
-- [Notes on adding or extending a task family](docs/extending.md)
 
 ## Citations
 
