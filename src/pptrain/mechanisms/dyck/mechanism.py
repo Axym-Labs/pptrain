@@ -33,7 +33,7 @@ class DyckMechanism(TokenSequenceMechanism):
             eos_token_id=vocab_offset + 1,
         )
 
-    def sample_tokens(
+    def sample_example(
         self,
         rng: np.random.Generator,
         spec: TokenizerSpec,

@@ -1,34 +1,12 @@
 # `pptrain`
 
-`pptrain` is a lean PyTorch library for pre-pre-training language models on synthetic upstream mechanisms.
+`pptrain` is a PyTorch library for pre-pre-training language models on synthetic upstream mechanisms before ordinary language pretraining.
 
-`v0.1` is intentionally narrow:
+It is built for a narrow use case:
 
-- six built-in mechanisms: neural cellular automata (`NCA`), Dyck-language generation (`Dyck`), a lightweight procedural task family (`Procedural`), a simpler synthetic task family (`SimplerTasks`), LIME-style substitution tasks (`LIME`), and synthetic document tasks for summarization-style warm-up (`Summarization`)
-- one built-in model adapter: Hugging Face causal language models
-- one built-in transfer policy: copy matching weights, re-initialize embeddings/output head
-- a small evaluation layer with a few practical adapters and an experimental ARC-AGI-2 utility
-- an automatic training summary plot saved with each run
-- a minimal CLI that lists mechanisms and runs config-driven fits
-
-The design target is not industrial pretraining. It is a small upstream layer you can slot in before your usual language pretraining stack.
-
-## Why this shape
-
-The public API follows a few user-level conventions that strong ML libraries share:
-
-- small constructors around explicit config objects
-- a short `fit()` path for common cases
-- adapters instead of framework-wide ownership of every training stage
-- optional evaluation instead of forcing one benchmark worldview into the core
-
-That leads to four core primitives:
-
-- `Mechanism`: generates synthetic upstream sequences
-- `TokenSequenceMechanism`: optional helper base for sequence-only mechanisms like Dyck or procedural tasks
-- `ModelAdapter`: builds or loads the model family you want to pre-pre-train
-- `TransferPolicy`: applies upstream weights to a downstream model
-- `EvalTask`: runs a lightweight validation check or benchmark adapter
+- generate synthetic upstream data
+- train an upstream causal LM with Hugging Face
+- export a transfer bundle for downstream pretraining
 
 ## Install
 
@@ -38,37 +16,34 @@ python -m venv .venv
 pip install -e .[dev]
 ```
 
-## Minimal Python usage
+## Quick Start
 
 ```python
-from pptrain import PrePreTrainer, RunConfig
+from pptrain import PrePreTrainer, RunConfig, create_mechanism
 from pptrain.integrations import HFCausalLMAdapter, HFModelConfig
-from pptrain.mechanisms import NCAMechanism, NCAConfig
 
-mechanism = NCAMechanism(
-    NCAConfig(
-        sequence_count=64,
-        eval_sequence_count=16,
-        grid_size=8,
-        init_rollout_steps=4,
-    )
-)
-
-adapter = HFCausalLMAdapter(
-    HFModelConfig(
-        model_name_or_path="sshleifer/tiny-gpt2",
-        config_overrides={"n_positions": 256},
-    )
+mechanism = create_mechanism(
+    "simpler_tasks",
+    {
+        "sequence_count": 64,
+        "eval_sequence_count": 16,
+        "max_length": 96,
+    },
 )
 
 trainer = PrePreTrainer(
     mechanism=mechanism,
-    model_adapter=adapter,
+    model_adapter=HFCausalLMAdapter(
+        HFModelConfig(
+            model_name_or_path="sshleifer/tiny-gpt2",
+            config_overrides={"n_positions": 96},
+        )
+    ),
     run_config=RunConfig(
-        output_dir="runs/nca-smoke",
+        output_dir="runs/smoke",
         max_steps=20,
-        per_device_train_batch_size=4,
-        per_device_eval_batch_size=4,
+        per_device_train_batch_size=8,
+        per_device_eval_batch_size=8,
         logging_steps=5,
         save_steps=20,
         eval_steps=20,
@@ -76,72 +51,38 @@ trainer = PrePreTrainer(
 )
 
 run = trainer.fit()
-print(run.model_dir)
-print(run.plot_path)
+bundle = run.load_transfer_bundle()
 ```
 
-## Transfer into downstream pretraining
+## Built-in Mechanism Families
+
+- `nca`: neural cellular automata trajectories
+- `dyck`: balanced-bracket sequence generation
+- `procedural`: short procedural string tasks
+- `simpler_tasks`: set/copy/query tasks from the simpler synthetic-task line
+- `lime`: induction, deduction, and abduction substitution tasks
+- `summarization`: synthetic document tasks such as sentence reordering and masked reconstruction
+
+Use `registered_mechanisms()` or `pptrain mechanisms` to inspect what is available.
+
+## Transfer
 
 ```python
 from pptrain.transfer import ReinitializeEmbeddingTransferPolicy
 
-bundle = run.load_transfer_bundle()
-target_model = adapter.load_downstream_model()
+target_model = trainer.model_adapter.load_downstream_model()
 report = ReinitializeEmbeddingTransferPolicy().apply_bundle(bundle, target_model)
 print(report.loaded_parameter_count)
 ```
 
-## CLI
+## Optional Utilities
 
-```bash
-pptrain fit configs/nca_minimal.yaml
-pptrain mechanisms
-```
+- CLI: `pptrain fit configs/nca_minimal.yaml`
+- Evaluation helpers: `pptrain.eval`
+- Example configs: [configs](configs)
 
-`pptrain fit` prints the run directory, model directory, plot path, and recorded metrics. `pptrain mechanisms` exposes the built-in upstream schemes without requiring users to read the source tree first.
+These are convenience layers. The main interface is the Python API.
 
-## Included evaluation pieces
+## Adding Mechanisms
 
-- `PerplexityTask`: quick held-out text perplexity
-- `GSM8KTask`: simple answer-extraction evaluation
-- `BigBenchJsonTask`: JSON-task adapter for BIG-bench style tasks
-- `HumanEvalTask`: optional completion export / pass@k integration if `human_eval` is installed
-- `ARCAGI2Task` and `ARCAGI2TextTask`: experimental ARC-AGI-2 support
-- `EvalHarness.run_and_save(...)`: writes `eval_results.json` and `eval_summary.png`
-
-Example:
-
-```python
-from pptrain.eval import ARCAGI2TextTask, EvalHarness, PerplexityTask
-
-harness = EvalHarness(
-    [
-        PerplexityTask(dataset_name="wikitext", split="test[:32]"),
-        ARCAGI2TextTask(data_dir="data/arc_agi2_eval", max_tasks=8),
-    ]
-)
-results = harness.run_and_save(
-    output_dir="runs/eval-smoke",
-    model=target_model,
-    tokenizer=tokenizer,
-)
-print(results["arc_agi2_text"].metrics["solve_rate"])
-```
-
-## Extending `pptrain`
-
-New mechanisms do not need to touch the trainer. Most additions should stay local to one module:
-
-1. define a config dataclass
-2. implement either `Mechanism` or `TokenSequenceMechanism`
-3. register it with `register_mechanism(...)`
-
-The extension contract is described in [docs/architecture.md](docs/architecture.md) and [docs/extending.md](docs/extending.md).
-
-## Non-goals for `v0.1`
-
-- distributed systems beyond what `transformers` / `accelerate` already provide
-- a benchmark policy engine for automatically choosing mechanisms
-- reproducing every paper in the synthetic pre-pre-training literature
-
-That mechanism-selection policy is a good next step later, but it should sit above this layer rather than distort the core API now.
+Most new mechanisms should only need a config dataclass, a mechanism class, and a registry entry. Contributor notes live in [docs/extending.md](docs/extending.md).

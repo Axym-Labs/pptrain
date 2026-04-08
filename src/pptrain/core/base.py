@@ -64,6 +64,8 @@ class Mechanism(ABC):
 
 
 class TokenSequenceMechanism(Mechanism):
+    max_sampling_attempts: ClassVar[int] = 1
+
     def build_datasets(self, seed: int | None = None) -> DatasetBundle:
         rng = np.random.default_rng(seed)
         spec = self.tokenizer_spec()
@@ -102,14 +104,26 @@ class TokenSequenceMechanism(Mechanism):
         metadata: list[dict[str, Any]] = []
         max_length = getattr(self.config, "max_length")
         for _ in range(count):
-            tokens, item_metadata = self.sample_tokens(rng, spec)
+            tokens, item_metadata = self._sample_bounded_example(rng, spec)
             inputs.append(tokens[:-1][:max_length])
             labels.append(tokens[1:][:max_length])
             metadata.append(item_metadata)
         return inputs, labels, metadata
 
+    def _sample_bounded_example(
+        self,
+        rng: np.random.Generator,
+        spec: TokenizerSpec,
+    ) -> tuple[list[int], dict[str, Any]]:
+        max_length = getattr(self.config, "max_length")
+        for _ in range(self.max_sampling_attempts):
+            tokens, metadata = self.sample_example(rng, spec)
+            if len(tokens) <= max_length + 1:
+                return tokens, metadata
+        raise RuntimeError(f"Failed to sample a {self.name} example within max_length={max_length}.")
+
     @abstractmethod
-    def sample_tokens(
+    def sample_example(
         self,
         rng: np.random.Generator,
         spec: TokenizerSpec,

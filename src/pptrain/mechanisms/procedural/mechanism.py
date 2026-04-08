@@ -6,9 +6,18 @@ import numpy as np
 
 from pptrain.core.base import TokenSequenceMechanism, TokenizerSpec
 from pptrain.core.registry import register_mechanism
+from pptrain.mechanisms._shared import (
+    TokenVocabulary,
+    TokenVocabularyBuilder,
+    require_non_empty,
+    require_positive_range,
+    require_subset,
+    require_supported,
+)
 from pptrain.mechanisms.procedural.config import ProceduralConfig
 
 BASE_CHARSET = "abcdefghijklmnopqrstuvwxyz0123456789:+=>,;|-_ "
+SUPPORTED_TASKS = {"copy", "reverse", "sort", "addition"}
 
 
 class ProceduralMechanism(TokenSequenceMechanism):
@@ -17,28 +26,24 @@ class ProceduralMechanism(TokenSequenceMechanism):
 
     def __init__(self, config: ProceduralConfig) -> None:
         super().__init__(config)
-        if self.config.min_symbol_length < 1 or self.config.max_symbol_length < self.config.min_symbol_length:
-            raise ValueError("min_symbol_length and max_symbol_length must define a valid positive range.")
+        require_positive_range(
+            "min_symbol_length",
+            self.config.min_symbol_length,
+            "max_symbol_length",
+            self.config.max_symbol_length,
+        )
         if self.config.max_number < 1:
             raise ValueError("max_number must be positive.")
-        if not self.config.tasks:
-            raise ValueError("At least one task must be configured.")
-        unknown_tasks = sorted(set(self.config.tasks) - {"copy", "reverse", "sort", "addition"})
-        if unknown_tasks:
-            raise ValueError(f"Unsupported procedural tasks: {unknown_tasks}")
-        if not set(self.config.alphabet).issubset(set(BASE_CHARSET)):
-            raise ValueError("alphabet contains unsupported characters.")
+        require_non_empty("tasks", self.config.tasks)
+        require_supported("procedural tasks", self.config.tasks, SUPPORTED_TASKS)
+        require_non_empty("alphabet", self.config.alphabet)
+        require_subset("alphabet", self.config.alphabet, BASE_CHARSET)
+        self._vocabulary = self._build_vocabulary()
 
     def tokenizer_spec(self) -> TokenizerSpec:
-        vocab_size = len(BASE_CHARSET) + 3
-        return TokenizerSpec(
-            vocab_size=vocab_size,
-            pad_token_id=len(BASE_CHARSET) + 2,
-            bos_token_id=len(BASE_CHARSET),
-            eos_token_id=len(BASE_CHARSET) + 1,
-        )
+        return self._vocabulary.tokenizer_spec()
 
-    def sample_tokens(
+    def sample_example(
         self,
         rng: np.random.Generator,
         spec: TokenizerSpec,
@@ -73,10 +78,15 @@ class ProceduralMechanism(TokenSequenceMechanism):
         chars = rng.choice(list(self.config.alphabet), size=length, replace=True)
         return "".join(chars.tolist())
 
+    def _encode_text(self, text: str, spec: TokenizerSpec) -> list[int]:
+        return [spec.bos_token_id or 0, *self._vocabulary.encode_group("char", text), spec.eos_token_id or 1]
+
     @staticmethod
-    def _encode_text(text: str, spec: TokenizerSpec) -> list[int]:
-        char_to_id = {char: idx for idx, char in enumerate(BASE_CHARSET)}
-        return [spec.bos_token_id or 0] + [char_to_id[char] for char in text] + [spec.eos_token_id or 1]
+    def _build_vocabulary() -> TokenVocabulary:
+        builder = TokenVocabularyBuilder()
+        builder.add_group("char", list(BASE_CHARSET))
+        builder.add_tokens("bos", "eos", "pad")
+        return builder.build()
 
 
 register_mechanism(

@@ -6,13 +6,9 @@ from pptrain.core.transfer import (
     TransferBundle,
     TransferReport,
 )
-from pptrain.eval import EvalHarness, EvalResult, EvalTask
 
 __all__ = [
     "create_mechanism",
-    "EvalHarness",
-    "EvalResult",
-    "EvalTask",
     "PrePreTrainer",
     "PrePreTrainingRun",
     "ReinitializeEmbeddingTransferPolicy",
