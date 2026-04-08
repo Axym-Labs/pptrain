@@ -1,6 +1,6 @@
 # `pptrain`
 
-`pptrain` is a small PyTorch library for pre-pre-training language models on synthetic upstream mechanisms before standard language pretraining.
+`pptrain` is a small PyTorch library for pre-pre-training language models on synthetic tasks before standard language pretraining.
 
 Use a paper-backed preset as the starting point, then override only the few values you actually need for a local run or a variant experiment. Alternatively, define custom mechanisms and model adapters when your upstream tasks or downstream architecture do not fit the built-ins. The library also includes evaluation and replication tooling to test transfer, compare against baselines, and produce plots and reports.
 
@@ -102,9 +102,9 @@ pptrain replicate --test
 
 ## Examples
 
-- Preset-first smoke configs live in [configs](configs)
-- Minimal Python examples live in [examples](examples)
-- Notes for adding or widening a mechanism family live in [docs/extending.md](docs/extending.md)
+- [Preset-first test configs](configs)
+- [Minimal Python examples](examples)
+- [Notes on adding or extending a mechanism family](docs/extending.md)
 
 ## Citations
 
