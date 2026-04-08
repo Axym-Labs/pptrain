@@ -2,7 +2,7 @@
 
 `pptrain` is a small PyTorch library for pre-pre-training language models on synthetic tasks before standard language pretraining.
 
-Use a paper-backed preset as the starting point, then override only the few values you actually need for a local run or a variant experiment. Alternatively, define custom mechanisms and model adapters when your upstream tasks or downstream architecture do not fit the built-ins. The library also includes evaluation and replication tooling to test transfer, compare against baselines, and produce plots and reports.
+Use a paper-backed preset as the starting point, then override only the few values you actually need for a local run or experiment. Alternatively, define custom task families by extending a flexible task abstraction and plugging in your own model adapter. Assess downstream transfer and benefit with a built-in analytics suite that compares against baselines and produces plots plus reports.
 
 ## Install
 
@@ -51,7 +51,7 @@ run = trainer.fit()
 bundle = run.load_transfer_bundle()
 ```
 
-## Built-in Families
+## Built-in Task Families
 
 - `nca`: neural cellular automata trajectories with paper presets for web-text and code bands [1]
 - `dyck`: Dyck-style balanced-bracket generation with paper presets for `k=8/16/32/64` [2]
@@ -62,13 +62,15 @@ bundle = run.load_transfer_bundle()
 
 Inspect them with `pptrain mechanisms`, `pptrain mechanisms summarization`, or `pptrain mechanisms --json`.
 
-## Custom Mechanisms
+## Custom Task Families
 
-To add a mechanism, define how tasks are sampled, executed, and serialized, then register presets around that family. `pptrain` handles the trainer path, tokenizer-spec plumbing, transfer-bundle export, and Hugging Face integration.
+To add a custom task family, define how tasks are sampled, executed, and serialized, then register presets around that family. `pptrain` handles the trainer path, tokenizer-spec plumbing, transfer-bundle export, and Hugging Face integration.
 
 Most symbolic or transduction-style additions can start from `SymbolicTaskMechanism`; lower-level simulators can implement `Mechanism` directly. For non-Hugging-Face architectures, use `CallableCausalLMAdapter` when you want full control over model construction, or `VocabSizeCausalLMAdapter` when the upstream model only depends on the synthetic tokenizer vocab size. See [docs/extending.md](docs/extending.md) and [examples/custom_adapter.py](examples/custom_adapter.py).
 
 ## Transfer
+
+For downstream pretraining on a compatible architecture, applying a transfer bundle is straightforward. When parameter names, tokenizer sizes, or embedding layouts differ, use an explicit transfer policy to control what is copied, reinitialized, or skipped.
 
 ```python
 from pptrain.transfer import ReinitializeEmbeddingTransferPolicy
@@ -80,31 +82,22 @@ print(report.loaded_parameter_count)
 
 For custom modules where embedding names do not follow the HF interface, `SkipParametersTransferPolicy` lets you skip explicit parameter prefixes instead.
 
-## Evaluation
+## Analytics
 
-The evaluation layer covers transfer-vs-baseline checks, compute-matched natural-baseline comparisons, reasoning and algorithmic probes, and multi-seed replication campaigns, and it writes plots plus markdown/CSV reports.
+Assess downstream transfer, compute-matched baseline comparisons, reasoning and algorithmic probes, and multi-seed replications with a built-in analytics suite that produces plots plus markdown/CSV reports.
 
 ```bash
 pptrain fit configs/nca_minimal.yaml --eval-config configs/eval_perplexity_smoke.yaml
 pptrain replicate --test
 ```
 
-The replication suite can also run larger paper-proxy campaigns with streamed natural-data baselines, seeded aggregation, plots, and markdown/CSV reports.
-
-## CLI
-
-```bash
-pptrain fit configs/nca_minimal.yaml
-pptrain fit configs/nca_minimal.yaml --eval-config configs/eval_perplexity_smoke.yaml
-pptrain mechanisms
-pptrain replicate --test
-```
+The same tooling can also run larger paper-proxy replications with streamed baseline corpora, seeded aggregation, plots, and markdown/CSV reports.
 
 ## Examples
 
 - [Preset-first test configs](configs)
 - [Minimal Python examples](examples)
-- [Notes on adding or extending a mechanism family](docs/extending.md)
+- [Notes on adding or extending a task family](docs/extending.md)
 
 ## Citations
 
