@@ -26,6 +26,7 @@ class NCAConfig:
     complexity_min: float = 0.5
     complexity_max: float = 1.0
     max_rule_attempts_per_sequence: int = 12
+    regenerate_train_each_epoch: bool = True
 
 
 NCA_PRESETS: tuple[MechanismPreset, ...] = (
@@ -43,6 +44,7 @@ NCA_PRESETS: tuple[MechanismPreset, ...] = (
         eval_rule_count=8,
         complexity_min=0.3,
         complexity_max=1.0,
+        regenerate_train_each_epoch=True,
     ),
     sequence_preset(
         "paper_web_text",
@@ -60,6 +62,7 @@ NCA_PRESETS: tuple[MechanismPreset, ...] = (
         eval_rule_count=2_000,
         complexity_min=0.5,
         complexity_max=1.0,
+        regenerate_train_each_epoch=True,
     ),
     sequence_preset(
         "paper_code",
@@ -77,5 +80,6 @@ NCA_PRESETS: tuple[MechanismPreset, ...] = (
         eval_rule_count=2_000,
         complexity_min=0.3,
         complexity_max=0.4,
+        regenerate_train_each_epoch=True,
     ),
 )

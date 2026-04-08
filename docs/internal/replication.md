@@ -7,6 +7,8 @@ This is an internal replication/proxy runner. It is meant to answer two question
 
 `--test` is only a plumbing check. It is not evidence for or against the papers.
 
+In other words: this is a proxy replication suite, not a claim of exact paper reproduction. Shared claims such as transfer, faster convergence, and compute-matched baseline outperformance are tested consistently across mechanisms. Paper-specific headline results outside that shared core are only partially covered.
+
 ## Commands
 
 Setup:
@@ -71,13 +73,18 @@ This runner does not claim exact reproduction. It checks a bounded proxy that st
 - `dyck`: `paper_k64`
 - `summarization`: `paper_ourtasks_subset_100k` compared against `paper_step_tasks_100k`
 
+NCA note:
+
+- epoch-wise training-set regeneration is enabled in the library path
+- the proxy suite also downscales both `sequence_count` and `rule_count` for NCA so that regeneration actually occurs within the configured synthetic step budget
+
 ## Datasets And Probes In `paper_proxy_2048`
 
 - `general_text`: `wikitext/wikitext-2-raw-v1`
 - `math_text`: `openai/gsm8k` (`main`)
 - `summary_text`: `cnn_dailymail` (`3.0.0`)
-- algorithmic probe: local needle-in-a-haystack proxy
-- reasoning probe: `GSM8K` when enabled, otherwise a small local arithmetic probe
+- algorithmic probe: local needle-in-a-haystack proxy scored by exact-answer accuracy; the reported gain is transferred accuracy minus scratch accuracy
+- reasoning probe: `GSM8K` when enabled, otherwise a small local arithmetic probe; the reported gain is transferred accuracy minus scratch accuracy
 
 This is intentionally smaller than the original papers. It is meant to rank mechanisms and detect broken or missing transfer, not to claim paper-level headline numbers.
 
@@ -100,6 +107,7 @@ Major claims still not covered directly:
 
 - NCA code-domain continuation results
 - NCA `HumanEval` and `BigBench-Lite` downstream evaluation
+- NCA direct grid-prediction accuracy used by the reference repo during synthetic training/evaluation
 - Summarization task metrics such as ROUGE on real summarization benchmarks
 - Exact long-context downstream tasks used by procedural-pretraining papers beyond the local needle proxy
 - Formal significance tests beyond seed-level aggregation

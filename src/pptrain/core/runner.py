@@ -5,7 +5,7 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from transformers import Trainer
+from transformers import Trainer, TrainerCallback
 
 from pptrain.core.base import Mechanism
 from pptrain.core.config import RunConfig
@@ -25,6 +25,33 @@ class PrePreTrainingRun:
         return TransferBundle.load(self.run_dir)
 
 
+class EpochTrainDatasetRefreshCallback(TrainerCallback):
+    def __init__(
+        self,
+        *,
+        mechanism: Mechanism,
+        train_dataset: Any,
+        seed: int | None,
+    ) -> None:
+        self.mechanism = mechanism
+        self.train_dataset = train_dataset
+        self.seed = seed
+        self.history: list[dict[str, Any]] = []
+
+    def on_epoch_begin(self, args, state, control, **kwargs):  # type: ignore[override]
+        epoch_index = int(state.epoch or 0)
+        if epoch_index <= 0:
+            return control
+        metadata = self.mechanism.refresh_train_dataset(
+            self.train_dataset,
+            seed=self.seed,
+            epoch_index=epoch_index,
+        )
+        if metadata is not None:
+            self.history.append(dict(metadata))
+        return control
+
+
 class PrePreTrainer:
     def __init__(
         self,
@@ -40,6 +67,13 @@ class PrePreTrainer:
         datasets = self.mechanism.build_datasets(seed=self.run_config.seed)
         tokenizer_spec = self.mechanism.tokenizer_spec()
         model = self.model_adapter.create_prepretrain_model(tokenizer_spec)
+        refresh_callback = None
+        if self.mechanism.uses_epoch_train_dataset_refresh():
+            refresh_callback = EpochTrainDatasetRefreshCallback(
+                mechanism=self.mechanism,
+                train_dataset=datasets.train_dataset,
+                seed=self.run_config.seed,
+            )
 
         run_dir = Path(self.run_config.output_dir)
         run_dir.mkdir(parents=True, exist_ok=True)
@@ -49,12 +83,16 @@ class PrePreTrainer:
             train_dataset=datasets.train_dataset,
             eval_dataset=datasets.eval_dataset,
             data_collator=datasets.data_collator,
+            callbacks=[refresh_callback] if refresh_callback is not None else None,
         )
 
         train_result = trainer.train()
         metrics = dict(train_result.metrics)
         if datasets.eval_dataset is not None:
             metrics.update(trainer.evaluate())
+        if refresh_callback is not None and refresh_callback.history:
+            datasets.metadata["train_refresh_history"] = list(refresh_callback.history)
+            metrics["train_dataset_refresh_count"] = len(refresh_callback.history)
 
         model_dir = run_dir / "prepretrained_model"
         trainer.save_model(str(model_dir))

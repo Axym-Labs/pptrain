@@ -24,3 +24,10 @@ class ListSequenceDataset(Dataset):
             "labels": label_tensor,
             "attention_mask": attention_mask,
         }
+
+
+@dataclass(slots=True)
+class MutableListSequenceDataset(ListSequenceDataset):
+    def replace(self, sequences: list[list[int]], labels: list[list[int]] | None = None) -> None:
+        self.sequences = sequences
+        self.labels = labels

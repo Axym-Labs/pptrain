@@ -65,6 +65,18 @@ class Mechanism(ABC):
     def build_datasets(self, seed: int | None = None) -> DatasetBundle:
         raise NotImplementedError
 
+    def uses_epoch_train_dataset_refresh(self) -> bool:
+        return False
+
+    def refresh_train_dataset(
+        self,
+        train_dataset: Any,
+        *,
+        seed: int | None,
+        epoch_index: int,
+    ) -> dict[str, Any] | None:
+        return None
+
     def default_transfer_policy_name(self) -> str:
         return "reinit_embeddings"
 

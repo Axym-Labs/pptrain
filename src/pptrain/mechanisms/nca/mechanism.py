@@ -6,7 +6,7 @@ import numpy as np
 
 from pptrain.core.base import DatasetBundle, Mechanism, TokenizerSpec
 from pptrain.core.collator import CausalLMCollator
-from pptrain.core.datasets import ListSequenceDataset
+from pptrain.core.datasets import ListSequenceDataset, MutableListSequenceDataset
 from pptrain.core.registry import register_mechanism
 from pptrain.mechanisms.nca.config import NCAConfig, NCA_PRESETS
 from pptrain.mechanisms.nca.generator import (
@@ -41,7 +41,6 @@ class NCAMechanism(Mechanism):
         )
 
     def build_datasets(self, seed: int | None = None) -> DatasetBundle:
-        rng = np.random.default_rng(seed)
         spec = self.tokenizer_spec()
         frame_count = required_frame_count(
             max_length=self.config.max_length,
@@ -49,21 +48,25 @@ class NCAMechanism(Mechanism):
             patch_size=self.config.patch_size,
         )
         frame_token_length = (self.config.grid_size // self.config.patch_size) ** 2 + 2
-        train_inputs, train_labels, train_ratios = self._generate_examples(
-            rng,
-            spec,
+        train_inputs, train_labels, train_ratios = self._generate_examples_for_split(
+            spec=spec,
+            seed=seed,
+            split="train",
             sequence_count=self.config.sequence_count,
             rule_count=self.config.rule_count or self.config.sequence_count,
             frame_count=frame_count,
             frame_token_length=frame_token_length,
+            epoch_index=0,
         )
-        eval_inputs, eval_labels, eval_ratios = self._generate_examples(
-            rng,
-            spec,
+        eval_inputs, eval_labels, eval_ratios = self._generate_examples_for_split(
+            spec=spec,
+            seed=seed,
+            split="eval",
             sequence_count=self.config.eval_sequence_count,
             rule_count=self.config.eval_rule_count or self.config.eval_sequence_count,
             frame_count=frame_count,
             frame_token_length=frame_token_length,
+            epoch_index=0,
         )
         metadata = {
             "train_sequence_count": len(train_inputs),
@@ -74,13 +77,76 @@ class NCAMechanism(Mechanism):
             "frame_token_length": frame_token_length,
             "train_avg_compression_ratio": float(np.mean(train_ratios)) if train_ratios else None,
             "eval_avg_compression_ratio": float(np.mean(eval_ratios)) if eval_ratios else None,
+            "epoch_regeneration_enabled": self.uses_epoch_train_dataset_refresh(),
+            "train_refresh_history": [],
             "config": asdict(self.config),
         }
         return DatasetBundle(
-            train_dataset=ListSequenceDataset(train_inputs, labels=train_labels),
+            train_dataset=MutableListSequenceDataset(train_inputs, labels=train_labels),
             eval_dataset=ListSequenceDataset(eval_inputs, labels=eval_labels),
             data_collator=CausalLMCollator(pad_token_id=spec.pad_token_id),
             metadata=metadata,
+        )
+
+    def uses_epoch_train_dataset_refresh(self) -> bool:
+        return bool(self.config.regenerate_train_each_epoch)
+
+    def refresh_train_dataset(
+        self,
+        train_dataset: object,
+        *,
+        seed: int | None,
+        epoch_index: int,
+    ) -> dict[str, object] | None:
+        if not self.uses_epoch_train_dataset_refresh():
+            return None
+        if not isinstance(train_dataset, MutableListSequenceDataset):
+            raise TypeError("NCA train dataset refresh requires a MutableListSequenceDataset.")
+        spec = self.tokenizer_spec()
+        frame_count = required_frame_count(
+            max_length=self.config.max_length,
+            grid_size=self.config.grid_size,
+            patch_size=self.config.patch_size,
+        )
+        frame_token_length = (self.config.grid_size // self.config.patch_size) ** 2 + 2
+        inputs, labels, ratios = self._generate_examples_for_split(
+            spec=spec,
+            seed=seed,
+            split="train",
+            sequence_count=self.config.sequence_count,
+            rule_count=self.config.rule_count or self.config.sequence_count,
+            frame_count=frame_count,
+            frame_token_length=frame_token_length,
+            epoch_index=epoch_index,
+        )
+        train_dataset.replace(inputs, labels)
+        return {
+            "epoch_index": epoch_index,
+            "train_sequence_count": len(inputs),
+            "train_rule_count": self.config.rule_count or self.config.sequence_count,
+            "train_avg_compression_ratio": float(np.mean(ratios)) if ratios else None,
+        }
+
+    def _generate_examples_for_split(
+        self,
+        *,
+        spec: TokenizerSpec,
+        seed: int | None,
+        split: str,
+        epoch_index: int,
+        sequence_count: int,
+        rule_count: int,
+        frame_count: int,
+        frame_token_length: int,
+    ) -> tuple[list[list[int]], list[list[int]], list[float]]:
+        rng = np.random.default_rng(self._seed_for_split(seed, split=split, epoch_index=epoch_index))
+        return self._generate_examples(
+            rng,
+            spec,
+            sequence_count=sequence_count,
+            rule_count=rule_count,
+            frame_count=frame_count,
+            frame_token_length=frame_token_length,
         )
 
     def _generate_examples(
@@ -149,6 +215,14 @@ class NCAMechanism(Mechanism):
             return []
         repeated = [rules[idx % len(rules)] for idx in range(sequence_count)]
         return repeated
+
+    @staticmethod
+    def _seed_for_split(seed: int | None, *, split: str, epoch_index: int) -> int | None:
+        if seed is None:
+            return None
+        split_offset = 0 if split == "train" else 1
+        sequence = np.random.SeedSequence([int(seed), split_offset, int(epoch_index)])
+        return int(sequence.generate_state(1, dtype=np.uint32)[0])
 
 
 register_mechanism(

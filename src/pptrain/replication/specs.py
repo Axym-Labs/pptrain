@@ -73,6 +73,7 @@ class MechanismStudySpec:
     sequence_count_override: int
     eval_sequence_count_override: int
     max_length_override: int
+    config_overrides: dict[str, Any] = field(default_factory=dict)
     comparison_presets: dict[str, str] = field(default_factory=dict)
     compare_against_natural_warmup: bool = False
     run_reasoning_probe: bool = False
@@ -173,9 +174,10 @@ def _build_smoke_profile(
             ),
             paper_source="Lee et al. 2026",
             paper_note="Proxy for downstream LM gain, convergence, compute-matched NL baseline, and reasoning transfer.",
-            sequence_count_override=24,
+            sequence_count_override=8,
             eval_sequence_count_override=8,
             max_length_override=128,
+            config_overrides={"rule_count": 8, "eval_rule_count": 8},
             compare_against_natural_warmup=True,
             run_reasoning_probe=True,
         ),
@@ -359,9 +361,10 @@ def _build_paper_proxy_profile(
             ),
             paper_source="Lee et al. 2026",
             paper_note="Proxy for LM gain, faster convergence, compute-matched natural baseline, and GSM8K transfer.",
-            sequence_count_override=1024,
-            eval_sequence_count_override=128,
+            sequence_count_override=128,
+            eval_sequence_count_override=32,
             max_length_override=resolved_context,
+            config_overrides={"rule_count": 128, "eval_rule_count": 32},
             compare_against_natural_warmup=True,
             run_reasoning_probe=True,
         ),

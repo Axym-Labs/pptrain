@@ -264,6 +264,7 @@ def _run_transferred_variant(
             "sequence_count": study.sequence_count_override,
             "eval_sequence_count": study.eval_sequence_count_override,
             "max_length": study.max_length_override,
+            **study.config_overrides,
         },
     )
     synthetic_run_config = _with_auto_precision(profile.synthetic_run_config, output_dir / "synthetic", seed=seed)

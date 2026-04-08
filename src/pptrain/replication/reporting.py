@@ -51,6 +51,10 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
     pd = _require_pandas()
     output = Path(output_dir)
     output.mkdir(parents=True, exist_ok=True)
+    for stale_name in ("primary_deltas.png",):
+        stale_path = output / stale_name
+        if stale_path.exists():
+            stale_path.unlink()
 
     raw_path = output / "replication_results.json"
     raw_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -79,6 +83,10 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
         xlabel="Step delta to scratch target loss (positive is better)",
     )
     probe_plot_path = _save_probe_gain_plot(payload, output / "probe_gains.png")
+    if probe_plot_path is None:
+        stale_probe_path = output / "probe_gains.png"
+        if stale_probe_path.exists():
+            stale_probe_path.unlink()
 
     markdown_path = output / "replication_report.md"
     markdown_path.write_text(
@@ -255,6 +263,8 @@ def _save_errorbar_plot(
         errors = np.asarray([item[2] for item in items], dtype=float)
         positions = np.arange(len(items))
         axis.barh(positions, values, xerr=errors, color="#8fb3cf", ecolor="#577c98", capsize=3)
+        axis.scatter(values, positions, color="#4d7798", s=20, zorder=3)
+        _annotate_horizontal_values(axis, values, positions)
         axis.axvline(0.0, color="#444444", linewidth=0.8)
         axis.set_yticks(positions)
         axis.set_yticklabels(labels)
@@ -286,6 +296,8 @@ def _save_probe_gain_plot(payload: dict[str, Any], output_path: Path) -> Path | 
     errors = np.asarray([item[2] for item in items], dtype=float)
     positions = np.arange(len(items))
     axis.barh(positions, values, xerr=errors, color="#8fb3cf", ecolor="#577c98", capsize=3)
+    axis.scatter(values, positions, color="#4d7798", s=20, zorder=3)
+    _annotate_horizontal_values(axis, values, positions, fmt="{value:.1f}")
     axis.axvline(0.0, color="#444444", linewidth=0.8)
     axis.set_yticks(positions)
     axis.set_yticklabels(labels)
@@ -350,3 +362,17 @@ def _set_plot_style() -> None:
             "ytick.labelsize": 7,
         }
     )
+
+
+def _annotate_horizontal_values(
+    axis,
+    values: np.ndarray,
+    positions: np.ndarray,
+    *,
+    fmt: str = "{value:.2f}",
+) -> None:
+    for value, position in zip(values.tolist(), positions.tolist()):
+        offset = 0.03 * max(abs(value), 1.0)
+        ha = "left" if value >= 0 else "right"
+        x = value + offset if value >= 0 else value - offset
+        axis.text(x, position, fmt.format(value=value), va="center", ha=ha, fontsize=7, color="#2f4b5f")
