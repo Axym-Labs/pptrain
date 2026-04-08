@@ -9,6 +9,7 @@ from transformers import Trainer
 
 from pptrain.core.base import Mechanism
 from pptrain.core.config import RunConfig
+from pptrain.core.plotting import save_training_summary_plot
 from pptrain.core.transfer import TransferBundle
 from pptrain.integrations.hf import HFCausalLMAdapter
 
@@ -18,6 +19,7 @@ class PrePreTrainingRun:
     run_dir: Path
     model_dir: Path
     metrics: dict[str, Any]
+    plot_path: Path | None = None
 
     def load_transfer_bundle(self) -> TransferBundle:
         return TransferBundle.load(self.run_dir)
@@ -57,6 +59,12 @@ class PrePreTrainer:
         model_dir = run_dir / "prepretrained_model"
         trainer.save_model(str(model_dir))
         trainer.save_state()
+        plot_path = save_training_summary_plot(
+            log_history=trainer.state.log_history,
+            metrics=metrics,
+            dataset_metadata=datasets.metadata,
+            output_path=run_dir / "training_summary.png",
+        )
         self._save_metadata(run_dir, tokenizer_spec.to_dict(), datasets.metadata, metrics)
 
         bundle = TransferBundle(
@@ -68,7 +76,12 @@ class PrePreTrainer:
             transfer_policy_name=self.mechanism.default_transfer_policy_name(),
         )
         bundle.save()
-        return PrePreTrainingRun(run_dir=run_dir, model_dir=model_dir, metrics=metrics)
+        return PrePreTrainingRun(
+            run_dir=run_dir,
+            model_dir=model_dir,
+            metrics=metrics,
+            plot_path=plot_path,
+        )
 
     def _save_metadata(
         self,
@@ -89,4 +102,3 @@ class PrePreTrainer:
             "metrics": metrics,
         }
         (run_dir / "run_metadata.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
-

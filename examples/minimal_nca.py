@@ -8,10 +8,10 @@ def main() -> None:
         mechanism=NCAMechanism(
             NCAConfig(
                 grid_size=8,
-                rollout_steps=12,
                 sequence_count=64,
                 eval_sequence_count=16,
                 hidden_dim=16,
+                init_rollout_steps=4,
             )
         ),
         model_adapter=HFCausalLMAdapter(
@@ -36,4 +36,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

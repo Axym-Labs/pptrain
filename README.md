@@ -4,10 +4,11 @@
 
 `v0.1` is intentionally narrow:
 
-- one built-in mechanism: neural cellular automata (`NCA`)
+- two built-in mechanisms: neural cellular automata (`NCA`) and Dyck-language generation (`Dyck`)
 - one built-in model adapter: Hugging Face causal language models
 - one built-in transfer policy: copy matching weights, re-initialize embeddings/output head
 - a small evaluation layer with a few practical adapters and an experimental ARC-AGI-2 utility
+- an automatic training summary plot saved with each run
 
 The design target is not industrial pretraining. It is a small upstream layer you can slot in before your usual language pretraining stack.
 
@@ -46,8 +47,8 @@ mechanism = NCAMechanism(
     NCAConfig(
         sequence_count=64,
         eval_sequence_count=16,
-        rollout_steps=12,
         grid_size=8,
+        init_rollout_steps=4,
     )
 )
 
@@ -74,6 +75,7 @@ trainer = PrePreTrainer(
 
 run = trainer.fit()
 print(run.model_dir)
+print(run.plot_path)
 ```
 
 ## Transfer into downstream pretraining
@@ -108,4 +110,3 @@ pptrain fit configs/nca_minimal.yaml
 - reproducing every paper in the synthetic pre-pre-training literature
 
 That mechanism-selection policy is a good next step later, but it should sit above this layer rather than distort the core API now.
-

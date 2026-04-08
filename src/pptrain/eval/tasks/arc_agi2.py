@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Callable
 
+from pptrain.eval.base import EvalResult, EvalTask
 
 Grid = list[list[int]]
 
@@ -54,3 +56,27 @@ def score_arc_predictions(
         if all(guess == pair.output for guess, pair in zip(guessed_outputs, task.test)):
             solved += 1
     return solved / max(len(dataset.tasks), 1)
+
+
+@dataclass(slots=True)
+class ARCAGI2Task(EvalTask):
+    data_dir: str
+    max_tasks: int | None = None
+    name: str = "arc_agi2"
+
+    def run(
+        self,
+        *,
+        predictor: Callable[[ARCTask], list[Grid]],
+        **_: object,
+    ) -> EvalResult:
+        dataset = ARCAGI2Dataset.from_directory(self.data_dir)
+        tasks = dataset.tasks[: self.max_tasks] if self.max_tasks is not None else dataset.tasks
+        sliced_dataset = ARCAGI2Dataset(tasks=tasks)
+        predictions = {task.task_id: predictor(task) for task in tasks}
+        score = score_arc_predictions(sliced_dataset, predictions)
+        return EvalResult(
+            name=self.name,
+            metrics={"solve_rate": score},
+            artifacts={"num_tasks": len(tasks)},
+        )
