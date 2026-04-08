@@ -48,6 +48,13 @@ The command writes:
 - `transfer_gap_vs_scratch.png`: mean perplexity-point delta versus scratch, with standard deviation across seeds
 - `convergence_step_delta.png`: mean step improvement to the scratch target loss, with standard deviation across seeds
 - `probe_gains.png`: mean accuracy-point gains for reasoning and algorithmic probes, with standard deviation across seeds when those probes apply
+- `loss_overlays.png`: downstream eval-loss overlays for scratch, transferred, and compute-matched baseline runs
+- `logit_divergence_to_baseline.png`: reference KL divergence to the compute-matched baseline
+- `activation_cka_to_baseline.png`: midpoint hidden-state linear CKA to the compute-matched baseline
+- `activation_effective_rank.png`: midpoint hidden-state effective rank
+- `pairwise_logit_divergence.png`: pairwise symmetric-KL matrices between variants
+- `pairwise_activation_cka.png`: pairwise activation-CKA matrices between variants
+- `effect_summary.png`: compact cross-metric mechanism summary
 
 Each mechanism also gets its own subdirectory with scratch, transferred, comparison, and natural-warmup runs when applicable.
 
@@ -90,8 +97,13 @@ This is intentionally smaller than the original papers. It is meant to rank mech
 
 Default seeds:
 
-- `smoke`: `41`
+- `smoke`: `41, 43, 47`
 - `paper_proxy_2048`: `11, 23, 37`
+
+Smoke-profile note:
+
+- `--test` uses multiple seeds now so error bars and standard deviations are visible in the report
+- exact-match reasoning and algorithmic probes can still sit at `0.0` across all seeds in smoke mode; that is expected floor behavior, not by itself evidence of a broken implementation
 
 Override if needed:
 

@@ -6,7 +6,8 @@ def test_smoke_replication_profile_contains_all_mechanisms(tmp_path) -> None:
     names = [study.mechanism_name for study in profile.studies]
     assert names == ["nca", "lime", "simpler_tasks", "procedural", "dyck", "summarization"]
     assert profile.context_length == 128
-    assert profile.seed_values == (41,)
+    assert profile.seed_values == (41, 43, 47)
+    assert profile.diagnostic_max_batches == 2
     for study in profile.studies:
         assert "compute_matched_gain" in study.claim_categories
 

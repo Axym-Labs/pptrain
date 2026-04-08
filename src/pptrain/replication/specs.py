@@ -93,6 +93,8 @@ class ReplicationProfile:
     natural_warmup_run_config: RunConfig
     datasets: dict[str, TextDatasetSpec]
     studies: tuple[MechanismStudySpec, ...]
+    diagnostic_max_batches: int = 4
+    diagnostic_max_positions_per_batch: int = 64
     needle_probe: NeedleProbeConfig | None = None
     arithmetic_probe: ArithmeticProbeConfig | None = None
     gsm8k_eval: GSM8KEvalConfig | None = None
@@ -276,7 +278,7 @@ def _build_smoke_profile(
         description="Tiny local replication smoke run for pipeline validation.",
         model_name_or_path=model_name_or_path or "sshleifer/tiny-gpt2",
         context_length=128,
-        seed_values=(41,),
+        seed_values=(41, 43, 47),
         config_overrides={"n_positions": 128},
         synthetic_run_config=RunConfig(
             output_dir=f"{output_dir}/synthetic",
@@ -307,6 +309,8 @@ def _build_smoke_profile(
         ),
         datasets=datasets,
         studies=studies,
+        diagnostic_max_batches=2,
+        diagnostic_max_positions_per_batch=24,
         needle_probe=NeedleProbeConfig(num_examples=4, haystack_size=8, max_new_tokens=6),
         arithmetic_probe=ArithmeticProbeConfig(num_examples=4, max_addend=9, max_new_tokens=8),
     )
@@ -497,6 +501,8 @@ def _build_paper_proxy_profile(
         ),
         datasets=datasets,
         studies=studies,
+        diagnostic_max_batches=4,
+        diagnostic_max_positions_per_batch=48,
         needle_probe=NeedleProbeConfig(num_examples=32, haystack_size=128, max_new_tokens=8),
         gsm8k_eval=GSM8KEvalConfig(split="test[:32]", max_new_tokens=96),
     )

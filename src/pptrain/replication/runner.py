@@ -16,6 +16,11 @@ from pptrain.core.registry import create_mechanism
 from pptrain.core.runner import PrePreTrainer
 from pptrain.integrations.hf import HFCausalLMAdapter, HFModelConfig
 from pptrain.replication.data import build_text_sequence_bundle, build_text_train_eval_bundle
+from pptrain.replication.diagnostics import (
+    VARIANT_LABELS,
+    collect_representation_diagnostics,
+    compute_nca_synthetic_token_accuracy,
+)
 from pptrain.replication.probes import run_arithmetic_probe, run_gsm8k_probe, run_needle_probe
 from pptrain.replication.reporting import save_replication_reports
 from pptrain.replication.specs import (
@@ -132,6 +137,7 @@ def _run_study(
         "seed_runs": seed_runs,
         "claims": _aggregate_claims(seed_runs),
         "metrics": _aggregate_metrics(seed_runs),
+        "diagnostics": _aggregate_diagnostics(seed_runs),
     }
 
 
@@ -236,11 +242,19 @@ def _run_seeded_study(
             del warmup_model
             _maybe_clear_cuda()
 
+    diagnostics = collect_representation_diagnostics(
+        variant_model_dirs={name: payload["model_dir"] for name, payload in variants.items()},
+        downstream_bundle=downstream_bundle,
+        trust_remote_code=hf_config.trust_remote_code,
+        max_batches=profile.diagnostic_max_batches,
+        max_positions_per_batch=profile.diagnostic_max_positions_per_batch,
+    )
     claims = _evaluate_claims(study=study, variants=variants)
     return {
         "seed": seed,
         "variants": variants,
         "claims": claims,
+        "diagnostics": diagnostics,
     }
 
 
@@ -302,6 +316,16 @@ def _run_transferred_variant(
         "plot_path": str(synthetic_run.plot_path) if synthetic_run.plot_path is not None else None,
     }
     payload["transfer_report"] = asdict(transfer_report)
+    if study.mechanism_name == "nca":
+        payload.setdefault("synthetic_run", {})
+        payload["synthetic_run"]["direct_metrics"] = {
+            "heldout_synthetic_token_accuracy": compute_nca_synthetic_token_accuracy(
+                mechanism=mechanism,
+                model_dir=synthetic_run.model_dir,
+                seed=seed,
+                max_batches=profile.diagnostic_max_batches,
+            )
+        }
     del transferred_model
     _maybe_clear_cuda()
     return payload
@@ -501,6 +525,11 @@ def _aggregate_metrics(seed_runs: list[dict[str, Any]]) -> dict[str, Any]:
     metrics["transferred_reasoning_accuracy"] = _aggregate_seed_values(seed_runs, CLAIM_REASONING_TRANSFER, "transferred_accuracy", scale=100.0)
     metrics["scratch_algorithmic_accuracy"] = _aggregate_seed_values(seed_runs, CLAIM_ALGORITHMIC_TRANSFER, "scratch_accuracy", scale=100.0)
     metrics["transferred_algorithmic_accuracy"] = _aggregate_seed_values(seed_runs, CLAIM_ALGORITHMIC_TRANSFER, "transferred_accuracy", scale=100.0)
+    metrics["nca_synthetic_token_accuracy"] = _aggregate_synthetic_metric(
+        seed_runs,
+        metric_name="heldout_synthetic_token_accuracy",
+        scale=100.0,
+    )
     return metrics
 
 
@@ -523,6 +552,69 @@ def _aggregate_seed_values(
         "std": _std(values),
         "num_seeds": len(values),
         "values": values,
+    }
+
+
+def _aggregate_synthetic_metric(
+    seed_runs: list[dict[str, Any]],
+    *,
+    metric_name: str,
+    scale: float = 1.0,
+) -> dict[str, Any] | None:
+    values = []
+    for seed_run in seed_runs:
+        synthetic_run = seed_run.get("variants", {}).get("transferred", {}).get("synthetic_run", {})
+        direct_metrics = synthetic_run.get("direct_metrics", {})
+        if direct_metrics.get(metric_name) is not None:
+            values.append(float(direct_metrics[metric_name]) * scale)
+    if not values:
+        return None
+    return {
+        "mean": _mean(values),
+        "std": _std(values),
+        "num_seeds": len(values),
+        "values": values,
+    }
+
+
+def _aggregate_diagnostics(seed_runs: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        "logit_divergence_to_baseline": _aggregate_named_diagnostic(seed_runs, "logit_divergence_to_baseline"),
+        "activation_cka_to_baseline": _aggregate_named_diagnostic(seed_runs, "activation_cka_to_baseline"),
+        "activation_effective_rank": _aggregate_named_diagnostic(seed_runs, "activation_effective_rank"),
+        "pairwise_logit_divergence": _aggregate_matrix_diagnostic(seed_runs, "pairwise_logit_divergence"),
+        "pairwise_activation_cka": _aggregate_matrix_diagnostic(seed_runs, "pairwise_activation_cka"),
+    }
+
+
+def _aggregate_named_diagnostic(seed_runs: list[dict[str, Any]], key: str) -> dict[str, Any] | None:
+    per_seed = [seed_run.get("diagnostics", {}).get(key) for seed_run in seed_runs if seed_run.get("diagnostics", {}).get(key)]
+    if not per_seed:
+        return None
+    variant_names = sorted({variant_name for item in per_seed for variant_name in item.keys()})
+    aggregated: dict[str, Any] = {}
+    for variant_name in variant_names:
+        values = [float(item[variant_name]) for item in per_seed if item.get(variant_name) is not None]
+        if values:
+            aggregated[variant_name] = {
+                "label": VARIANT_LABELS.get(variant_name, variant_name),
+                "mean": _mean(values),
+                "std": _std(values),
+                "values": values,
+            }
+    return aggregated
+
+
+def _aggregate_matrix_diagnostic(seed_runs: list[dict[str, Any]], key: str) -> dict[str, Any] | None:
+    per_seed = [seed_run.get("diagnostics", {}).get(key) for seed_run in seed_runs if seed_run.get("diagnostics", {}).get(key)]
+    if not per_seed:
+        return None
+    matrices = np.asarray([item["matrix"] for item in per_seed], dtype=np.float64)
+    return {
+        "variants": per_seed[0]["variants"],
+        "labels": per_seed[0]["labels"],
+        "mean": np.mean(matrices, axis=0).tolist(),
+        "std": np.std(matrices, axis=0, ddof=1).tolist() if len(per_seed) > 1 else np.zeros_like(matrices[0]).tolist(),
     }
 
 
