@@ -178,6 +178,13 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Resume a partially completed replication campaign from replication_results.json.",
     )
+    replicate_parser.add_argument(
+        "--keep-checkpoints",
+        action="store_false",
+        dest="remove_checkpoints",
+        help="Keep intermediate Trainer checkpoint-* directories instead of pruning them after final model save.",
+    )
+    replicate_parser.set_defaults(remove_checkpoints=True)
     replicate_parser.add_argument("--json", action="store_true", help="Print the top-level campaign payload as JSON.")
     return parser
 
@@ -204,6 +211,7 @@ def main(argv: list[str] | None = None) -> None:
             model_name_or_path=args.model_name_or_path,
             context_length=args.context_length,
             seeds=seed_values,
+            remove_checkpoints=bool(args.remove_checkpoints),
             resume=bool(args.resume),
         )
         if args.json:

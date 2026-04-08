@@ -84,7 +84,8 @@ def train_downstream_stage(
     model_dir = output_dir / "model"
     trainer.save_model(str(model_dir))
     trainer.save_state()
-    _remove_trainer_checkpoints(output_dir)
+    if stage_run_config.remove_checkpoints:
+        _remove_trainer_checkpoints(output_dir)
     plot_path = save_training_summary_plot(
         log_history=trainer.state.log_history,
         metrics=metrics,

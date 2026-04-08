@@ -143,3 +143,11 @@ def test_paper_proxy_hardware_optimization_uses_gradient_checkpointing_and_h200_
     assert optimized.synthetic_run_config.per_device_train_batch_size == 4
     assert optimized.synthetic_run_config.per_device_eval_batch_size == 4
     assert optimized.synthetic_run_config.gradient_accumulation_steps == 2
+
+
+def test_checkpoint_removal_override_applies_to_all_stages(tmp_path: Path) -> None:
+    profile = build_replication_profile("paper_proxy_2048", output_dir=str(tmp_path), test_mode=False)
+    overridden = runner._override_checkpoint_removal(profile=profile, remove_checkpoints=False)
+    assert overridden.synthetic_run_config.remove_checkpoints is False
+    assert overridden.downstream_run_config.remove_checkpoints is False
+    assert overridden.natural_warmup_run_config.remove_checkpoints is False

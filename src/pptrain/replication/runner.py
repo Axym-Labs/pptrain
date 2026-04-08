@@ -55,6 +55,7 @@ def run_replication_campaign(
     model_name_or_path: str | None = None,
     context_length: int | None = None,
     seeds: tuple[int, ...] | None = None,
+    remove_checkpoints: bool | None = None,
     resume: bool = False,
 ) -> dict[str, Any]:
     output_path = Path(output_dir)
@@ -68,6 +69,8 @@ def run_replication_campaign(
     seed_values = tuple(seeds or profile.seed_values)
     environment = _collect_environment_info()
     profile = _optimize_profile_for_hardware(profile=profile, environment=environment)
+    if remove_checkpoints is not None:
+        profile = _override_checkpoint_removal(profile=profile, remove_checkpoints=remove_checkpoints)
     existing_payload = (
         _load_resume_payload(
             output_path=output_path,
@@ -884,6 +887,19 @@ def _scale_run_config_for_headroom(run_config: RunConfig) -> RunConfig:
         per_device_train_batch_size=target_train_batch,
         per_device_eval_batch_size=max(run_config.per_device_eval_batch_size, target_train_batch),
         gradient_accumulation_steps=target_gradient_accumulation,
+    )
+
+
+def _override_checkpoint_removal(
+    *,
+    profile: ReplicationProfile,
+    remove_checkpoints: bool,
+) -> ReplicationProfile:
+    return replace(
+        profile,
+        synthetic_run_config=replace(profile.synthetic_run_config, remove_checkpoints=remove_checkpoints),
+        downstream_run_config=replace(profile.downstream_run_config, remove_checkpoints=remove_checkpoints),
+        natural_warmup_run_config=replace(profile.natural_warmup_run_config, remove_checkpoints=remove_checkpoints),
     )
 
 

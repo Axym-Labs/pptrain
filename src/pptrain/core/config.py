@@ -26,6 +26,7 @@ class RunConfig:
     fp16: bool = False
     bf16: bool = False
     gradient_checkpointing: bool = False
+    remove_checkpoints: bool = True
     report_to: tuple[str, ...] = field(default_factory=tuple)
 
     def to_training_arguments(self, has_eval: bool) -> TrainingArguments:

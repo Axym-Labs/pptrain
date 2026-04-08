@@ -17,6 +17,9 @@ def test_full_replication_profile_defaults_to_2048_context(tmp_path) -> None:
     profile = build_replication_profile("paper_proxy_2048", output_dir=str(tmp_path), test_mode=False)
     assert profile.context_length == 2048
     assert profile.model_name_or_path == "EleutherAI/pythia-410m-deduped"
+    assert profile.synthetic_run_config.remove_checkpoints is True
+    assert profile.downstream_run_config.remove_checkpoints is True
+    assert profile.natural_warmup_run_config.remove_checkpoints is True
     assert profile.seed_values == (11, 23, 37, 47, 59, 71, 83, 97, 109, 131)
     assert profile.datasets["general_text"].streaming is True
     assert profile.datasets["general_text"].dataset_name == "HuggingFaceFW/fineweb-edu"

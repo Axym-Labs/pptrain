@@ -100,7 +100,8 @@ class PrePreTrainer:
         model_dir = run_dir / "prepretrained_model"
         trainer.save_model(str(model_dir))
         trainer.save_state()
-        self._remove_trainer_checkpoints(run_dir)
+        if self.run_config.remove_checkpoints:
+            self._remove_trainer_checkpoints(run_dir)
         plot_path = save_training_summary_plot(
             log_history=trainer.state.log_history,
             metrics=metrics,

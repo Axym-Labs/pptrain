@@ -167,6 +167,27 @@ def test_cli_replicate_prints_artifact_summary(monkeypatch, capsys) -> None:
     assert "profile: smoke" in output
     assert "claim_matrix.csv" in output
     assert captured["resume"] is True
+    assert captured["remove_checkpoints"] is True
+
+
+def test_cli_replicate_can_keep_checkpoints(monkeypatch, capsys) -> None:
+    captured = {}
+
+    def _fake_run_replication_campaign(**kwargs):
+        captured.update(kwargs)
+        return {
+            "profile": {"name": "smoke"},
+            "artifacts": {"csv": "runs/replication/claim_matrix.csv"},
+        }
+
+    monkeypatch.setattr(
+        cli,
+        "run_replication_campaign",
+        _fake_run_replication_campaign,
+    )
+    cli.main(["replicate", "--keep-checkpoints"])
+    _ = capsys.readouterr().out
+    assert captured["remove_checkpoints"] is False
 
 
 def test_cli_module_entrypoint() -> None:
