@@ -1,6 +1,12 @@
 import json
 
-from pptrain.eval.tasks.arc_agi2 import ARCAGI2Dataset, ARCAGI2Task, score_arc_predictions
+from pptrain.eval.tasks.arc_agi2 import (
+    ARCAGI2Dataset,
+    ARCAGI2Task,
+    grid_to_text,
+    parse_grid_text,
+    score_arc_predictions,
+)
 
 
 def test_arc_dataset_load_and_score(tmp_path) -> None:
@@ -34,3 +40,9 @@ def test_arc_task_adapter_runs(tmp_path) -> None:
     task = ARCAGI2Task(data_dir=str(tmp_path))
     result = task.run(predictor=lambda arc_task: [pair.output for pair in arc_task.test])
     assert result.metrics["solve_rate"] == 1.0
+
+
+def test_arc_grid_text_roundtrip() -> None:
+    grid = [[1, 0, 2], [3, 4, 5]]
+    text = grid_to_text(grid)
+    assert parse_grid_text(text) == grid

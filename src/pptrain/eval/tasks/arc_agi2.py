@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Callable
 
 from pptrain.eval.base import EvalResult, EvalTask
+from pptrain.eval.generation import generate_text
 
 Grid = list[list[int]]
 
@@ -58,6 +59,32 @@ def score_arc_predictions(
     return solved / max(len(dataset.tasks), 1)
 
 
+def grid_to_text(grid: Grid) -> str:
+    return "\n".join(" ".join(str(cell) for cell in row) for row in grid)
+
+
+def parse_grid_text(text: str) -> Grid | None:
+    rows: list[list[int]] = []
+    for raw_line in text.strip().splitlines():
+        line = raw_line.strip()
+        if not line:
+            if rows:
+                break
+            continue
+        parts = line.split()
+        if not parts or not all(part.isdigit() and 0 <= int(part) <= 9 for part in parts):
+            if rows:
+                break
+            continue
+        rows.append([int(part) for part in parts])
+    if not rows:
+        return None
+    width = len(rows[0])
+    if any(len(row) != width for row in rows):
+        return None
+    return rows
+
+
 @dataclass(slots=True)
 class ARCAGI2Task(EvalTask):
     data_dir: str
@@ -80,3 +107,72 @@ class ARCAGI2Task(EvalTask):
             metrics={"solve_rate": score},
             artifacts={"num_tasks": len(tasks)},
         )
+
+
+@dataclass(slots=True)
+class ARCAGI2TextTask(EvalTask):
+    data_dir: str
+    max_tasks: int | None = None
+    max_new_tokens: int = 256
+    name: str = "arc_agi2_text"
+
+    def run(
+        self,
+        *,
+        model,
+        tokenizer,
+        **_: object,
+    ) -> EvalResult:
+        dataset = ARCAGI2Dataset.from_directory(self.data_dir)
+        tasks = dataset.tasks[: self.max_tasks] if self.max_tasks is not None else dataset.tasks
+        sliced_dataset = ARCAGI2Dataset(tasks=tasks)
+        predictions: dict[str, list[Grid]] = {}
+        parse_failures = 0
+        for task in tasks:
+            task_predictions: list[Grid] = []
+            for test_index, pair in enumerate(task.test):
+                prompt = self._build_prompt(task, test_index)
+                completion = generate_text(
+                    model=model,
+                    tokenizer=tokenizer,
+                    prompt=prompt,
+                    max_new_tokens=self.max_new_tokens,
+                )
+                grid = parse_grid_text(completion)
+                if grid is None:
+                    parse_failures += 1
+                    grid = []
+                task_predictions.append(grid)
+            predictions[task.task_id] = task_predictions
+        score = score_arc_predictions(sliced_dataset, predictions)
+        return EvalResult(
+            name=self.name,
+            metrics={"solve_rate": score},
+            artifacts={"num_tasks": len(tasks), "parse_failures": parse_failures},
+        )
+
+    @staticmethod
+    def _build_prompt(task: ARCTask, test_index: int) -> str:
+        lines = [
+            "Infer the grid transformation rule from the examples.",
+            "Return only the output grid as rows of space-separated digits.",
+            "",
+        ]
+        for idx, pair in enumerate(task.train, start=1):
+            lines.extend(
+                [
+                    f"Example {idx} Input:",
+                    grid_to_text(pair.input),
+                    f"Example {idx} Output:",
+                    grid_to_text(pair.output),
+                    "",
+                ]
+            )
+        lines.extend(
+            [
+                "Test Input:",
+                grid_to_text(task.test[test_index].input),
+                "Output:",
+            ]
+        )
+        return "\n".join(lines)

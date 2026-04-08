@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Iterable
 
 from pptrain.eval.base import EvalResult, EvalTask
+from pptrain.eval.plotting import save_eval_summary
 
 
 class EvalHarness:
@@ -15,3 +16,7 @@ class EvalHarness:
             results[task.name] = task.run(**kwargs)
         return results
 
+    def run_and_save(self, output_dir: str, **kwargs: Any) -> dict[str, EvalResult]:
+        results = self.run(**kwargs)
+        save_eval_summary(results, output_dir)
+        return results

@@ -4,7 +4,7 @@
 
 `v0.1` is intentionally narrow:
 
-- two built-in mechanisms: neural cellular automata (`NCA`) and Dyck-language generation (`Dyck`)
+- three built-in mechanisms: neural cellular automata (`NCA`), Dyck-language generation (`Dyck`), and a lightweight procedural task family (`Procedural`)
 - one built-in model adapter: Hugging Face causal language models
 - one built-in transfer policy: copy matching weights, re-initialize embeddings/output head
 - a small evaluation layer with a few practical adapters and an experimental ARC-AGI-2 utility
@@ -101,7 +101,8 @@ pptrain fit configs/nca_minimal.yaml
 - `GSM8KTask`: simple answer-extraction evaluation
 - `BigBenchJsonTask`: JSON-task adapter for BIG-bench style tasks
 - `HumanEvalTask`: optional completion export / pass@k integration if `human_eval` is installed
-- `ARCAGI2Dataset` and `score_arc_predictions()`: experimental ARC-AGI-2 support
+- `ARCAGI2Task` and `ARCAGI2TextTask`: experimental ARC-AGI-2 support
+- `EvalHarness.run_and_save(...)`: writes `eval_results.json` and `eval_summary.png`
 
 ## Non-goals for `v0.1`
 

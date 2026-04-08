@@ -1,0 +1,28 @@
+mechanism:
+  name: procedural
+  config:
+    tasks:
+      - copy
+      - reverse
+      - sort
+      - addition
+    min_symbol_length: 4
+    max_symbol_length: 16
+    max_number: 999
+    sequence_count: 256
+    eval_sequence_count: 64
+    max_length: 96
+
+model:
+  model_name_or_path: sshleifer/tiny-gpt2
+  config_overrides:
+    n_positions: 96
+
+run:
+  output_dir: runs/procedural-minimal
+  max_steps: 20
+  per_device_train_batch_size: 8
+  per_device_eval_batch_size: 8
+  logging_steps: 5
+  save_steps: 20
+  eval_steps: 20
