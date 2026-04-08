@@ -2,12 +2,7 @@
 
 `pptrain` is a small PyTorch library for pre-pre-training language models on synthetic upstream mechanisms before standard language pretraining.
 
-Core features:
-
-- built-in mechanism families with paper-backed presets
-- a small extension API for custom mechanisms and model adapters
-- transfer bundles for downstream pretraining
-- lightweight evaluation and replication utilities
+Use a paper-backed preset as the starting point, then override only the few values you actually need for a local run or a variant experiment. Alternatively, define custom mechanisms and model adapters when your upstream tasks or downstream architecture do not fit the built-ins. The library also includes evaluation and replication tooling to test transfer, compare against baselines, and produce plots and reports.
 
 ## Install
 
@@ -56,8 +51,6 @@ run = trainer.fit()
 bundle = run.load_transfer_bundle()
 ```
 
-Use a paper-backed preset as the starting point, then override only the few values you actually need for a local run or a variant experiment.
-
 ## Built-in Families
 
 - `nca`: neural cellular automata trajectories with paper presets for web-text and code bands [1]
@@ -89,7 +82,7 @@ For custom modules where embedding names do not follow the HF interface, `SkipPa
 
 ## Evaluation
 
-The evaluation layer is intentionally lightweight. It is there to sanity-check transfer, compare a transferred checkpoint against the downstream baseline on a small task list, and run the internal multi-seed replication campaign when you want a more structured comparison.
+The evaluation layer covers transfer-vs-baseline checks, compute-matched natural-baseline comparisons, reasoning and algorithmic probes, and multi-seed replication campaigns, and it writes plots plus markdown/CSV reports.
 
 ```bash
 pptrain fit configs/nca_minimal.yaml --eval-config configs/eval_perplexity_smoke.yaml
