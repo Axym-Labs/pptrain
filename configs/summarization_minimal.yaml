@@ -1,0 +1,33 @@
+mechanism:
+  name: summarization
+  config:
+    tasks:
+      - sentence_reordering
+      - next_sentence
+      - masked_document
+    vocab_size: 96
+    min_sentences: 4
+    max_sentences: 6
+    min_words_per_sentence: 4
+    max_words_per_sentence: 8
+    next_sentence_input_sentences: 3
+    next_sentence_target_sentences: 1
+    masked_span_min_words: 3
+    masked_span_max_words: 6
+    sequence_count: 256
+    eval_sequence_count: 64
+    max_length: 160
+
+model:
+  model_name_or_path: sshleifer/tiny-gpt2
+  config_overrides:
+    n_positions: 160
+
+run:
+  output_dir: runs/summarization-minimal
+  max_steps: 20
+  per_device_train_batch_size: 8
+  per_device_eval_batch_size: 8
+  logging_steps: 5
+  save_steps: 20
+  eval_steps: 20

@@ -20,6 +20,7 @@ from pptrain.mechanisms.nca.generator import (
 
 class NCAMechanism(Mechanism):
     name = "nca"
+    description = "Neural cellular automata trajectories serialized into patch-token sequences."
 
     def __init__(self, config: NCAConfig) -> None:
         super().__init__(config)
@@ -150,4 +151,8 @@ class NCAMechanism(Mechanism):
         return repeated
 
 
-register_mechanism("nca", lambda config: NCAMechanism(NCAConfig(**config)))
+register_mechanism(
+    "nca",
+    lambda config: NCAMechanism(NCAConfig(**config)),
+    description=NCAMechanism.description,
+)

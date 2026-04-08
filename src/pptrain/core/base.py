@@ -4,6 +4,11 @@ from abc import ABC, abstractmethod
 from dataclasses import asdict, dataclass, field, is_dataclass
 from typing import Any, Callable, ClassVar, Mapping
 
+import numpy as np
+
+from pptrain.core.collator import CausalLMCollator
+from pptrain.core.datasets import ListSequenceDataset
+
 
 @dataclass(slots=True)
 class TokenizerSpec:
@@ -57,3 +62,59 @@ class Mechanism(ABC):
             return dict(self.config)
         return {"value": self.config}
 
+
+class TokenSequenceMechanism(Mechanism):
+    def build_datasets(self, seed: int | None = None) -> DatasetBundle:
+        rng = np.random.default_rng(seed)
+        spec = self.tokenizer_spec()
+        train_inputs, train_labels, train_meta = self._generate_examples(
+            rng,
+            spec,
+            getattr(self.config, "sequence_count"),
+        )
+        eval_inputs, eval_labels, eval_meta = self._generate_examples(
+            rng,
+            spec,
+            getattr(self.config, "eval_sequence_count"),
+        )
+        metadata = {
+            "train_sequence_count": len(train_inputs),
+            "eval_sequence_count": len(eval_inputs),
+            "config": self.export_config(),
+        }
+        metadata.update(self._split_metadata("train", train_meta))
+        metadata.update(self._split_metadata("eval", eval_meta))
+        return DatasetBundle(
+            train_dataset=ListSequenceDataset(train_inputs, labels=train_labels),
+            eval_dataset=ListSequenceDataset(eval_inputs, labels=eval_labels),
+            data_collator=CausalLMCollator(pad_token_id=spec.pad_token_id),
+            metadata=metadata,
+        )
+
+    def _generate_examples(
+        self,
+        rng: np.random.Generator,
+        spec: TokenizerSpec,
+        count: int,
+    ) -> tuple[list[list[int]], list[list[int]], list[dict[str, Any]]]:
+        inputs: list[list[int]] = []
+        labels: list[list[int]] = []
+        metadata: list[dict[str, Any]] = []
+        max_length = getattr(self.config, "max_length")
+        for _ in range(count):
+            tokens, item_metadata = self.sample_tokens(rng, spec)
+            inputs.append(tokens[:-1][:max_length])
+            labels.append(tokens[1:][:max_length])
+            metadata.append(item_metadata)
+        return inputs, labels, metadata
+
+    @abstractmethod
+    def sample_tokens(
+        self,
+        rng: np.random.Generator,
+        spec: TokenizerSpec,
+    ) -> tuple[list[int], dict[str, Any]]:
+        raise NotImplementedError
+
+    def _split_metadata(self, split: str, items: list[dict[str, Any]]) -> dict[str, Any]:
+        return {}

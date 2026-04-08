@@ -20,6 +20,14 @@ Responsible only for synthetic data generation and tokenization.
 - build train and eval datasets
 - export config and metadata
 
+### `TokenSequenceMechanism`
+
+Optional helper for mechanisms that only need to sample token sequences and light metadata.
+
+- centralizes the usual train/eval split handling
+- keeps Dyck-like or procedural mechanisms from duplicating dataset boilerplate
+- avoids leaking sequence-specific shortcuts into mechanisms like NCA that need custom masking or tokenization
+
 ### `ModelAdapter`
 
 Responsible only for bridging a model family into `pptrain`.
@@ -57,8 +65,7 @@ NCA is a good first mechanism because it exercises the actual abstractions we ne
 New mechanisms should only need:
 
 1. a config dataclass
-2. a mechanism class implementing the base interface
-3. registration in the mechanism registry
+2. a mechanism class implementing the base interface, or subclassing `TokenSequenceMechanism`
+3. registration in the mechanism registry with a short user-facing description
 
 That keeps later additions such as Dyck languages, procedural tasks, or artificial-language generators local to their own modules.
-

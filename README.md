@@ -4,11 +4,12 @@
 
 `v0.1` is intentionally narrow:
 
-- three built-in mechanisms: neural cellular automata (`NCA`), Dyck-language generation (`Dyck`), and a lightweight procedural task family (`Procedural`)
+- six built-in mechanisms: neural cellular automata (`NCA`), Dyck-language generation (`Dyck`), a lightweight procedural task family (`Procedural`), a simpler synthetic task family (`SimplerTasks`), LIME-style substitution tasks (`LIME`), and synthetic document tasks for summarization-style warm-up (`Summarization`)
 - one built-in model adapter: Hugging Face causal language models
 - one built-in transfer policy: copy matching weights, re-initialize embeddings/output head
 - a small evaluation layer with a few practical adapters and an experimental ARC-AGI-2 utility
 - an automatic training summary plot saved with each run
+- a minimal CLI that lists mechanisms and runs config-driven fits
 
 The design target is not industrial pretraining. It is a small upstream layer you can slot in before your usual language pretraining stack.
 
@@ -24,6 +25,7 @@ The public API follows a few user-level conventions that strong ML libraries sha
 That leads to four core primitives:
 
 - `Mechanism`: generates synthetic upstream sequences
+- `TokenSequenceMechanism`: optional helper base for sequence-only mechanisms like Dyck or procedural tasks
 - `ModelAdapter`: builds or loads the model family you want to pre-pre-train
 - `TransferPolicy`: applies upstream weights to a downstream model
 - `EvalTask`: runs a lightweight validation check or benchmark adapter
@@ -93,7 +95,10 @@ print(report.loaded_parameter_count)
 
 ```bash
 pptrain fit configs/nca_minimal.yaml
+pptrain mechanisms
 ```
+
+`pptrain fit` prints the run directory, model directory, plot path, and recorded metrics. `pptrain mechanisms` exposes the built-in upstream schemes without requiring users to read the source tree first.
 
 ## Included evaluation pieces
 
@@ -103,6 +108,35 @@ pptrain fit configs/nca_minimal.yaml
 - `HumanEvalTask`: optional completion export / pass@k integration if `human_eval` is installed
 - `ARCAGI2Task` and `ARCAGI2TextTask`: experimental ARC-AGI-2 support
 - `EvalHarness.run_and_save(...)`: writes `eval_results.json` and `eval_summary.png`
+
+Example:
+
+```python
+from pptrain.eval import ARCAGI2TextTask, EvalHarness, PerplexityTask
+
+harness = EvalHarness(
+    [
+        PerplexityTask(dataset_name="wikitext", split="test[:32]"),
+        ARCAGI2TextTask(data_dir="data/arc_agi2_eval", max_tasks=8),
+    ]
+)
+results = harness.run_and_save(
+    output_dir="runs/eval-smoke",
+    model=target_model,
+    tokenizer=tokenizer,
+)
+print(results["arc_agi2_text"].metrics["solve_rate"])
+```
+
+## Extending `pptrain`
+
+New mechanisms do not need to touch the trainer. Most additions should stay local to one module:
+
+1. define a config dataclass
+2. implement either `Mechanism` or `TokenSequenceMechanism`
+3. register it with `register_mechanism(...)`
+
+The extension contract is described in [docs/architecture.md](docs/architecture.md) and [docs/extending.md](docs/extending.md).
 
 ## Non-goals for `v0.1`
 

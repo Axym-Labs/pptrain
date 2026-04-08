@@ -1,18 +1,15 @@
 from __future__ import annotations
 
-from dataclasses import asdict
-
 import numpy as np
 
-from pptrain.core.base import DatasetBundle, Mechanism, TokenizerSpec
-from pptrain.core.collator import CausalLMCollator
-from pptrain.core.datasets import ListSequenceDataset
+from pptrain.core.base import TokenSequenceMechanism, TokenizerSpec
 from pptrain.core.registry import register_mechanism
 from pptrain.mechanisms.dyck.config import DyckConfig
 
 
-class DyckMechanism(Mechanism):
+class DyckMechanism(TokenSequenceMechanism):
     name = "dyck"
+    description = "Balanced-bracket language generation with controllable depth and nesting."
 
     def __init__(self, config: DyckConfig) -> None:
         super().__init__(config)
@@ -36,50 +33,19 @@ class DyckMechanism(Mechanism):
             eos_token_id=vocab_offset + 1,
         )
 
-    def build_datasets(self, seed: int | None = None) -> DatasetBundle:
-        rng = np.random.default_rng(seed)
-        spec = self.tokenizer_spec()
-        train_inputs, train_labels, train_depths = self._generate_examples(
-            rng,
-            spec,
-            self.config.sequence_count,
-        )
-        eval_inputs, eval_labels, eval_depths = self._generate_examples(
-            rng,
-            spec,
-            self.config.eval_sequence_count,
-        )
-        metadata = {
-            "train_sequence_count": len(train_inputs),
-            "eval_sequence_count": len(eval_inputs),
-            "train_avg_depth": float(np.mean(train_depths)) if train_depths else None,
-            "eval_avg_depth": float(np.mean(eval_depths)) if eval_depths else None,
-            "config": asdict(self.config),
-        }
-        return DatasetBundle(
-            train_dataset=ListSequenceDataset(train_inputs, labels=train_labels),
-            eval_dataset=ListSequenceDataset(eval_inputs, labels=eval_labels),
-            data_collator=CausalLMCollator(pad_token_id=spec.pad_token_id),
-            metadata=metadata,
-        )
-
-    def _generate_examples(
+    def sample_tokens(
         self,
         rng: np.random.Generator,
         spec: TokenizerSpec,
-        count: int,
-    ) -> tuple[list[list[int]], list[list[int]], list[int]]:
-        inputs: list[list[int]] = []
-        labels: list[list[int]] = []
-        depths: list[int] = []
+    ) -> tuple[list[int], dict[str, int]]:
         max_pairs_bound = min(self.config.max_pairs, max(1, (self.config.max_length - 1) // 2))
-        for _ in range(count):
-            pair_count = int(rng.integers(self.config.min_pairs, max_pairs_bound + 1))
-            sequence, peak_depth = self._sample_sequence(rng, pair_count, spec)
-            inputs.append(sequence[:-1][: self.config.max_length])
-            labels.append(sequence[1:][: self.config.max_length])
-            depths.append(peak_depth)
-        return inputs, labels, depths
+        pair_count = int(rng.integers(self.config.min_pairs, max_pairs_bound + 1))
+        sequence, peak_depth = self._sample_sequence(rng, pair_count, spec)
+        return sequence, {"peak_depth": peak_depth}
+
+    def _split_metadata(self, split: str, items: list[dict[str, int]]) -> dict[str, float | None]:
+        depths = [item["peak_depth"] for item in items]
+        return {f"{split}_avg_depth": float(np.mean(depths)) if depths else None}
 
     def _sample_sequence(
         self,
@@ -107,4 +73,8 @@ class DyckMechanism(Mechanism):
         return sequence, peak_depth
 
 
-register_mechanism("dyck", lambda config: DyckMechanism(DyckConfig(**config)))
+register_mechanism(
+    "dyck",
+    lambda config: DyckMechanism(DyckConfig(**config)),
+    description=DyckMechanism.description,
+)

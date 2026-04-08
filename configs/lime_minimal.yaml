@@ -1,0 +1,30 @@
+mechanism:
+  name: lime
+  config:
+    modes:
+      - induct
+      - deduct
+      - abduct
+    min_variables: 3
+    max_variables: 4
+    min_pattern_length: 5
+    max_pattern_length: 12
+    min_substitution_length: 2
+    max_substitution_length: 4
+    sequence_count: 256
+    eval_sequence_count: 64
+    max_length: 160
+
+model:
+  model_name_or_path: sshleifer/tiny-gpt2
+  config_overrides:
+    n_positions: 160
+
+run:
+  output_dir: runs/lime-minimal
+  max_steps: 20
+  per_device_train_batch_size: 8
+  per_device_eval_batch_size: 8
+  logging_steps: 5
+  save_steps: 20
+  eval_steps: 20
