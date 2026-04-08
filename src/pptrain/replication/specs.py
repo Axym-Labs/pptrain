@@ -36,6 +36,12 @@ class TextDatasetSpec:
     train_split: str | None = None
     eval_split: str | None = None
     text_field: str = "text"
+    streaming: bool = False
+    shuffle_buffer_size: int | None = None
+    shuffle_seed: int = 13
+    warmup_skip_records: int = 0
+    train_skip_records: int = 0
+    eval_skip_records: int = 0
     inline_warmup_texts: tuple[str, ...] = ()
     inline_train_texts: tuple[str, ...] = ()
     inline_eval_texts: tuple[str, ...] = ()
@@ -327,29 +333,43 @@ def _build_paper_proxy_profile(
         "general_text": TextDatasetSpec(
             source="hf",
             formatter="plain_text",
-            dataset_name="wikitext",
-            dataset_config_name="wikitext-2-raw-v1",
-            warmup_split="train[:256]",
-            train_split="train[256:1024]",
-            eval_split="validation[:128]",
+            dataset_name="HuggingFaceFW/fineweb-edu",
+            dataset_config_name="sample-10BT",
+            warmup_split="train",
+            train_split="train",
+            eval_split="train",
+            streaming=True,
+            shuffle_buffer_size=10_000,
+            warmup_skip_records=0,
+            train_skip_records=10_000,
+            eval_skip_records=20_000,
         ),
         "math_text": TextDatasetSpec(
             source="hf",
-            formatter="gsm8k_qa",
-            dataset_name="openai/gsm8k",
-            subset="main",
-            warmup_split="train[:128]",
-            train_split="train[128:512]",
-            eval_split="test[:64]",
+            formatter="plain_text",
+            dataset_name="HuggingFaceTB/finemath",
+            dataset_config_name="finemath-4plus",
+            warmup_split="train",
+            train_split="train",
+            eval_split="train",
+            streaming=True,
+            shuffle_buffer_size=4_000,
+            warmup_skip_records=0,
+            train_skip_records=4_000,
+            eval_skip_records=8_000,
         ),
         "summary_text": TextDatasetSpec(
             source="hf",
-            formatter="cnn_dm_tldr",
-            dataset_name="cnn_dailymail",
-            dataset_config_name="3.0.0",
-            warmup_split="train[:256]",
-            train_split="train[256:1024]",
-            eval_split="validation[:128]",
+            formatter="plain_text",
+            dataset_name="vblagoje/cc_news",
+            warmup_split="train",
+            train_split="train",
+            eval_split="train",
+            streaming=True,
+            shuffle_buffer_size=2_000,
+            warmup_skip_records=0,
+            train_skip_records=4_000,
+            eval_skip_records=8_000,
         ),
     }
     studies = (

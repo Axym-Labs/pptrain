@@ -99,13 +99,20 @@ NCA note:
 
 ## Datasets And Probes In `paper_proxy_2048`
 
-- `general_text`: `wikitext/wikitext-2-raw-v1`
-- `math_text`: `openai/gsm8k` (`main`)
-- `summary_text`: `cnn_dailymail` (`3.0.0`)
+- `general_text`: streamed `HuggingFaceFW/fineweb-edu` (`sample-10BT`)
+- `math_text`: streamed `HuggingFaceTB/finemath` (`finemath-4plus`)
+- `summary_text`: streamed `vblagoje/cc_news`
+- for streamed natural-data stages, the loader stops by token budget rather than document count
+- warmup and downstream train splits use disjoint skipped windows from the same stream so the comparison stays close to a shared-data setup without downloading the full corpus
 - algorithmic probe: local needle-in-a-haystack proxy scored by exact-answer accuracy; the reported gain is transferred accuracy minus scratch accuracy
 - reasoning probe: `GSM8K` when enabled, otherwise a small local arithmetic probe; the reported gain is transferred accuracy minus scratch accuracy
 
-This is intentionally smaller than the original papers. It is meant to rank mechanisms and detect broken or missing transfer, not to claim paper-level headline numbers.
+This is intentionally smaller than the original papers, but no longer relies on tiny benchmark slices for the natural baseline. It is meant to rank mechanisms and detect broken or missing transfer, not to claim paper-level headline numbers.
+
+Operational notes:
+
+- set `HF_TOKEN` if available; unauthenticated Hub requests are slower and more likely to hit retries
+- on Windows, enabling Developer Mode avoids Hugging Face cache fallback that can use extra disk because symlinks are unavailable
 
 Default seeds:
 

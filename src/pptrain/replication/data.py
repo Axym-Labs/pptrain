@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import islice
 from typing import Any
 
 from transformers import PreTrainedTokenizerBase
@@ -31,9 +32,15 @@ def build_text_sequence_bundle(
     dataset_spec: TextDatasetSpec,
     block_size: int,
     split: str,
+    target_token_count: int | None = None,
 ) -> TextSequenceBundle:
-    texts = _load_texts(dataset_spec, split)
-    sequences, labels, metadata = _tokenize_texts(tokenizer=tokenizer, texts=texts, block_size=block_size)
+    sequences, labels, metadata = _build_tokenized_sequences(
+        tokenizer=tokenizer,
+        dataset_spec=dataset_spec,
+        block_size=block_size,
+        split=split,
+        target_token_count=target_token_count,
+    )
     bundle = DatasetBundle(
         train_dataset=ListSequenceDataset(sequences, labels=labels),
         eval_dataset=None,
@@ -48,18 +55,22 @@ def build_text_train_eval_bundle(
     tokenizer: PreTrainedTokenizerBase,
     dataset_spec: TextDatasetSpec,
     block_size: int,
+    train_target_token_count: int | None = None,
+    eval_target_token_count: int | None = None,
 ) -> DatasetBundle:
-    train_texts = _load_texts(dataset_spec, "train")
-    eval_texts = _load_texts(dataset_spec, "eval")
-    train_sequences, train_labels, train_metadata = _tokenize_texts(
+    train_sequences, train_labels, train_metadata = _build_tokenized_sequences(
         tokenizer=tokenizer,
-        texts=train_texts,
+        dataset_spec=dataset_spec,
         block_size=block_size,
+        split="train",
+        target_token_count=train_target_token_count,
     )
-    eval_sequences, eval_labels, eval_metadata = _tokenize_texts(
+    eval_sequences, eval_labels, eval_metadata = _build_tokenized_sequences(
         tokenizer=tokenizer,
-        texts=eval_texts,
+        dataset_spec=dataset_spec,
         block_size=block_size,
+        split="eval",
+        target_token_count=eval_target_token_count,
     )
     return DatasetBundle(
         train_dataset=ListSequenceDataset(train_sequences, labels=train_labels),
@@ -72,6 +83,26 @@ def build_text_train_eval_bundle(
             "eval_avg_chunk_length": eval_metadata["avg_chunk_length"],
         },
     )
+
+
+def _build_tokenized_sequences(
+    *,
+    tokenizer: PreTrainedTokenizerBase,
+    dataset_spec: TextDatasetSpec,
+    block_size: int,
+    split: str,
+    target_token_count: int | None,
+) -> tuple[list[list[int]], list[list[int]], dict[str, Any]]:
+    if dataset_spec.source == "hf" and dataset_spec.streaming:
+        return _tokenize_streaming_hf_texts(
+            tokenizer=tokenizer,
+            dataset_spec=dataset_spec,
+            split=split,
+            block_size=block_size,
+            target_token_count=target_token_count,
+        )
+    texts = _load_texts(dataset_spec, split)
+    return _tokenize_texts(tokenizer=tokenizer, texts=texts, block_size=block_size)
 
 
 def _load_texts(dataset_spec: TextDatasetSpec, split: str) -> list[str]:
@@ -93,6 +124,8 @@ def _load_inline_texts(dataset_spec: TextDatasetSpec, split: str) -> list[str]:
 
 
 def _load_hf_texts(dataset_spec: TextDatasetSpec, split: str) -> list[str]:
+    if dataset_spec.streaming:
+        raise ValueError("Streaming datasets must be consumed through the token-budgeted loader.")
     load_dataset = _require_datasets()
     split_name = {
         "warmup": dataset_spec.warmup_split,
@@ -110,6 +143,73 @@ def _load_hf_texts(dataset_spec: TextDatasetSpec, split: str) -> list[str]:
         args.append(dataset_spec.subset)
     dataset = load_dataset(*args, split=split_name)
     return [_format_record(dataset_spec, record) for record in dataset]
+
+
+def _tokenize_streaming_hf_texts(
+    *,
+    tokenizer: PreTrainedTokenizerBase,
+    dataset_spec: TextDatasetSpec,
+    split: str,
+    block_size: int,
+    target_token_count: int | None,
+) -> tuple[list[list[int]], list[list[int]], dict[str, Any]]:
+    if target_token_count is None:
+        raise ValueError("target_token_count must be provided for streaming datasets.")
+    load_dataset = _require_datasets()
+    split_name = {
+        "warmup": dataset_spec.warmup_split,
+        "train": dataset_spec.train_split,
+        "eval": dataset_spec.eval_split,
+    }[split]
+    if split_name is None:
+        return [], [], {"num_texts": 0, "avg_chunk_length": 0.0, "streaming": True, "raw_token_count": 0}
+    if dataset_spec.dataset_name is None:
+        raise ValueError("dataset_name must be provided for hf datasets.")
+    args: list[str] = [dataset_spec.dataset_name]
+    if dataset_spec.dataset_config_name is not None:
+        args.append(dataset_spec.dataset_config_name)
+    if dataset_spec.subset is not None:
+        args.append(dataset_spec.subset)
+    dataset = load_dataset(*args, split=split_name, streaming=True)
+    if dataset_spec.shuffle_buffer_size is not None:
+        dataset = dataset.shuffle(seed=dataset_spec.shuffle_seed, buffer_size=dataset_spec.shuffle_buffer_size)
+    skip_records = {
+        "warmup": dataset_spec.warmup_skip_records,
+        "train": dataset_spec.train_skip_records,
+        "eval": dataset_spec.eval_skip_records,
+    }[split]
+    if skip_records > 0:
+        dataset = islice(dataset, skip_records, None)
+
+    eos_token_id = tokenizer.eos_token_id or tokenizer.pad_token_id
+    if eos_token_id is None:
+        raise ValueError("Tokenizer must provide either eos_token_id or pad_token_id.")
+
+    tokens: list[int] = []
+    num_texts = 0
+    raw_token_count = 0
+    for record in dataset:
+        text = _format_record(dataset_spec, record)
+        encoded = tokenizer(text, add_special_tokens=False, verbose=False)["input_ids"]
+        if not encoded:
+            continue
+        tokens.extend(encoded)
+        tokens.append(eos_token_id)
+        num_texts += 1
+        raw_token_count += len(encoded) + 1
+        if raw_token_count >= target_token_count:
+            break
+
+    sequences, labels, metadata = _chunk_token_buffer(
+        tokens=tokens,
+        block_size=block_size,
+        num_texts=num_texts,
+    )
+    metadata["streaming"] = True
+    metadata["raw_token_count"] = raw_token_count
+    metadata["target_token_count"] = target_token_count
+    metadata["skip_records"] = skip_records
+    return sequences, labels, metadata
 
 
 def _format_record(dataset_spec: TextDatasetSpec, record: dict[str, Any]) -> str:
@@ -134,12 +234,28 @@ def _tokenize_texts(
 
     tokens: list[int] = []
     for text in texts:
-        encoded = tokenizer(text, add_special_tokens=False)["input_ids"]
+        encoded = tokenizer(text, add_special_tokens=False, verbose=False)["input_ids"]
         if not encoded:
             continue
         tokens.extend(encoded)
         tokens.append(eos_token_id)
 
+    sequences, labels, metadata = _chunk_token_buffer(
+        tokens=tokens,
+        block_size=block_size,
+        num_texts=len(texts),
+    )
+    metadata["streaming"] = False
+    metadata["raw_token_count"] = len(tokens)
+    return sequences, labels, metadata
+
+
+def _chunk_token_buffer(
+    *,
+    tokens: list[int],
+    block_size: int,
+    num_texts: int,
+) -> tuple[list[list[int]], list[list[int]], dict[str, Any]]:
     chunk_size = block_size + 1
     if len(tokens) < chunk_size:
         while len(tokens) < chunk_size and tokens:
@@ -155,4 +271,4 @@ def _tokenize_texts(
         labels.append(chunk[1:])
 
     avg_chunk_length = (sum(len(item) for item in sequences) / len(sequences)) if sequences else 0.0
-    return sequences, labels, {"num_texts": len(texts), "avg_chunk_length": avg_chunk_length}
+    return sequences, labels, {"num_texts": num_texts, "avg_chunk_length": avg_chunk_length}

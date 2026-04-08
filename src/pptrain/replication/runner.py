@@ -213,6 +213,14 @@ def _run_seeded_study(
         tokenizer=tokenizer,
         dataset_spec=profile.datasets[study.dataset_key],
         block_size=profile.context_length,
+        train_target_token_count=_training_token_budget(
+            run_config=profile.downstream_run_config,
+            block_size=profile.context_length,
+        ),
+        eval_target_token_count=_eval_token_budget(
+            run_config=profile.downstream_run_config,
+            block_size=profile.context_length,
+        ),
     )
     variants: dict[str, Any] = {}
 
@@ -269,6 +277,10 @@ def _run_seeded_study(
             dataset_spec=profile.datasets[study.dataset_key],
             block_size=profile.context_length,
             split="warmup",
+            target_token_count=_training_token_budget(
+                run_config=profile.natural_warmup_run_config,
+                block_size=profile.context_length,
+            ),
         )
         if len(warmup_bundle.dataset_bundle.train_dataset) > 0:
             _set_global_seed(seed)
@@ -663,6 +675,8 @@ def _collect_cross_mechanism_diagnostics(
         tokenizer=tokenizer,
         dataset_spec=profile.datasets["general_text"],
         block_size=profile.context_length,
+        train_target_token_count=_diagnostic_token_budget(profile),
+        eval_target_token_count=_diagnostic_token_budget(profile),
     )
     per_seed: list[dict[str, Any]] = []
     mechanism_items = payload.get("mechanisms", {})
@@ -1002,3 +1016,29 @@ def _paired_sign_flip_hypothesis_test(
         "p_value_support": p_value_support,
         "p_value_contradict": p_value_contradict,
     }
+
+
+def _training_token_budget(
+    *,
+    run_config: RunConfig,
+    block_size: int,
+    multiplier: float = 2.0,
+) -> int | None:
+    if run_config.max_steps <= 0:
+        return None
+    effective_batch = run_config.per_device_train_batch_size * run_config.gradient_accumulation_steps
+    return int(math.ceil(run_config.max_steps * effective_batch * block_size * multiplier))
+
+
+def _eval_token_budget(
+    *,
+    run_config: RunConfig,
+    block_size: int,
+) -> int:
+    target_sequences = max(128, run_config.per_device_eval_batch_size * max(run_config.eval_steps, 32))
+    return int(target_sequences * block_size)
+
+
+def _diagnostic_token_budget(profile: ReplicationProfile) -> int:
+    target_sequences = max(32, profile.diagnostic_max_batches * 8)
+    return int(target_sequences * profile.context_length)
