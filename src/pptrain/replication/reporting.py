@@ -30,7 +30,7 @@ STATUS_TO_NUMERIC = {True: 1.0, False: -1.0, None: 0.0}
 STATUS_TO_PLOT_TEXT = {True: "Yes", False: "No", None: "N/A"}
 
 CLAIM_LABELS = {
-    "transfer_signal": "Transfer beats scratch",
+    "transfer_signal": "Transfer beats baseline",
     "convergence_gain": "Converges faster",
     "compute_matched_gain": "Beats compute-matched baseline",
     "reasoning_transfer": "Reasoning transfer",
@@ -70,14 +70,14 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
         payload,
         metric_key="compute_matched_gap_perplexity",
         output_path=output / "compute_matched_baseline_gap.png",
-        xlabel="Perplexity delta vs compute-matched baseline (positive is better)",
+        xlabel="Perplexity delta vs compute-matched natural baseline (positive is better)",
     )
     scratch_plot_path = _save_errorbar_plot(
         payload,
         metric_key="transfer_gap_perplexity",
         output_path=output / "transfer_gap_vs_scratch.png",
-        xlabel="Perplexity difference compared to pre-training from scratch (positive is better)",
-        title="Perplexity difference compared to pre-training from scratch",
+        xlabel="Perplexity difference compared to the no-mechanism baseline (positive is better)",
+        title="Perplexity difference compared to the no-mechanism baseline",
         annotate_values=False,
         xgrid_step=50.0,
     )
@@ -85,7 +85,7 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
         payload,
         metric_key="convergence_step_delta",
         output_path=output / "convergence_step_delta.png",
-        xlabel="Step delta to scratch target loss (positive is better)",
+        xlabel="Step delta to baseline target loss (positive is better)",
     )
     probe_plot_path = _save_probe_gain_plot(payload, output / "probe_gains.png")
     loss_overlay_path = _save_loss_overlay_plot(payload, output / "loss_overlays.png")
@@ -93,7 +93,7 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
         payload,
         diagnostic_key="logit_divergence_to_baseline",
         output_path=output / "logit_divergence_to_baseline.png",
-        top_label="Reference KL divergence to compute-matched baseline (x1e4 nats, lower is better)",
+        top_label="Reference KL divergence to compute-matched natural baseline (x1e4 nats, lower is better)",
         scale=1.0e4,
         include_variants=("scratch", "transferred", "step"),
     )
@@ -101,7 +101,7 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
         payload,
         diagnostic_key="activation_cka_to_baseline",
         output_path=output / "activation_cka_to_baseline.png",
-        top_label="Mid-layer linear CKA to compute-matched baseline (higher is better)",
+        top_label="Mid-layer linear CKA to compute-matched natural baseline (higher is better)",
         zero_floor=True,
         include_variants=("scratch", "transferred", "step"),
     )
@@ -225,7 +225,7 @@ def _build_report_markdown(
         "",
         "This report summarizes a bounded multi-seed replication campaign across the current pre-pre-training mechanisms.",
         "The goal is not exact paper reproduction, but a consistent check of whether each mechanism transfers in the expected direction under one shared setup.",
-        "All mechanisms are additionally evaluated against a compute-matched baseline built from natural-text warm-up on the same downstream text family.",
+        "All mechanisms are additionally evaluated against a compute-matched natural baseline built from natural-text warm-up on the same downstream text family.",
         "In the table, `✅` means the aggregated proxy claim was met, `❌` means it was not met, and `➖` means the claim was not evaluated for that mechanism in this profile rather than missing data.",
         "",
         "### Key Results",
@@ -242,25 +242,25 @@ def _build_report_markdown(
         "",
         f"![Compute-matched baseline gap]({compute_plot_path.name})",
         "",
-        "This plot shows the mean perplexity-point gap between each transferred run and its compute-matched baseline, with standard deviation across seeds. Positive values mean the synthetic pre-pre-training path outperformed the matched natural-text baseline.",
+        "This plot shows the mean perplexity-point gap between each transferred run and its compute-matched natural baseline, with standard deviation across seeds. Positive values mean the synthetic pre-pre-training path outperformed the matched natural-text baseline.",
         "",
-        "### Perplexity Difference Compared To Pre-Training From Scratch",
+        "### Perplexity Difference Compared To The No-Mechanism Baseline",
         "",
         f"![Transfer gap versus scratch]({scratch_plot_path.name})",
         "",
-        "This plot shows the mean final-evaluation perplexity difference between the transferred run and the scratch run after the same downstream training budget, with standard deviation across seeds. Positive values mean the transferred model finished with lower perplexity than scratch.",
+        "This plot shows the mean final-evaluation perplexity difference between the transferred run and the no-mechanism baseline after the same downstream training budget, with standard deviation across seeds. Positive values mean the transferred model finished with lower perplexity than the baseline.",
         "",
         "### Convergence Step Delta",
         "",
         f"![Convergence step delta]({convergence_plot_path.name})",
         "",
-        "This plot shows how many optimization steps earlier the transferred model reaches the scratch model's final loss level. Positive values indicate faster convergence.",
+        "This plot shows how many optimization steps earlier the transferred model reaches the no-mechanism baseline's final loss level. Positive values indicate faster convergence.",
         "",
         "### Loss Overlays",
         "",
         f"![Loss overlays]({loss_overlay_path.name})",
         "",
-        "This figure overlays the downstream evaluation-loss curves for scratch, transferred, and compute-matched baseline runs for each mechanism. Solid lines are means across seeds and shaded bands show one standard deviation.",
+        "This figure overlays the downstream evaluation-loss curves for the baseline, transferred, and compute-matched natural baseline runs for each mechanism. Solid lines are means across seeds and shaded bands show one standard deviation.",
         "",
     ]
     if probe_plot_path is not None:
@@ -281,13 +281,13 @@ def _build_report_markdown(
             "",
             f"![Logit divergence to baseline]({logit_baseline_plot_path.name})",
             "",
-            "Each subplot corresponds to one model category. Bars are mechanisms, and each value compares that mechanism's category-specific model against its own compute-matched baseline. The baseline itself is omitted because comparing it to itself is not informative here. Values are plotted in x1e4 nats for readability.",
+            "Each subplot corresponds to one model category. Bars are mechanisms, and each value compares that mechanism's category-specific model against its own compute-matched natural baseline. The natural baseline itself is omitted because comparing it to itself is not informative here. Values are plotted in x1e4 nats for readability.",
             "",
             "### Activation CKA To Baseline",
             "",
             f"![Activation CKA to baseline]({activation_cka_plot_path.name})",
             "",
-            "Each subplot corresponds to one model category. Bars are mechanisms, and each value compares midpoint hidden representations against that mechanism's own compute-matched baseline using linear CKA. Higher values mean the internal representation geometry is more similar despite different parameter initializations.",
+            "Each subplot corresponds to one model category. Bars are mechanisms, and each value compares midpoint hidden representations against that mechanism's own compute-matched natural baseline using linear CKA. Higher values mean the internal representation geometry is more similar despite different parameter initializations.",
             "",
             "### Activation Effective Rank",
             "",
@@ -427,7 +427,7 @@ def _save_probe_gain_plot(payload: dict[str, Any], output_path: Path) -> Path | 
     axis.axvline(0.0, color="#444444", linewidth=0.8)
     axis.set_yticks(positions)
     axis.set_yticklabels(labels)
-    axis.set_xlabel("Probe accuracy-point gain vs scratch (positive is better)")
+    axis.set_xlabel("Probe accuracy-point gain vs baseline (positive is better)")
     limit = max(np.max(np.abs(values) + errors), 0.1)
     axis.set_xlim(-1.15 * limit, 1.15 * limit)
     figure.tight_layout()
@@ -663,9 +663,9 @@ def _build_metrics_table_markdown(payload: dict[str, Any]) -> str:
         "mechanism",
         "preset",
         "seeds",
-        "scratch ppl",
-        "transferred ppl",
         "baseline ppl",
+        "transferred ppl",
+        "natural baseline ppl",
         "transfer gap",
         "baseline gap",
         "convergence delta",
@@ -746,7 +746,7 @@ def _build_probe_note(payload: dict[str, Any]) -> str:
             "In this smoke run, all exact-match probe gains were 0.0, which means the probes are acting only as a floor check here rather than a meaningful ranking signal."
         )
     return (
-        "Probe gains are computed as transferred exact-answer accuracy minus scratch exact-answer accuracy on the configured reasoning or algorithmic probe."
+        "Probe gains are computed as transferred exact-answer accuracy minus baseline exact-answer accuracy on the configured reasoning or algorithmic probe."
     )
 
 

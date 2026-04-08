@@ -13,9 +13,9 @@ from pptrain.core.base import DatasetBundle, Mechanism
 
 
 VARIANT_LABELS = {
-    "scratch": "Scratch",
+    "scratch": "Baseline",
     "transferred": "Transferred",
-    "compute_matched_baseline": "Compute-matched baseline",
+    "compute_matched_baseline": "Compute-matched natural baseline",
     "step": "Comparison preset",
 }
 DIAGNOSTIC_VARIANTS = ("scratch", "transferred", "compute_matched_baseline", "step")
