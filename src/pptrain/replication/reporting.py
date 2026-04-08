@@ -11,6 +11,7 @@ matplotlib.use("Agg")
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.ticker import MultipleLocator
 
 from pptrain.replication.diagnostics import VARIANT_LABELS
 from pptrain.replication.specs import CLAIM_COLUMNS
@@ -78,6 +79,7 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
         xlabel="Perplexity difference compared to pre-training from scratch (positive is better)",
         title="Perplexity difference compared to pre-training from scratch",
         annotate_values=False,
+        xgrid_step=50.0,
     )
     convergence_plot_path = _save_errorbar_plot(
         payload,
@@ -125,6 +127,7 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
         output_path=output / "pairwise_activation_cka.png",
         value_format="{value:.2f}",
         top_label="Across-mechanism midpoint linear CKA on the shared diagnostic text bundle (higher is better)",
+        shared_scale=False,
     )
     summary_plot_path = _save_effect_summary_plot(payload, output / "effect_summary.png")
     if probe_plot_path is None:
@@ -366,6 +369,7 @@ def _save_errorbar_plot(
     xlabel: str,
     title: str | None = None,
     annotate_values: bool = True,
+    xgrid_step: float | None = None,
 ) -> Path:
     items = []
     for mechanism_name, result in payload["mechanisms"].items():
@@ -381,7 +385,6 @@ def _save_errorbar_plot(
         errors = np.asarray([item[2] for item in items], dtype=float)
         positions = np.arange(len(items))
         axis.barh(positions, values, xerr=errors, color="#8fb3cf", ecolor="#577c98", capsize=3)
-        axis.scatter(values, positions, color="#4d7798", s=20, zorder=3)
         if annotate_values:
             _annotate_horizontal_values(axis, values, positions, errors=errors)
         axis.axvline(0.0, color="#444444", linewidth=0.8)
@@ -392,6 +395,9 @@ def _save_errorbar_plot(
             axis.set_title(title, fontsize=8)
         limit = max(np.max(np.abs(values) + errors), 1.0)
         axis.set_xlim(-1.15 * limit, 1.15 * limit)
+        if xgrid_step is not None:
+            axis.xaxis.set_major_locator(MultipleLocator(xgrid_step))
+            axis.grid(axis="x", color="#94a3b8", alpha=0.18, linewidth=0.7)
     figure.tight_layout()
     figure.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(figure)
@@ -417,7 +423,6 @@ def _save_probe_gain_plot(payload: dict[str, Any], output_path: Path) -> Path | 
     errors = np.asarray([item[2] for item in items], dtype=float)
     positions = np.arange(len(items))
     axis.barh(positions, values, xerr=errors, color="#8fb3cf", ecolor="#577c98", capsize=3)
-    axis.scatter(values, positions, color="#4d7798", s=20, zorder=3)
     _annotate_horizontal_values(axis, values, positions, errors=errors, fmt="{value:.1f}")
     axis.axvline(0.0, color="#444444", linewidth=0.8)
     axis.set_yticks(positions)
@@ -517,7 +522,6 @@ def _save_variant_category_plot(
             ecolor="#577c98",
             capsize=3,
         )
-        axis.scatter(values, positions, color="#3e576d", s=18, zorder=3)
         axis.set_yticks(positions)
         axis.set_yticklabels(labels)
         axis.invert_yaxis()
@@ -543,6 +547,7 @@ def _save_cross_mechanism_matrix_grid(
     value_format: str = "{value:.2f}",
     scale: float = 1.0,
     top_label: str,
+    shared_scale: bool = True,
 ) -> Path:
     diagnostics = payload.get("cross_mechanism_diagnostics", {}).get(cross_key, {})
     items = [(variant_name, diagnostic) for variant_name, diagnostic in diagnostics.items() if diagnostic]
@@ -553,16 +558,22 @@ def _save_cross_mechanism_matrix_grid(
     all_values = []
     for _, diagnostic in items:
         all_values.append(np.asarray(diagnostic["mean"], dtype=float) * scale)
-    if all_values:
+    if all_values and shared_scale:
         global_min = min(float(values.min()) for values in all_values)
         global_max = max(float(values.max()) for values in all_values)
     else:
-        global_min = 0.0
-        global_max = 1.0
+        global_min = None
+        global_max = None
     for axis, (variant_name, diagnostic) in zip(flat_axes, items):
         matrix = np.asarray(diagnostic["mean"], dtype=float) * scale
         std_matrix = np.asarray(diagnostic.get("std"), dtype=float) * scale if diagnostic.get("std") is not None else None
-        axis.imshow(matrix, cmap="Blues", aspect="auto", vmin=global_min, vmax=global_max if global_max > global_min else None)
+        if shared_scale and global_min is not None and global_max is not None and global_max > global_min:
+            vmin = global_min
+            vmax = global_max
+        else:
+            vmin = float(matrix.min())
+            vmax = float(matrix.max()) if float(matrix.max()) > float(matrix.min()) else float(matrix.min()) + 1.0
+        axis.imshow(matrix, cmap="Blues", aspect="auto", vmin=vmin, vmax=vmax)
         labels = [MECHANISM_LABELS.get(name, name) for name in diagnostic["labels"]]
         axis.set_xticks(range(len(labels)))
         axis.set_yticks(range(len(labels)))
@@ -575,7 +586,9 @@ def _save_cross_mechanism_matrix_grid(
                     label = f"{value_format.format(value=matrix[row_index, col_index])}\n±{value_format.format(value=std_matrix[row_index, col_index])}"
                 else:
                     label = value_format.format(value=matrix[row_index, col_index])
-                axis.text(col_index, row_index, label, ha="center", va="center", fontsize=5.5, color="#1f2f3a")
+                normalized = 0.0 if vmax <= vmin else (matrix[row_index, col_index] - vmin) / (vmax - vmin)
+                text_color = "#f8fafc" if normalized >= 0.62 else "#1f2f3a"
+                axis.text(col_index, row_index, label, ha="center", va="center", fontsize=5.5, color=text_color)
     for axis in flat_axes[len(items) :]:
         axis.axis("off")
     figure.suptitle(top_label, fontsize=8, y=0.98)
