@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pptrain"
+version = "0.1.0"
+description = "Lean PyTorch tooling for pre-pre-training language models on synthetic upstream mechanisms."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+  { name = "OpenAI Codex" }
+]
+dependencies = [
+  "accelerate>=0.30",
+  "numpy>=1.26",
+  "PyYAML>=6.0",
+  "safetensors>=0.4",
+  "torch>=2.2",
+  "transformers>=4.40",
+]
+
+[project.optional-dependencies]
+eval = [
+  "datasets>=2.18",
+]
+dev = [
+  "datasets>=2.18",
+  "pytest>=8.0",
+  "ruff>=0.5",
+]
+
+[project.scripts]
+pptrain = "pptrain.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
