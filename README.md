@@ -14,12 +14,12 @@ pip install -e .[dev]
 
 ## Built-in Task Families
 
-- `nca`: Pre-train on synthetic cellular-automata rollouts. The built-in presets follow the paper's web-text and code-oriented complexity bands [1].
-- `dyck`: Pre-train on balanced-bracket sequences that emphasize nested structure. The built-in presets scale the Dyck family across `k=8/16/32/64` and longer symbolic contexts [2].
-- `procedural`: Pre-train on short algorithmic text tasks such as reverse, sort, set, union, and delete. The built-in presets mirror the procedural-pretraining paper's task-by-length setup [3].
-- `simpler_tasks`: Pre-train on compact symbolic tasks like copy, search, set operations, and related transformations. The built-in presets cover both mixed-task and broader single-task settings from the simpler synthetic-task benchmark [4].
-- `lime`: Pre-train on induction, deduction, and abduction tasks aimed at mathematical reasoning. The built-in presets include both mixed and single-mode configurations from the LIME line of work [5].
-- `summarization`: Pre-train on synthetic document-transduction tasks that teach compression and selection. The built-in presets cover both STEP-style tasks and bounded nonsense-style `OurTasks` variants [6].
+- `nca`: Synthetic cellular-automata rollouts. The built-in presets follow the paper's web-text and code-oriented complexity bands [1].
+- `dyck`: Balanced-bracket sequences that emphasize nested structure. The built-in presets scale the Dyck family across `k=8/16/32/64` and longer symbolic contexts [2].
+- `procedural`: Short algorithmic text tasks such as reverse, sort, set, union, and delete. The built-in presets mirror the procedural-pretraining paper's task-by-length setup [3].
+- `simpler_tasks`: Compact symbolic tasks like copy, search, set operations, and related transformations. The built-in presets cover both mixed-task and broader single-task settings from the simpler synthetic-task benchmark [4].
+- `lime`: Induction, deduction, and abduction tasks aimed at mathematical reasoning. The built-in presets include both mixed and single-mode configurations from the LIME line of work [5].
+- `summarization`: Synthetic document-transduction tasks that teach compression and selection. The built-in presets cover both STEP-style tasks and bounded nonsense-style `OurTasks` variants [6].
 
 Each family ships with paper-backed presets and can also serve as a template for your own additions.
 
