@@ -14,12 +14,12 @@ pip install -e .[dev]
 
 ## Built-in Task Families
 
-- `nca`: Synthetic cellular-automata rollouts. The built-in presets follow the paper's web-text and code-oriented complexity bands [1].
-- `dyck`: Balanced-bracket sequences that emphasize nested structure. The built-in presets scale the Dyck family across `k=8/16/32/64` and longer symbolic contexts [2].
-- `procedural`: Short algorithmic text tasks such as reverse, sort, set, union, and delete. The built-in presets mirror the procedural-pretraining paper's task-by-length setup [3].
-- `simpler_tasks`: Compact symbolic tasks like copy, search, set operations, and related transformations. The built-in presets cover both mixed-task and broader single-task settings from the simpler synthetic-task benchmark [4].
-- `lime`: Induction, deduction, and abduction tasks aimed at mathematical reasoning. The built-in presets include both mixed and single-mode configurations from the LIME line of work [5].
-- `summarization`: Synthetic document-transduction tasks that teach compression and selection. The built-in presets cover both STEP-style tasks and bounded nonsense-style `OurTasks` variants [6].
+- `nca`: Synthetic cellular-automata rollouts. The built-in presets follow the paper's `12x12`, `10`-state, `2x2`-patch setup and separate web-text versus code complexity bands [1].
+- `dyck`: Balanced-bracket sequences that emphasize nested structure. The built-in presets scale bracket-type count and sequence length together across the `k=8/16/32/64` variants [2].
+- `procedural`: Short algorithmic text tasks such as reverse, sort, set, union, and delete. The built-in presets mirror the paper's single-task-by-length grid for identity/reverse/sort/set/union/delete programs [3].
+- `simpler_tasks`: Compact symbolic tasks like copy, search, set operations, and related transformations. The built-in presets cover unary-core, binary, and single-task benchmark settings rather than only one mixed sampler [4].
+- `lime`: Induction, deduction, and abduction tasks aimed at mathematical reasoning. The built-in presets span `100k`, `1M`, and mixed `5M` budgets, plus single-mode induct/deduct/abduct variants [5].
+- `summarization`: Synthetic document-transduction tasks that teach compression and selection. The built-in presets combine STEP-style sentence/document transforms with nonsense-style copy/keyword tasks and an `OurTasks`-style subset [6].
 
 Each family ships with paper-backed presets and can also serve as a template for your own additions.
 
