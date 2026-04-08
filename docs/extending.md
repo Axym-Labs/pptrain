@@ -2,7 +2,13 @@
 
 Most additions should stay local to one mechanism family.
 
-Use `TokenSequenceMechanism` when one sampled token sequence can be shifted into `input_ids` and `labels`. Use `Mechanism` directly only when the family needs custom masking, packing, or labels.
+Use `SymbolicTaskMechanism` for symbolic families where you can:
+
+- sample a bounded task or program
+- execute it into a target sequence
+- serialize the result into one causal-LM example
+
+Use `Mechanism` directly only when the family needs a different data or loss path, such as `nca`.
 
 Minimal registry pattern:
 
@@ -11,7 +17,14 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from pptrain.core import MechanismPreset, TokenSequenceMechanism, TokenizerSpec, register_mechanism
+from pptrain.core import (
+    ExecutedSymbolicTask,
+    MechanismPreset,
+    SymbolicTask,
+    SymbolicTaskMechanism,
+    TokenizerSpec,
+    register_mechanism,
+)
 
 
 @dataclass(slots=True)
@@ -37,7 +50,7 @@ REPEAT_PRESETS = (
 )
 
 
-class RepeatMechanism(TokenSequenceMechanism):
+class RepeatMechanism(SymbolicTaskMechanism):
     name = "repeat"
     description = "Predict repeated symbol patterns."
 
@@ -49,14 +62,24 @@ class RepeatMechanism(TokenSequenceMechanism):
             pad_token_id=self.config.alphabet_size + 2,
         )
 
-    def sample_example(
-        self,
-        rng: np.random.Generator,
-        spec: TokenizerSpec,
-    ) -> tuple[list[int], dict[str, int]]:
+    def sample_task(self, rng: np.random.Generator) -> SymbolicTask:
         symbol = int(rng.integers(0, self.config.alphabet_size))
         repeat_count = int(rng.integers(2, 6))
-        return [spec.bos_token_id, *([symbol] * repeat_count), spec.eos_token_id], {"repeat_count": repeat_count}
+        return SymbolicTask(name="repeat", payload=(symbol, repeat_count))
+
+    def execute_task(self, task: SymbolicTask) -> ExecutedSymbolicTask:
+        symbol, repeat_count = task.payload
+        return ExecutedSymbolicTask(
+            name=task.name,
+            payload=[symbol] * repeat_count,
+            metadata={"repeat_count": repeat_count},
+        )
+
+    def serialize_task(self, executed: ExecutedSymbolicTask, spec: TokenizerSpec) -> list[int]:
+        return [spec.bos_token_id, *executed.payload, spec.eos_token_id]
+
+    def numeric_metadata_fields(self) -> tuple[str, ...]:
+        return ("repeat_count",)
 
 
 register_mechanism(

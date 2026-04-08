@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from collections import Counter
-
 import numpy as np
 
-from pptrain.core.base import TokenSequenceMechanism, TokenizerSpec
+from pptrain.core.base import ExecutedSymbolicTask, SymbolicTask, SymbolicTaskMechanism, TokenizerSpec
 from pptrain.core.registry import register_mechanism
 from pptrain.mechanisms._shared import (
     TokenVocabulary,
@@ -18,10 +16,11 @@ from pptrain.mechanisms.lime.config import LIME_PRESETS, LIMEConfig
 from pptrain.mechanisms.lime.generator import LIMEExample, sample_lime_example
 
 
-class LIMEMechanism(TokenSequenceMechanism):
+class LIMEMechanism(SymbolicTaskMechanism):
     name = "lime"
     description = "LIME-style induction, deduction, and abduction substitution tasks."
     max_sampling_attempts = 32
+    task_group_metadata_key = "mode"
 
     def __init__(self, config: LIMEConfig) -> None:
         super().__init__(config)
@@ -60,11 +59,7 @@ class LIMEMechanism(TokenSequenceMechanism):
         )
         return self._vocabulary.tokenizer_spec(extra_token_ids=extra_token_ids)
 
-    def sample_example(
-        self,
-        rng: np.random.Generator,
-        spec: TokenizerSpec,
-    ) -> tuple[list[int], dict[str, int | str]]:
+    def sample_task(self, rng: np.random.Generator) -> SymbolicTask:
         mode = self.config.modes[int(rng.integers(0, len(self.config.modes)))]
         example = sample_lime_example(
             rng,
@@ -78,23 +73,25 @@ class LIMEMechanism(TokenSequenceMechanism):
             min_substitution_length=self.config.min_substitution_length,
             max_substitution_length=self.config.max_substitution_length,
         )
-        tokens = self._encode_example(mode, example, spec)
-        return tokens, {
-            "mode": mode,
+        return SymbolicTask(name=mode, payload=example)
+
+    def execute_task(self, task: SymbolicTask) -> ExecutedSymbolicTask:
+        example = task.payload
+        return ExecutedSymbolicTask(
+            name=task.name,
+            payload=example,
+            metadata={
             "variable_count": len(example.upper_vocab),
             "pattern_length": len(example.pattern),
             "result_length": len(example.result),
-        }
+            },
+        )
 
-    def _split_metadata(self, split: str, items: list[dict[str, int | str]]) -> dict[str, object]:
-        mode_counts = Counter(str(item["mode"]) for item in items)
-        pattern_lengths = [int(item["pattern_length"]) for item in items]
-        result_lengths = [int(item["result_length"]) for item in items]
-        return {
-            f"{split}_mode_counts": dict(mode_counts),
-            f"{split}_avg_pattern_length": float(np.mean(pattern_lengths)) if pattern_lengths else None,
-            f"{split}_avg_result_length": float(np.mean(result_lengths)) if result_lengths else None,
-        }
+    def serialize_task(self, executed: ExecutedSymbolicTask, spec: TokenizerSpec) -> list[int]:
+        return self._encode_example(executed.name, executed.payload, spec)
+
+    def numeric_metadata_fields(self) -> tuple[str, ...]:
+        return ("variable_count", "pattern_length", "result_length")
 
     def _encode_example(
         self,

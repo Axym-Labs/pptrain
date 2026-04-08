@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from collections import Counter
+from dataclasses import dataclass
 
 import numpy as np
 
-from pptrain.core.base import TokenSequenceMechanism, TokenizerSpec
+from pptrain.core.base import ExecutedSymbolicTask, SymbolicTask, SymbolicTaskMechanism, TokenizerSpec
 from pptrain.core.registry import register_mechanism
 from pptrain.mechanisms._shared import (
     TokenVocabulary,
@@ -20,7 +20,13 @@ BASE_CHARSET = "abcdefghijklmnopqrstuvwxyz0123456789:+=>,;|-_ "
 SUPPORTED_TASKS = {"copy", "identity", "reverse", "sort", "addition", "set", "union", "delete"}
 
 
-class ProceduralMechanism(TokenSequenceMechanism):
+@dataclass(slots=True)
+class ProceduralProgram:
+    left: str | int
+    right: str | int | None = None
+
+
+class ProceduralMechanism(SymbolicTaskMechanism):
     name = "procedural"
     description = "Short procedural text tasks such as copy, reverse, sort, and addition."
 
@@ -43,46 +49,55 @@ class ProceduralMechanism(TokenSequenceMechanism):
     def tokenizer_spec(self) -> TokenizerSpec:
         return self._vocabulary.tokenizer_spec()
 
-    def sample_example(
-        self,
-        rng: np.random.Generator,
-        spec: TokenizerSpec,
-    ) -> tuple[list[int], dict[str, str]]:
+    def sample_task(self, rng: np.random.Generator) -> SymbolicTask:
         task = self.config.tasks[int(rng.integers(0, len(self.config.tasks)))]
-        text = self._sample_task_text(rng, task)
-        encoded = self._encode_text(text, spec)
-        return encoded, {"task": task}
+        return SymbolicTask(name=task, payload=self._sample_program(rng, task))
 
-    def _split_metadata(self, split: str, items: list[dict[str, str]]) -> dict[str, dict[str, int]]:
-        task_counts = Counter(item["task"] for item in items)
-        return {f"{split}_task_counts": dict(task_counts)}
+    def execute_task(self, task: SymbolicTask) -> ExecutedSymbolicTask:
+        program = task.payload
+        text = self._execute_program(task.name, program)
+        return ExecutedSymbolicTask(name=task.name, payload=text)
 
-    def _sample_task_text(self, rng: np.random.Generator, task: str) -> str:
-        if task == "copy" or task == "identity":
-            symbol = self._sample_symbol_string(rng)
-            label = "identity" if task == "identity" else "copy"
-            return f"{label}:{symbol}=>{symbol}"
-        if task == "reverse":
-            symbol = self._sample_symbol_string(rng)
-            return f"reverse:{symbol}=>{symbol[::-1]}"
-        if task == "sort":
-            symbol = self._sample_symbol_string(rng)
-            return f"sort:{symbol}=>{''.join(sorted(symbol))}"
-        if task == "set":
-            symbol = self._sample_symbol_string(rng)
-            return f"set:{symbol}=>{_stable_unique_string(symbol)}"
-        if task == "union":
-            left = self._sample_symbol_string(rng)
-            right = self._sample_symbol_string(rng)
-            return f"union:{left}|{right}=>{_stable_unique_string(left + right)}"
-        if task == "delete":
-            source = self._sample_symbol_string(rng)
-            query = self._sample_symbol_string(rng)
-            filtered = "".join(char for char in source if char not in set(query))
-            return f"delete:{source}|{query}=>{filtered}"
+    def serialize_task(self, executed: ExecutedSymbolicTask, spec: TokenizerSpec) -> list[int]:
+        return [spec.bos_token_id or 0, *self._vocabulary.encode_group("char", executed.payload), spec.eos_token_id or 1]
+
+    def _sample_program(self, rng: np.random.Generator, task: str) -> ProceduralProgram:
         if task == "addition":
             left = int(rng.integers(0, self.config.max_number + 1))
             right = int(rng.integers(0, self.config.max_number + 1))
+            return ProceduralProgram(left=left, right=right)
+        if task == "union" or task == "delete":
+            return ProceduralProgram(
+                left=self._sample_symbol_string(rng),
+                right=self._sample_symbol_string(rng),
+            )
+        return ProceduralProgram(left=self._sample_symbol_string(rng))
+
+    def _execute_program(self, task: str, program: ProceduralProgram) -> str:
+        if task == "copy" or task == "identity":
+            label = "identity" if task == "identity" else "copy"
+            return f"{label}:{program.left}=>{program.left}"
+        if task == "reverse":
+            symbol = str(program.left)
+            return f"reverse:{symbol}=>{symbol[::-1]}"
+        if task == "sort":
+            symbol = str(program.left)
+            return f"sort:{symbol}=>{''.join(sorted(symbol))}"
+        if task == "set":
+            symbol = str(program.left)
+            return f"set:{symbol}=>{_stable_unique_string(symbol)}"
+        if task == "union":
+            left = str(program.left)
+            right = str(program.right)
+            return f"union:{left}|{right}=>{_stable_unique_string(left + right)}"
+        if task == "delete":
+            source = str(program.left)
+            query = str(program.right)
+            filtered = "".join(char for char in source if char not in set(query))
+            return f"delete:{source}|{query}=>{filtered}"
+        if task == "addition":
+            left = int(program.left)
+            right = int(program.right or 0)
             return f"addition:{left}+{right}=>{left + right}"
         raise AssertionError(f"Unhandled task '{task}'")
 
@@ -90,9 +105,6 @@ class ProceduralMechanism(TokenSequenceMechanism):
         length = int(rng.integers(self.config.min_symbol_length, self.config.max_symbol_length + 1))
         chars = rng.choice(list(self.config.alphabet), size=length, replace=True)
         return "".join(chars.tolist())
-
-    def _encode_text(self, text: str, spec: TokenizerSpec) -> list[int]:
-        return [spec.bos_token_id or 0, *self._vocabulary.encode_group("char", text), spec.eos_token_id or 1]
 
     @staticmethod
     def _build_vocabulary() -> TokenVocabulary:

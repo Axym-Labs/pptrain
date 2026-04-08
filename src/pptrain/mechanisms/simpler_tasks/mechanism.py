@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from collections import Counter
+from dataclasses import dataclass
 
 import numpy as np
 
-from pptrain.core.base import TokenSequenceMechanism, TokenizerSpec
+from pptrain.core.base import ExecutedSymbolicTask, SymbolicTask, SymbolicTaskMechanism, TokenizerSpec
 from pptrain.core.registry import register_mechanism
 from pptrain.mechanisms._shared import (
     TokenVocabulary,
@@ -34,7 +34,13 @@ from pptrain.mechanisms.simpler_tasks.tasks import (
 )
 
 
-class SimplerTasksMechanism(TokenSequenceMechanism):
+@dataclass(slots=True)
+class SimplerTaskProgram:
+    left: list[str]
+    right: list[str] | None = None
+
+
+class SimplerTasksMechanism(SymbolicTaskMechanism):
     name = "simpler_tasks"
     description = "Synthetic set/copy/query tasks derived from the simpler synthetic pretraining line."
     max_sampling_attempts = 32
@@ -61,70 +67,65 @@ class SimplerTasksMechanism(TokenSequenceMechanism):
         )
         return self._vocabulary.tokenizer_spec(extra_token_ids=extra_tokens)
 
-    def sample_example(
-        self,
-        rng: np.random.Generator,
-        spec: TokenizerSpec,
-    ) -> tuple[list[int], dict[str, int | str]]:
+    def sample_task(self, rng: np.random.Generator) -> SymbolicTask:
         task = self.config.tasks[int(rng.integers(0, len(self.config.tasks)))]
-        tokens, target_length, input_length = self._sample_task_tokens(rng, task, spec)
-        return tokens, {
-            "task": task,
-            "input_symbols": input_length,
-            "target_symbols": target_length,
-        }
+        return SymbolicTask(name=task, payload=self._sample_program(rng, task))
 
-    def _split_metadata(self, split: str, items: list[dict[str, int | str]]) -> dict[str, object]:
-        task_counts = Counter(str(item["task"]) for item in items)
-        input_lengths = [int(item["input_symbols"]) for item in items]
-        target_lengths = [int(item["target_symbols"]) for item in items]
-        return {
-            f"{split}_task_counts": dict(task_counts),
-            f"{split}_avg_input_symbols": float(np.mean(input_lengths)) if input_lengths else None,
-            f"{split}_avg_target_symbols": float(np.mean(target_lengths)) if target_lengths else None,
-        }
+    def execute_task(self, task: SymbolicTask) -> ExecutedSymbolicTask:
+        program = task.payload
+        if task.name in UNARY_TASKS:
+            target = apply_unary_task(task.name, program.left)
+            return ExecutedSymbolicTask(
+                name=task.name,
+                payload=(program.left, None, target),
+                metadata={"input_symbols": len(program.left), "target_symbols": len(target)},
+            )
 
-    def _sample_task_tokens(
-        self,
-        rng: np.random.Generator,
-        task: str,
-        spec: TokenizerSpec,
-    ) -> tuple[list[int], int, int]:
-        if task in UNARY_TASKS:
-            sequence = self._sample_sequence(rng)
-            target = apply_unary_task(task, sequence)
-            tokens = [
-                spec.bos_token_id or 0,
-                self._vocabulary.token(self._task_token_name(task)),
-                *self._encode_symbols(sequence),
+        target = apply_binary_task(task.name, program.left, program.right or [])
+        return ExecutedSymbolicTask(
+            name=task.name,
+            payload=(program.left, program.right, target),
+            metadata={
+                "input_symbols": len(program.left) + len(program.right or []),
+                "target_symbols": len(target),
+            },
+        )
+
+    def serialize_task(self, executed: ExecutedSymbolicTask, spec: TokenizerSpec) -> list[int]:
+        left, right, target = executed.payload
+        tokens = [
+            spec.bos_token_id or 0,
+            self._vocabulary.token(self._task_token_name(executed.name)),
+            *self._encode_symbols(left),
+        ]
+        if right is not None:
+            tokens.extend([self._vocabulary.token("input_sep"), *self._encode_symbols(right)])
+        tokens.extend(
+            [
                 self._vocabulary.token("output_sep"),
                 *self._encode_payload(target),
                 spec.eos_token_id or 1,
             ]
-            return tokens, len(target), len(sequence)
+        )
+        return tokens
 
+    def numeric_metadata_fields(self) -> tuple[str, ...]:
+        return ("input_symbols", "target_symbols")
+
+    def _sample_program(self, rng: np.random.Generator, task: str) -> SimplerTaskProgram:
+        if task in UNARY_TASKS:
+            return SimplerTaskProgram(left=self._sample_sequence(rng))
+
+        sequence = self._sample_sequence(rng)
         if task in SINGLE_SYMBOL_QUERY_TASKS:
-            sequence = self._sample_sequence(rng)
             query = sample_count_query(
                 rng,
                 sequence,
                 self.config.alphabet,
             )
-            target = apply_binary_task(task, sequence, query)
-            tokens = [
-                spec.bos_token_id or 0,
-                self._vocabulary.token(self._task_token_name(task)),
-                *self._encode_symbols(sequence),
-                self._vocabulary.token("input_sep"),
-                *self._encode_symbols(query),
-                self._vocabulary.token("output_sep"),
-                *self._encode_payload(target),
-                spec.eos_token_id or 1,
-            ]
-            return tokens, len(target), len(sequence) + len(query)
+            return SimplerTaskProgram(left=sequence, right=query)
 
         if task in SUBSEQUENCE_QUERY_TASKS:
-            sequence = self._sample_sequence(rng)
             query = sample_search_query(
                 rng,
                 sequence=sequence,
@@ -133,71 +134,24 @@ class SimplerTasksMechanism(TokenSequenceMechanism):
                 max_query_symbols=self.config.max_query_symbols,
                 positive_probability=self.config.positive_search_probability,
             )
-            target = apply_binary_task(task, sequence, query)
-            tokens = [
-                spec.bos_token_id or 0,
-                self._vocabulary.token(self._task_token_name(task)),
-                *self._encode_symbols(sequence),
-                self._vocabulary.token("input_sep"),
-                *self._encode_symbols(query),
-                self._vocabulary.token("output_sep"),
-                *self._encode_payload(target),
-                spec.eos_token_id or 1,
-            ]
-            return tokens, len(target), len(sequence) + len(query)
+            return SimplerTaskProgram(left=sequence, right=query)
 
         if task in ORDER_QUERY_TASKS:
-            sequence = self._sample_sequence(rng)
-            query = sample_sort_order(rng, sequence)
-            target = apply_binary_task(task, sequence, query)
-            tokens = [
-                spec.bos_token_id or 0,
-                self._vocabulary.token(self._task_token_name(task)),
-                *self._encode_symbols(sequence),
-                self._vocabulary.token("input_sep"),
-                *self._encode_symbols(query),
-                self._vocabulary.token("output_sep"),
-                *self._encode_payload(target),
-                spec.eos_token_id or 1,
-            ]
-            return tokens, len(target), len(sequence) + len(query)
+            return SimplerTaskProgram(left=sequence, right=sample_sort_order(rng, sequence))
 
         if task in REPLACEMENT_TASKS:
-            sequence = self._sample_sequence(rng)
-            query = sample_replacement_query(
-                rng,
-                sequence,
-                self.config.alphabet,
-                many=task == "replace_many",
+            return SimplerTaskProgram(
+                left=sequence,
+                right=sample_replacement_query(
+                    rng,
+                    sequence,
+                    self.config.alphabet,
+                    many=task == "replace_many",
+                ),
             )
-            target = apply_binary_task(task, sequence, query)
-            tokens = [
-                spec.bos_token_id or 0,
-                self._vocabulary.token(self._task_token_name(task)),
-                *self._encode_symbols(sequence),
-                self._vocabulary.token("input_sep"),
-                *self._encode_symbols(query),
-                self._vocabulary.token("output_sep"),
-                *self._encode_payload(target),
-                spec.eos_token_id or 1,
-            ]
-            return tokens, len(target), len(sequence) + len(query)
 
         if task in BINARY_SET_TASKS:
-            left = self._sample_sequence(rng)
-            right = self._sample_sequence(rng)
-            target = apply_binary_task(task, left, right)
-            tokens = [
-                spec.bos_token_id or 0,
-                self._vocabulary.token(self._task_token_name(task)),
-                *self._encode_symbols(left),
-                self._vocabulary.token("input_sep"),
-                *self._encode_symbols(right),
-                self._vocabulary.token("output_sep"),
-                *self._encode_payload(target),
-                spec.eos_token_id or 1,
-            ]
-            return tokens, len(target), len(left) + len(right)
+            return SimplerTaskProgram(left=sequence, right=self._sample_sequence(rng))
 
         raise KeyError(f"Unsupported task '{task}'")
 

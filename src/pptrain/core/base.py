@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from collections import Counter
 from dataclasses import asdict, dataclass, field, is_dataclass
 from typing import Any, Callable, ClassVar, Mapping
 
@@ -33,6 +34,20 @@ class DatasetBundle:
     train_dataset: Any
     eval_dataset: Any | None = None
     data_collator: Callable[[list[Mapping[str, Any]]], Mapping[str, Any]] | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class SymbolicTask:
+    name: str
+    payload: Any
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class ExecutedSymbolicTask:
+    name: str
+    payload: Any
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
@@ -132,3 +147,53 @@ class TokenSequenceMechanism(Mechanism):
 
     def _split_metadata(self, split: str, items: list[dict[str, Any]]) -> dict[str, Any]:
         return {}
+
+
+class SymbolicTaskMechanism(TokenSequenceMechanism):
+    task_group_metadata_key: ClassVar[str | None] = "task"
+
+    def sample_example(
+        self,
+        rng: np.random.Generator,
+        spec: TokenizerSpec,
+    ) -> tuple[list[int], dict[str, Any]]:
+        task = self.sample_task(rng)
+        executed = self.execute_task(task)
+        tokens = self.serialize_task(executed, spec)
+        metadata = dict(task.metadata)
+        metadata.update(executed.metadata)
+        if self.task_group_metadata_key is not None:
+            metadata.setdefault(self.task_group_metadata_key, executed.name)
+        return tokens, metadata
+
+    @abstractmethod
+    def sample_task(self, rng: np.random.Generator) -> SymbolicTask:
+        raise NotImplementedError
+
+    @abstractmethod
+    def execute_task(self, task: SymbolicTask) -> ExecutedSymbolicTask:
+        raise NotImplementedError
+
+    @abstractmethod
+    def serialize_task(
+        self,
+        executed: ExecutedSymbolicTask,
+        spec: TokenizerSpec,
+    ) -> list[int]:
+        raise NotImplementedError
+
+    def numeric_metadata_fields(self) -> tuple[str, ...]:
+        return ()
+
+    def _split_metadata(self, split: str, items: list[dict[str, Any]]) -> dict[str, Any]:
+        summary: dict[str, Any] = {}
+        group_key = self.task_group_metadata_key
+        if group_key is not None:
+            values = [str(item[group_key]) for item in items if group_key in item]
+            if values:
+                summary[f"{split}_{group_key}_counts"] = dict(Counter(values))
+        for field_name in self.numeric_metadata_fields():
+            values = [float(item[field_name]) for item in items if field_name in item]
+            if values:
+                summary[f"{split}_avg_{field_name}"] = float(np.mean(values))
+        return summary

@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from collections import Counter
-
 import numpy as np
 
-from pptrain.core.base import TokenSequenceMechanism, TokenizerSpec
+from pptrain.core.base import ExecutedSymbolicTask, SymbolicTask, SymbolicTaskMechanism, TokenizerSpec
 from pptrain.core.registry import register_mechanism
 from pptrain.mechanisms._shared import (
     TokenVocabulary,
@@ -23,7 +21,7 @@ from pptrain.mechanisms.summarization.generator import (
 )
 
 
-class SummarizationMechanism(TokenSequenceMechanism):
+class SummarizationMechanism(SymbolicTaskMechanism):
     name = "summarization"
     description = "Synthetic document pre-pre-training tasks inspired by nonsense/step-task summarization corpora."
     max_sampling_attempts = 32
@@ -65,11 +63,7 @@ class SummarizationMechanism(TokenSequenceMechanism):
         )
         return self._vocabulary.tokenizer_spec(extra_token_ids=extra_token_ids)
 
-    def sample_example(
-        self,
-        rng: np.random.Generator,
-        spec: TokenizerSpec,
-    ) -> tuple[list[int], dict[str, int | str]]:
+    def sample_task(self, rng: np.random.Generator) -> SymbolicTask:
         document = sample_document(
             rng,
             vocab_size=self.config.vocab_size,
@@ -79,23 +73,24 @@ class SummarizationMechanism(TokenSequenceMechanism):
             max_words_per_sentence=self.config.max_words_per_sentence,
         )
         task = self.config.tasks[int(rng.integers(0, len(self.config.tasks)))]
-        example = self._build_example(rng, task, document)
-        tokens = self._encode_example(example, spec)
-        return tokens, {
-            "task": task,
-            "sentence_count": example.sentence_count,
-            "word_count": example.word_count,
-        }
+        return SymbolicTask(name=task, payload=self._build_example(rng, task, document))
 
-    def _split_metadata(self, split: str, items: list[dict[str, int | str]]) -> dict[str, object]:
-        task_counts = Counter(str(item["task"]) for item in items)
-        sentence_counts = [int(item["sentence_count"]) for item in items]
-        word_counts = [int(item["word_count"]) for item in items]
-        return {
-            f"{split}_task_counts": dict(task_counts),
-            f"{split}_avg_sentence_count": float(np.mean(sentence_counts)) if sentence_counts else None,
-            f"{split}_avg_word_count": float(np.mean(word_counts)) if word_counts else None,
-        }
+    def execute_task(self, task: SymbolicTask) -> ExecutedSymbolicTask:
+        example = task.payload
+        return ExecutedSymbolicTask(
+            name=task.name,
+            payload=example,
+            metadata={
+                "sentence_count": example.sentence_count,
+                "word_count": example.word_count,
+            },
+        )
+
+    def serialize_task(self, executed: ExecutedSymbolicTask, spec: TokenizerSpec) -> list[int]:
+        return self._encode_example(executed.payload, spec)
+
+    def numeric_metadata_fields(self) -> tuple[str, ...]:
+        return ("sentence_count", "word_count")
 
     def _build_example(
         self,
