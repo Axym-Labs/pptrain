@@ -48,6 +48,12 @@ MECHANISM_LABELS = {
     "summarization": "Summarization",
 }
 
+BRIGHT_BAR = "#6ea8ff"
+BRIGHT_BAR_EDGE = "#2f6fcb"
+WARM_BAR = "#f5a97f"
+WARM_BAR_EDGE = "#c4744c"
+PASTEL_BLUE_MAP = ListedColormap(["#edf5ff", "#d8e9ff", "#bad6ff", "#8ab7ff"])
+
 
 def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) -> dict[str, Path]:
     pd = _require_pandas()
@@ -70,14 +76,14 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
         payload,
         metric_key="compute_matched_gap_perplexity",
         output_path=output / "compute_matched_baseline_gap.png",
-        xlabel="Perplexity delta vs compute-matched natural baseline (positive is better)",
+        xlabel="Perplexity delta vs compute-matched baseline (positive is better)",
     )
     scratch_plot_path = _save_errorbar_plot(
         payload,
         metric_key="transfer_gap_perplexity",
         output_path=output / "transfer_gap_vs_scratch.png",
-        xlabel="Perplexity difference compared to the no-mechanism baseline (positive is better)",
-        title="Perplexity difference compared to the no-mechanism baseline",
+        xlabel="Perplexity difference compared to baseline (no pre-pre-training) (positive is better)",
+        title="Perplexity difference compared to baseline (no pre-pre-training)",
         annotate_values=False,
         xgrid_step=50.0,
     )
@@ -93,25 +99,25 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
         payload,
         diagnostic_key="logit_divergence_to_baseline",
         output_path=output / "logit_divergence_to_baseline.png",
-        top_label="Reference KL divergence to compute-matched natural baseline (x1e4 nats, lower is better)",
+        top_label="Reference KL divergence to compute-matched baseline (x1e4 nats, lower is better)",
         scale=1.0e4,
-        include_variants=("scratch", "transferred", "step"),
+        include_variants=("transferred",),
     )
     activation_cka_plot_path = _save_variant_category_plot(
         payload,
         diagnostic_key="activation_cka_to_baseline",
         output_path=output / "activation_cka_to_baseline.png",
-        top_label="Mid-layer linear CKA to compute-matched natural baseline (higher is better)",
+        top_label="Mid-layer linear CKA to compute-matched baseline (higher is better)",
         zero_floor=True,
-        include_variants=("scratch", "transferred", "step"),
+        include_variants=("transferred",),
     )
-    activation_rank_plot_path = _save_variant_category_plot(
+    activation_rank_plot_path = _save_transferred_metric_plot(
         payload,
-        diagnostic_key="activation_effective_rank",
+        metric_key="transferred_effective_rank",
         output_path=output / "activation_effective_rank.png",
-        top_label="Mid-layer effective rank (higher is better)",
+        top_label="Mid-layer effective rank of transferred models (higher is better)",
+        xlabel="Effective rank",
         zero_floor=True,
-        include_variants=("compute_matched_baseline", "scratch", "transferred", "step"),
     )
     pairwise_logit_plot_path = _save_cross_mechanism_matrix_grid(
         payload,
@@ -119,14 +125,14 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
         output_path=output / "pairwise_logit_divergence.png",
         value_format="{value:.2f}",
         scale=1.0e4,
-        top_label="Across-mechanism symmetric KL divergence on the shared diagnostic text bundle (x1e4 nats, lower is better)",
+        top_label="Pairwise symmetric KL divergence between transferred mechanisms (x1e4 nats, lower is better)",
     )
     pairwise_activation_plot_path = _save_cross_mechanism_matrix_grid(
         payload,
         cross_key="pairwise_activation_cka_by_variant",
         output_path=output / "pairwise_activation_cka.png",
         value_format="{value:.2f}",
-        top_label="Across-mechanism midpoint linear CKA on the shared diagnostic text bundle (higher is better)",
+        top_label="Pairwise midpoint linear CKA between transferred mechanisms (higher is better)",
         shared_scale=False,
     )
     summary_plot_path = _save_effect_summary_plot(payload, output / "effect_summary.png")
@@ -244,23 +250,23 @@ def _build_report_markdown(
         "",
         "This plot shows the mean perplexity-point gap between each transferred run and its compute-matched natural baseline, with standard deviation across seeds. Positive values mean the synthetic pre-pre-training path outperformed the matched natural-text baseline.",
         "",
-        "### Perplexity Difference Compared To The No-Mechanism Baseline",
+        "### Perplexity Difference Compared To Baseline",
         "",
-        f"![Transfer gap versus scratch]({scratch_plot_path.name})",
+        f"![Transfer gap versus baseline]({scratch_plot_path.name})",
         "",
-        "This plot shows the mean final-evaluation perplexity difference between the transferred run and the no-mechanism baseline after the same downstream training budget, with standard deviation across seeds. Positive values mean the transferred model finished with lower perplexity than the baseline.",
+        "This plot shows the mean final-evaluation perplexity difference between the transferred run and the baseline run with no pre-pre-training after the same downstream training budget, with standard deviation across seeds. Positive values mean the transferred model finished with lower perplexity than the baseline.",
         "",
         "### Convergence Step Delta",
         "",
         f"![Convergence step delta]({convergence_plot_path.name})",
         "",
-        "This plot shows how many optimization steps earlier the transferred model reaches the no-mechanism baseline's final loss level. Positive values indicate faster convergence.",
+        "This plot shows how many optimization steps earlier the transferred model reaches the baseline run's final loss level. Positive values indicate faster convergence.",
         "",
         "### Loss Overlays",
         "",
         f"![Loss overlays]({loss_overlay_path.name})",
         "",
-        "This figure overlays the downstream evaluation-loss curves for the baseline, transferred, and compute-matched natural baseline runs for each mechanism. Solid lines are means across seeds and shaded bands show one standard deviation.",
+        "This figure overlays the downstream evaluation-loss curves for the baseline, transferred, and compute-matched natural baseline runs for each mechanism. Study-specific synthetic comparison presets are intentionally excluded so the overlay stays focused on the main replication comparison. Solid lines are means across seeds and shaded bands show one standard deviation.",
         "",
     ]
     if probe_plot_path is not None:
@@ -270,7 +276,7 @@ def _build_report_markdown(
                 "",
                 f"![Probe gains]({probe_plot_path.name})",
                 "",
-                "This plot shows mean accuracy-point gains on the reasoning and algorithmic probes, with standard deviation across seeds. These probe metrics are only shown for mechanisms whose papers motivate those capabilities directly.",
+                "This plot shows mean accuracy-point gains on the reasoning and algorithmic probes, with standard deviation across seeds. These probe metrics are only shown when they carry non-trivial signal in the current profile.",
                 probe_note,
                 "",
             ]
@@ -281,31 +287,31 @@ def _build_report_markdown(
             "",
             f"![Logit divergence to baseline]({logit_baseline_plot_path.name})",
             "",
-            "Each subplot corresponds to one model category. Bars are mechanisms, and each value compares that mechanism's category-specific model against its own compute-matched natural baseline. The natural baseline itself is omitted because comparing it to itself is not informative here. Values are plotted in x1e4 nats for readability.",
+            "This plot compares each mechanism's transferred model against its own compute-matched natural baseline using reference KL divergence over held-out downstream tokens. Values are plotted in x1e4 nats for readability. Lower values mean the transferred predictive distribution is closer to the matched compute baseline.",
             "",
             "### Activation CKA To Baseline",
             "",
             f"![Activation CKA to baseline]({activation_cka_plot_path.name})",
             "",
-            "Each subplot corresponds to one model category. Bars are mechanisms, and each value compares midpoint hidden representations against that mechanism's own compute-matched natural baseline using linear CKA. Higher values mean the internal representation geometry is more similar despite different parameter initializations.",
+            "This plot compares each mechanism's transferred model against its own compute-matched natural baseline using midpoint linear CKA on held-out downstream tokens. Higher values mean the internal representation geometry is more similar despite different parameter initializations.",
             "",
             "### Activation Effective Rank",
             "",
             f"![Activation effective rank]({activation_rank_plot_path.name})",
             "",
-            "This figure measures the effective rank of midpoint hidden states on held-out downstream tokens. Higher values indicate more diverse internal representations rather than collapsed activity.",
+            "This figure measures the effective rank of midpoint hidden states for transferred models on held-out downstream tokens. Higher values indicate more diverse internal representations rather than collapsed activity.",
             "",
             "### Pairwise Logit Divergence Matrices",
             "",
             f"![Pairwise logit divergence matrices]({pairwise_logit_plot_path.name})",
             "",
-            "Each subplot corresponds to one model category and shows pairwise symmetric KL divergence between mechanisms on one shared diagnostic text bundle. Values are shown as mean plus-or-minus standard deviation in x1e4 nats across seeds. Lower values indicate more similar predictive distributions.",
+            "This heatmap shows pairwise symmetric KL divergence between transferred mechanisms on one shared diagnostic text bundle. Values are shown as mean plus-or-minus standard deviation in x1e4 nats across seeds. Lower values indicate more similar predictive distributions.",
             "",
             "### Pairwise Activation CKA Matrices",
             "",
             f"![Pairwise activation CKA matrices]({pairwise_activation_plot_path.name})",
             "",
-            "Each subplot corresponds to one model category and shows pairwise linear CKA between mechanisms on one shared diagnostic text bundle. Higher values indicate more similar internal representation structure.",
+            "This heatmap shows pairwise midpoint linear CKA between transferred mechanisms on one shared diagnostic text bundle. Higher values indicate more similar internal representation structure.",
             "",
             "### Effect Summary",
             "",
@@ -384,7 +390,8 @@ def _save_errorbar_plot(
         values = np.asarray([item[1] for item in items], dtype=float)
         errors = np.asarray([item[2] for item in items], dtype=float)
         positions = np.arange(len(items))
-        axis.barh(positions, values, xerr=errors, color="#8fb3cf", ecolor="#577c98", capsize=3)
+        axis.set_axisbelow(True)
+        axis.barh(positions, values, xerr=errors, color=BRIGHT_BAR, ecolor=BRIGHT_BAR_EDGE, capsize=3)
         if annotate_values:
             _annotate_horizontal_values(axis, values, positions, errors=errors)
         axis.axvline(0.0, color="#444444", linewidth=0.8)
@@ -416,14 +423,16 @@ def _save_probe_gain_plot(payload: dict[str, Any], output_path: Path) -> Path | 
             items.append((f"{MECHANISM_LABELS.get(mechanism_name, mechanism_name)} algorithmic", float(algorithmic["mean"]), float(algorithmic.get("std") or 0.0)))
     if not items:
         return None
+    values = np.asarray([item[1] for item in items], dtype=float)
+    errors = np.asarray([item[2] for item in items], dtype=float)
+    if np.max(np.abs(values) + errors) <= 1e-9:
+        return None
     _set_plot_style()
     figure, axis = plt.subplots(1, 1, figsize=(9, max(2.8, 0.4 * len(items))))
     labels = [item[0] for item in items]
-    values = np.asarray([item[1] for item in items], dtype=float)
-    errors = np.asarray([item[2] for item in items], dtype=float)
     positions = np.arange(len(items))
-    axis.barh(positions, values, xerr=errors, color="#8fb3cf", ecolor="#577c98", capsize=3)
-    _annotate_horizontal_values(axis, values, positions, errors=errors, fmt="{value:.1f}")
+    axis.set_axisbelow(True)
+    axis.barh(positions, values, xerr=errors, color=BRIGHT_BAR, ecolor=BRIGHT_BAR_EDGE, capsize=3)
     axis.axvline(0.0, color="#444444", linewidth=0.8)
     axis.set_yticks(positions)
     axis.set_yticklabels(labels)
@@ -439,13 +448,14 @@ def _save_probe_gain_plot(payload: dict[str, Any], output_path: Path) -> Path | 
 def _save_loss_overlay_plot(payload: dict[str, Any], output_path: Path) -> Path:
     items = list(payload["mechanisms"].items())
     _set_plot_style()
-    figure, axes = plt.subplots(2, 3, figsize=(11, 6), sharex=False, sharey=False)
-    flat_axes = axes.flatten()
+    ncols = min(3, max(1, len(items)))
+    nrows = int(np.ceil(len(items) / ncols))
+    figure, axes = plt.subplots(nrows, ncols, figsize=(3.8 * ncols, 2.8 * nrows), sharex=False, sharey=False)
+    flat_axes = np.atleast_1d(axes).flatten()
     variant_styles = {
-        "scratch": {"color": "#8b96a3", "linestyle": "-"},
-        "transferred": {"color": "#4d7798", "linestyle": "-"},
-        "compute_matched_baseline": {"color": "#6c8f6b", "linestyle": "--"},
-        "step": {"color": "#b48b5e", "linestyle": ":"},
+        "scratch": {"color": "#b88ef0", "linestyle": "-"},
+        "transferred": {"color": BRIGHT_BAR_EDGE, "linestyle": "-"},
+        "compute_matched_baseline": {"color": WARM_BAR_EDGE, "linestyle": "--"},
     }
     for axis, (mechanism_name, result) in zip(flat_axes, items):
         curves = _collect_loss_curves(result.get("seed_runs", []))
@@ -461,6 +471,7 @@ def _save_loss_overlay_plot(payload: dict[str, Any], output_path: Path) -> Path:
         axis.set_xlabel("Step")
         axis.set_ylabel("Eval loss")
         axis.grid(alpha=0.15)
+        axis.set_axisbelow(True)
     for axis in flat_axes[len(items) :]:
         axis.axis("off")
     handles, labels = flat_axes[0].get_legend_handles_labels()
@@ -480,13 +491,13 @@ def _save_variant_category_plot(
     top_label: str,
     zero_floor: bool = False,
     scale: float = 1.0,
-    include_variants: tuple[str, ...] = ("scratch", "transferred", "step"),
+    include_variants: tuple[str, ...] = ("transferred",),
 ) -> Path:
     color_map = {
-        "scratch": "#6f86a6",
-        "transferred": "#c57a5f",
-        "compute_matched_baseline": "#7e9f8d",
-        "step": "#b79b63",
+        "scratch": "#b88ef0",
+        "transferred": BRIGHT_BAR,
+        "compute_matched_baseline": WARM_BAR,
+        "step": "#ffd36b",
     }
     categories: list[tuple[str, list[tuple[str, float, float]]]] = []
     for variant_name in include_variants:
@@ -519,19 +530,67 @@ def _save_variant_category_plot(
             values,
             xerr=errors,
             color=color_map.get(variant_name, "#8fb3cf"),
-            ecolor="#577c98",
+            ecolor="#4f88c7",
             capsize=3,
         )
+        axis.set_axisbelow(True)
         axis.set_yticks(positions)
         axis.set_yticklabels(labels)
         axis.invert_yaxis()
-        axis.set_title(VARIANT_LABELS.get(variant_name, variant_name), fontsize=8)
-        axis.grid(axis="x", alpha=0.15)
+        if len(categories) > 1:
+            axis.set_title(VARIANT_LABELS.get(variant_name, variant_name), fontsize=8)
+        axis.grid(axis="x", color="#94a3b8", alpha=0.18, linewidth=0.7)
         if zero_floor:
             upper = max(np.max(values + errors), 1.0)
             axis.set_xlim(0.0, upper * 1.12)
     for axis in flat_axes[len(categories) :]:
         axis.axis("off")
+    figure.suptitle(top_label, fontsize=8, y=0.98)
+    figure.tight_layout(rect=(0.0, 0.0, 1.0, 0.95))
+    figure.savefig(output_path, dpi=150, bbox_inches="tight")
+    plt.close(figure)
+    return output_path
+
+
+def _save_transferred_metric_plot(
+    payload: dict[str, Any],
+    *,
+    metric_key: str,
+    output_path: Path,
+    top_label: str,
+    xlabel: str,
+    zero_floor: bool = False,
+) -> Path:
+    items = []
+    for mechanism_name, result in payload["mechanisms"].items():
+        diagnostics = result.get("diagnostics", {})
+        summary = diagnostics.get("activation_effective_rank")
+        if metric_key == "transferred_effective_rank" and summary and "transferred" in summary:
+            entry = summary["transferred"]
+            items.append(
+                (
+                    MECHANISM_LABELS.get(mechanism_name, mechanism_name),
+                    float(entry["mean"]),
+                    float(entry.get("std") or 0.0),
+                )
+            )
+    _set_plot_style()
+    figure, axis = plt.subplots(1, 1, figsize=(8.5, max(2.8, 0.45 * max(len(items), 1))))
+    if items:
+        labels = [item[0] for item in items]
+        values = np.asarray([item[1] for item in items], dtype=float)
+        errors = np.asarray([item[2] for item in items], dtype=float)
+        positions = np.arange(len(items))
+        axis.set_axisbelow(True)
+        axis.barh(positions, values, xerr=errors, color=BRIGHT_BAR, ecolor=BRIGHT_BAR_EDGE, capsize=3)
+        axis.set_yticks(positions)
+        axis.set_yticklabels(labels)
+        axis.invert_yaxis()
+        axis.set_xlabel(xlabel)
+        axis.grid(axis="x", color="#94a3b8", alpha=0.18, linewidth=0.7)
+        if zero_floor:
+            upper = max(np.max(values + errors), 1.0)
+            axis.set_xlim(0.0, upper * 1.12)
     figure.suptitle(top_label, fontsize=8, y=0.98)
     figure.tight_layout(rect=(0.0, 0.0, 1.0, 0.95))
     figure.savefig(output_path, dpi=150, bbox_inches="tight")
@@ -553,7 +612,7 @@ def _save_cross_mechanism_matrix_grid(
     items = [(variant_name, diagnostic) for variant_name, diagnostic in diagnostics.items() if diagnostic]
     _set_plot_style()
     num_categories = max(len(items), 1)
-    figure, axes = plt.subplots(1, num_categories, figsize=(4.2 * num_categories, 4.6))
+    figure, axes = plt.subplots(1, num_categories, figsize=(5.2 * num_categories, 5.0))
     flat_axes = np.atleast_1d(axes).flatten()
     all_values = []
     for _, diagnostic in items:
@@ -573,13 +632,14 @@ def _save_cross_mechanism_matrix_grid(
         else:
             vmin = float(matrix.min())
             vmax = float(matrix.max()) if float(matrix.max()) > float(matrix.min()) else float(matrix.min()) + 1.0
-        axis.imshow(matrix, cmap="Blues", aspect="auto", vmin=vmin, vmax=vmax)
+        axis.imshow(matrix, cmap=PASTEL_BLUE_MAP, aspect="auto", vmin=vmin, vmax=vmax)
         labels = [MECHANISM_LABELS.get(name, name) for name in diagnostic["labels"]]
         axis.set_xticks(range(len(labels)))
         axis.set_yticks(range(len(labels)))
         axis.set_xticklabels(labels, rotation=25, ha="right")
         axis.set_yticklabels(labels)
-        axis.set_title(VARIANT_LABELS.get(variant_name, variant_name), fontsize=8)
+        if len(items) > 1:
+            axis.set_title(VARIANT_LABELS.get(variant_name, variant_name), fontsize=8)
         for row_index in range(matrix.shape[0]):
             for col_index in range(matrix.shape[1]):
                 if std_matrix is not None and std_matrix.shape == matrix.shape:
@@ -587,8 +647,8 @@ def _save_cross_mechanism_matrix_grid(
                 else:
                     label = value_format.format(value=matrix[row_index, col_index])
                 normalized = 0.0 if vmax <= vmin else (matrix[row_index, col_index] - vmin) / (vmax - vmin)
-                text_color = "#f8fafc" if normalized >= 0.62 else "#1f2f3a"
-                axis.text(col_index, row_index, label, ha="center", va="center", fontsize=5.5, color=text_color)
+                text_color = "#ffffff" if normalized >= 0.5 else "#0f172a"
+                axis.text(col_index, row_index, label, ha="center", va="center", fontsize=6.0, color=text_color)
     for axis in flat_axes[len(items) :]:
         axis.axis("off")
     figure.suptitle(top_label, fontsize=8, y=0.98)
@@ -604,11 +664,10 @@ def _save_effect_summary_plot(payload: dict[str, Any], output_path: Path) -> Pat
     labels = []
     metric_specs = (
         ("transfer_gap_perplexity", "Transfer gap\n(ppl)"),
-        ("compute_matched_gap_perplexity", "Baseline gap\n(ppl)"),
+        ("compute_matched_gap_perplexity", "Compute-matched gap\n(ppl)"),
         ("convergence_step_delta", "Convergence\n(steps)"),
         ("reasoning_accuracy_gain", "Reasoning\n(points)"),
         ("algorithmic_accuracy_gain", "Algorithmic\n(points)"),
-        ("nca_synthetic_token_accuracy", "NCA synthetic\n(%)"),
     )
     for mechanism_name, result in payload["mechanisms"].items():
         metrics = result.get("metrics", {})
@@ -638,7 +697,7 @@ def _save_effect_summary_plot(payload: dict[str, Any], output_path: Path) -> Pat
         color_matrix[~valid, column_index] = 0.0
     _set_plot_style()
     figure, axis = plt.subplots(1, 1, figsize=(9, max(3.0, 0.5 * len(labels))))
-    axis.imshow(color_matrix, cmap="Blues", aspect="auto", vmin=0.0, vmax=1.0)
+    axis.imshow(color_matrix, cmap=PASTEL_BLUE_MAP, aspect="auto", vmin=0.0, vmax=1.0)
     axis.set_xticks(range(len(metric_specs)))
     axis.set_xticklabels([label for _, label in metric_specs], rotation=20, ha="right")
     axis.set_yticks(range(len(labels)))
@@ -651,7 +710,9 @@ def _save_effect_summary_plot(payload: dict[str, Any], output_path: Path) -> Pat
             else:
                 std_value = std_matrix[row_index, column_index]
                 label = f"{value:.2f}\n±{std_value:.2f}"
-            axis.text(column_index, row_index, label, ha="center", va="center", fontsize=5.5, color="#1f2f3a")
+            color_value = color_matrix[row_index, column_index]
+            text_color = "#ffffff" if color_value >= 0.5 else "#0f172a"
+            axis.text(column_index, row_index, label, ha="center", va="center", fontsize=6.0, color=text_color)
     figure.tight_layout()
     figure.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(figure)
@@ -779,7 +840,7 @@ def _annotate_horizontal_values(
 
 
 def _collect_loss_curves(seed_runs: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    variants = ("scratch", "transferred", "compute_matched_baseline", "step")
+    variants = ("scratch", "transferred", "compute_matched_baseline")
     curves: dict[str, dict[str, Any]] = {}
     for variant_name in variants:
         per_seed = []

@@ -635,6 +635,7 @@ def _collect_cross_mechanism_diagnostics(
                 trust_remote_code=hf_config.trust_remote_code,
                 max_batches=profile.diagnostic_max_batches,
                 max_positions_per_batch=profile.diagnostic_max_positions_per_batch,
+                include_variants=("transferred",),
             )
         )
     return {

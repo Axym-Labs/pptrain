@@ -98,6 +98,7 @@ def collect_cross_mechanism_representation_diagnostics(
     trust_remote_code: bool,
     max_batches: int,
     max_positions_per_batch: int,
+    include_variants: tuple[str, ...] = ("transferred",),
 ) -> dict[str, Any]:
     if downstream_bundle.eval_dataset is None or downstream_bundle.data_collator is None:
         return {}
@@ -112,7 +113,7 @@ def collect_cross_mechanism_representation_diagnostics(
         return {}
 
     features_by_variant: dict[str, dict[str, dict[str, np.ndarray]]] = {}
-    for variant_name in DIAGNOSTIC_VARIANTS:
+    for variant_name in include_variants:
         features_by_variant[variant_name] = {}
         for mechanism_name, variant_dirs in variant_model_dirs_by_mechanism.items():
             model_dir = variant_dirs.get(variant_name)
