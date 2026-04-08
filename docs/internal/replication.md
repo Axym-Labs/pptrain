@@ -105,7 +105,7 @@ This is intentionally smaller than the original papers. It is meant to rank mech
 Default seeds:
 
 - `smoke`: `41, 43, 47`
-- `paper_proxy_2048`: `11, 23, 37`
+- `paper_proxy_2048`: `11, 23, 37, 47, 59, 71, 83, 97, 109, 131`
 
 Smoke-profile note:
 
@@ -115,7 +115,7 @@ Smoke-profile note:
 Override if needed:
 
 ```powershell
-python -m pptrain.cli replicate --profile paper_proxy_2048 --seeds 11,23,37,47,59 --output-dir runs/replication-5seeds
+python -m pptrain.cli replicate --profile paper_proxy_2048 --seeds 11,23,37,47,59 --output-dir runs/replication-custom-seeds
 ```
 
 ## Claim Coverage Limits

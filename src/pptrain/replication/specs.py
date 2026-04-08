@@ -467,7 +467,7 @@ def _build_paper_proxy_profile(
         description="Paper-aligned proxy campaign with 2k context and public datasets.",
         model_name_or_path=model_name_or_path or "EleutherAI/pythia-160m-deduped",
         context_length=resolved_context,
-        seed_values=(11, 23, 37),
+        seed_values=(11, 23, 37, 47, 59, 71, 83, 97, 109, 131),
         config_overrides={"max_position_embeddings": resolved_context},
         synthetic_run_config=RunConfig(
             output_dir=f"{output_dir}/synthetic",
