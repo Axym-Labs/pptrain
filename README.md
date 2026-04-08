@@ -1,8 +1,8 @@
 # `pptrain`
 
-`pptrain` is a the PyTorch- and HuggingFace-native library for pre-pre-training language models on synthetic tasks before standard language pretraining.
+`pptrain` is a the PyTorch- and HuggingFace-native library for pre-pretraining language models. Pre-pretraining involves training on synthetic tasks before standard language pretraining, with recent work [1] showing gains beyond what additional natural-language pretraining alone achieves.
 
-Use a paper-backed preset as the starting point, then override only the few values you actually need for a local run or experiment. Alternatively, define custom task families by extending a flexible task abstraction and plugging in your own model adapter. Assess downstream transfer and benefit with a built-in analytics suite that compares against baselines and produces plots plus reports.
+Use a paper-backed preset as the starting point, then override only the few values you actually need for a local run or experiment. Alternatively, define custom task families by extending a flexible task abstraction and plugging in your own model adapter. Assess downstream transfer and performance with a built-in analytics suite that compares against baselines and produces plots plus reports.
 
 ## Install
 
