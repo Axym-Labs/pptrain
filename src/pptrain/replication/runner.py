@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import math
 import random
+from itertools import product
 from dataclasses import asdict
 from pathlib import Path
 from typing import Any
@@ -483,21 +484,26 @@ def _aggregate_claims(seed_runs: list[dict[str, Any]]) -> dict[str, Any]:
             continue
         replicated_values = [item.get("replicated") for item in claim_values if item.get("replicated") is not None]
         effect_values = [float(item["effect"]) for item in claim_values if item.get("effect") is not None]
+        hypothesis = _paired_sign_flip_hypothesis_test(effect_values)
         summary: dict[str, Any] = {
             "replicated": None,
+            "status": "not_evaluated",
             "success_rate": None,
             "num_valid_seeds": len(replicated_values),
             "effect_mean": _mean(effect_values),
             "effect_std": _std(effect_values),
             "effect_unit": next((item.get("effect_unit") for item in claim_values if item.get("effect_unit")), None),
+            "test_name": hypothesis.get("test_name"),
+            "alpha": hypothesis.get("alpha"),
+            "p_value_support": hypothesis.get("p_value_support"),
+            "p_value_contradict": hypothesis.get("p_value_contradict"),
         }
         if replicated_values:
             success_rate = sum(bool(value) for value in replicated_values) / len(replicated_values)
             summary["success_rate"] = success_rate
-            if effect_values:
-                summary["replicated"] = bool(_mean(effect_values) > 0 and success_rate >= (2.0 / 3.0))
-            else:
-                summary["replicated"] = bool(success_rate >= (2.0 / 3.0))
+        if hypothesis["status"] != "not_evaluated":
+            summary["status"] = hypothesis["status"]
+            summary["replicated"] = True if hypothesis["status"] == "supported" else False if hypothesis["status"] == "contradicted" else None
         numeric_fields = sorted(
             {
                 key
@@ -797,3 +803,54 @@ def _std(values: list[float]) -> float | None:
     if len(values) < 2:
         return 0.0 if values else None
     return float(np.std(values, ddof=1))
+
+
+def _paired_sign_flip_hypothesis_test(
+    effect_values: list[float],
+    *,
+    alpha: float = 0.05,
+) -> dict[str, Any]:
+    if not effect_values:
+        return {
+            "status": "not_evaluated",
+            "test_name": "paired_sign_flip",
+            "alpha": alpha,
+            "p_value_support": None,
+            "p_value_contradict": None,
+        }
+    if len(effect_values) < 2:
+        return {
+            "status": "inconclusive",
+            "test_name": "paired_sign_flip",
+            "alpha": alpha,
+            "p_value_support": None,
+            "p_value_contradict": None,
+        }
+
+    observed = float(np.mean(effect_values))
+    values = np.asarray(effect_values, dtype=np.float64)
+    null_distribution = np.asarray(
+        [
+            float(np.mean(values * np.asarray(signs, dtype=np.float64)))
+            for signs in product((-1.0, 1.0), repeat=len(effect_values))
+        ],
+        dtype=np.float64,
+    )
+    tolerance = 1e-12
+    p_value_support = float(np.mean(null_distribution >= (observed - tolerance)))
+    p_value_contradict = float(np.mean(null_distribution <= (observed + tolerance)))
+
+    if observed > 0.0 and p_value_support <= alpha:
+        status = "supported"
+    elif observed < 0.0 and p_value_contradict <= alpha:
+        status = "contradicted"
+    else:
+        status = "inconclusive"
+
+    return {
+        "status": status,
+        "test_name": "paired_sign_flip",
+        "alpha": alpha,
+        "p_value_support": p_value_support,
+        "p_value_contradict": p_value_contradict,
+    }

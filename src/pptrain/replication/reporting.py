@@ -25,9 +25,33 @@ def _require_pandas():
     return pd
 
 
-STATUS_TO_EMOJI = {True: "✅", False: "❌", None: "➖"}
-STATUS_TO_NUMERIC = {True: 1.0, False: -1.0, None: 0.0}
-STATUS_TO_PLOT_TEXT = {True: "Yes", False: "No", None: "N/A"}
+STATUS_TO_EMOJI = {
+    "supported": "✅",
+    "contradicted": "❌",
+    "inconclusive": "❔",
+    "not_evaluated": "➖",
+    True: "✅",
+    False: "❌",
+    None: "➖",
+}
+STATUS_TO_INDEX = {
+    "contradicted": 0,
+    "not_evaluated": 1,
+    "inconclusive": 2,
+    "supported": 3,
+    True: 3,
+    False: 0,
+    None: 1,
+}
+STATUS_TO_PLOT_TEXT = {
+    "supported": "Supported",
+    "contradicted": "Contradicted",
+    "inconclusive": "Inconclusive",
+    "not_evaluated": "N/A",
+    True: "Supported",
+    False: "Contradicted",
+    None: "N/A",
+}
 
 CLAIM_LABELS = {
     "transfer_signal": "Transfer beats baseline",
@@ -53,6 +77,20 @@ BRIGHT_BAR_EDGE = "#2f6fcb"
 WARM_BAR = "#f5a97f"
 WARM_BAR_EDGE = "#c4744c"
 PASTEL_BLUE_MAP = ListedColormap(["#edf5ff", "#d8e9ff", "#bad6ff", "#8ab7ff"])
+
+
+def _claim_status(claim: dict[str, Any] | None) -> str:
+    if not claim:
+        return "not_evaluated"
+    status = claim.get("status")
+    if status in {"supported", "contradicted", "inconclusive", "not_evaluated"}:
+        return status
+    replicated = claim.get("replicated")
+    if replicated is True:
+        return "supported"
+    if replicated is False:
+        return "contradicted"
+    return "not_evaluated"
 
 
 def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) -> dict[str, Path]:
@@ -187,7 +225,7 @@ def _build_claim_dataframe(pd, payload: dict[str, Any]):
     for mechanism_name, result in payload["mechanisms"].items():
         claims = result["claims"]
         rows[mechanism_name] = {
-            column: STATUS_TO_EMOJI[claims.get(column, {}).get("replicated")]
+            column: STATUS_TO_EMOJI[_claim_status(claims.get(column))]
             for column in CLAIM_COLUMNS
         }
     dataframe = pd.DataFrame.from_dict(rows, orient="index")
@@ -232,7 +270,8 @@ def _build_report_markdown(
         "This report summarizes a bounded multi-seed replication campaign across the current pre-pre-training mechanisms.",
         "The goal is not exact paper reproduction, but a consistent check of whether each mechanism transfers in the expected direction under one shared setup.",
         "All mechanisms are additionally evaluated against a compute-matched natural baseline built from natural-text warm-up on the same downstream text family.",
-        "In the table, `✅` means the aggregated proxy claim was met, `❌` means it was not met, and `➖` means the claim was not evaluated for that mechanism in this profile rather than missing data.",
+        "Aggregated claim outcomes are based on a paired sign-flip hypothesis test across seeds rather than the earlier heuristic threshold.",
+        "In the table, `✅` means the target-direction claim was statistically supported, `❌` means the data significantly favored the opposite direction, `❔` means the result was inconclusive, and `➖` means the claim was not evaluated for that mechanism in this profile rather than missing data.",
         "",
         "### Key Results",
         "",
@@ -242,7 +281,7 @@ def _build_report_markdown(
         "",
         f"![Claim matrix]({claim_plot_path.name})",
         "",
-        "This matrix shows the aggregated claim outcomes. Rows are mechanisms, columns are natural-language claim categories, and each cell reports whether the corresponding proxy claim was supported after aggregating across seeds.",
+        "This matrix shows the aggregated claim outcomes. Rows are mechanisms, columns are natural-language claim categories, and each cell reports whether the corresponding proxy claim was supported, contradicted, or left inconclusive after aggregating across seeds.",
         "",
         "### Compute-Matched Baseline Gap",
         "",
@@ -337,16 +376,16 @@ def _build_report_markdown(
 def _save_claim_matrix_plot(payload: dict[str, Any], output_path: Path) -> Path:
     mechanisms = list(payload["mechanisms"])
     matrix = [
-        [STATUS_TO_NUMERIC[payload["mechanisms"][name]["claims"].get(column, {}).get("replicated")] for column in CLAIM_COLUMNS]
+        [STATUS_TO_INDEX[_claim_status(payload["mechanisms"][name]["claims"].get(column))] for column in CLAIM_COLUMNS]
         for name in mechanisms
     ]
     _set_plot_style()
     figure, axis = plt.subplots(1, 1, figsize=(10, max(2.8, 0.5 * len(mechanisms))))
     axis.imshow(
         matrix,
-        cmap=ListedColormap(["#f4d9dd", "#eceef2", "#d8e7f4"]),
-        vmin=-1,
-        vmax=1,
+        cmap=ListedColormap(["#f4d9dd", "#eceef2", "#fff0bf", "#d8e7f4"]),
+        vmin=0,
+        vmax=3,
         aspect="auto",
     )
     axis.set_xticks(range(len(CLAIM_COLUMNS)))
@@ -359,7 +398,7 @@ def _save_claim_matrix_plot(payload: dict[str, Any], output_path: Path) -> Path:
     axis.tick_params(which="minor", bottom=False, left=False)
     for row_index, mechanism_name in enumerate(mechanisms):
         for column_index, column_name in enumerate(CLAIM_COLUMNS):
-            status = payload["mechanisms"][mechanism_name]["claims"].get(column_name, {}).get("replicated")
+            status = _claim_status(payload["mechanisms"][mechanism_name]["claims"].get(column_name))
             axis.text(column_index, row_index, STATUS_TO_PLOT_TEXT[status], ha="center", va="center", fontsize=7)
     figure.tight_layout()
     figure.savefig(output_path, dpi=150, bbox_inches="tight")
