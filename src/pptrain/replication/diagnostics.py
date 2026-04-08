@@ -237,7 +237,12 @@ def _extract_model_features(
     model = AutoModelForCausalLM.from_pretrained(
         model_dir,
         trust_remote_code=trust_remote_code,
-    ).to(device)
+    )
+    if device.type == "cuda":
+        # Diagnostic forwards prioritize numerical stability over throughput.
+        model = model.to(device=device, dtype=torch.float32)
+    else:
+        model = model.to(device)
     model.eval()
     logits_chunks: list[np.ndarray] = []
     hidden_chunks: list[np.ndarray] = []
@@ -293,8 +298,16 @@ def _linear_cka(left_hidden: np.ndarray, right_hidden: np.ndarray) -> float:
 def _effective_rank(hidden: np.ndarray) -> float:
     if hidden.size == 0:
         return float("nan")
-    centered = hidden - hidden.mean(axis=0, keepdims=True)
-    singular_values = np.linalg.svd(centered, compute_uv=False)
+    centered = np.asarray(hidden, dtype=np.float64)
+    centered = np.nan_to_num(centered, copy=False, nan=0.0, posinf=0.0, neginf=0.0)
+    centered = centered - centered.mean(axis=0, keepdims=True)
+    try:
+        singular_values = np.linalg.svd(centered, compute_uv=False)
+    except np.linalg.LinAlgError:
+        covariance = centered.T @ centered
+        covariance = np.nan_to_num(covariance, copy=False, nan=0.0, posinf=0.0, neginf=0.0)
+        eigenvalues = np.linalg.eigvalsh(covariance)
+        singular_values = np.sqrt(np.clip(eigenvalues, a_min=0.0, a_max=None))
     singular_values = singular_values[singular_values > 1e-12]
     if singular_values.size == 0:
         return 0.0

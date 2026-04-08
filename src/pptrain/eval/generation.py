@@ -19,14 +19,16 @@ def generate_text(
 ) -> str:
     device = resolve_device(model)
     encoded = tokenizer(prompt, return_tensors="pt").to(device)
+    generation_kwargs = {
+        **encoded,
+        "max_new_tokens": max_new_tokens,
+        "do_sample": temperature > 0,
+        "pad_token_id": tokenizer.eos_token_id or tokenizer.pad_token_id or model.config.eos_token_id,
+    }
+    if temperature > 0:
+        generation_kwargs["temperature"] = max(temperature, 1e-5)
     with torch.no_grad():
-        outputs = model.generate(
-            **encoded,
-            max_new_tokens=max_new_tokens,
-            do_sample=temperature > 0,
-            temperature=max(temperature, 1e-5),
-            pad_token_id=tokenizer.eos_token_id or tokenizer.pad_token_id or model.config.eos_token_id,
-        )
+        outputs = model.generate(**generation_kwargs)
     generated = outputs[0, encoded["input_ids"].shape[1] :]
     return tokenizer.decode(generated, skip_special_tokens=True)
 
