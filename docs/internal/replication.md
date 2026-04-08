@@ -30,6 +30,12 @@ Recommended 2k-context proxy run on Hopper-class GPUs:
 python -m pptrain.cli replicate --profile paper_proxy_2048 --context-length 2048 --model-name-or-path EleutherAI/pythia-410m-deduped --output-dir runs/replication-2048
 ```
 
+Resume a partial or interrupted campaign:
+
+```powershell
+python -m pptrain.cli replicate --profile paper_proxy_2048 --context-length 2048 --model-name-or-path EleutherAI/pythia-410m-deduped --output-dir runs/replication-2048 --resume
+```
+
 Single-mechanism debugging:
 
 ```powershell
@@ -41,6 +47,7 @@ python -m pptrain.cli replicate --profile paper_proxy_2048 --mechanism nca --out
 The command writes:
 
 - `replication_results.json`: full raw payload with environment info, per-run metrics, log histories, probe results, transfer reports, and artifact paths
+  - during an in-progress campaign this file is also the resume snapshot; it is updated after each completed seed
 - `claim_matrix.csv`: pandas dataframe export
 - `replication_report.md`: paper-style markdown summary with the claim matrix, plot embeds, and short plot descriptions
 - `claim_matrix.png`: heatmap view of the claim matrix

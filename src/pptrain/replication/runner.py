@@ -55,6 +55,7 @@ def run_replication_campaign(
     model_name_or_path: str | None = None,
     context_length: int | None = None,
     seeds: tuple[int, ...] | None = None,
+    resume: bool = False,
 ) -> dict[str, Any]:
     output_path = Path(output_dir)
     profile = build_replication_profile(
@@ -72,13 +73,23 @@ def run_replication_campaign(
     adapter = HFCausalLMAdapter(hf_config)
     tokenizer = load_tokenizer(hf_config)
     environment = _collect_environment_info()
+    existing_payload = (
+        _load_resume_payload(
+            output_path=output_path,
+            profile=profile,
+            seed_values=seed_values,
+            test_mode=test_mode,
+        )
+        if resume
+        else None
+    )
 
     selected_studies = [
         study
         for study in profile.studies
         if mechanisms is None or study.mechanism_name in set(mechanisms)
     ]
-    payload: dict[str, Any] = {
+    payload: dict[str, Any] = existing_payload or {
         "profile": {
             "name": profile.name,
             "description": profile.description,
@@ -90,6 +101,10 @@ def run_replication_campaign(
         "environment": environment,
         "mechanisms": {},
     }
+    payload["environment"] = environment
+    payload["status"] = "in_progress"
+    payload.pop("artifacts", None)
+    _write_replication_snapshot(payload, output_path)
 
     for study in selected_studies:
         payload["mechanisms"][study.mechanism_name] = _run_study(
@@ -100,7 +115,15 @@ def run_replication_campaign(
             tokenizer=tokenizer,
             output_dir=output_path / study.mechanism_name,
             seed_values=seed_values,
+            existing_result=payload["mechanisms"].get(study.mechanism_name),
+            progress_callback=lambda result, mechanism_name=study.mechanism_name: _persist_study_progress(
+                payload=payload,
+                output_path=output_path,
+                mechanism_name=mechanism_name,
+                study_result=result,
+            ),
         )
+        _write_replication_snapshot(payload, output_path)
 
     payload["cross_mechanism_diagnostics"] = _collect_cross_mechanism_diagnostics(
         payload=payload,
@@ -112,7 +135,8 @@ def run_replication_campaign(
 
     artifacts = save_replication_reports(payload, output_path)
     payload["artifacts"] = {name: str(path) for name, path in artifacts.items()}
-    (output_path / "replication_results.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    payload["status"] = "completed"
+    _write_replication_snapshot(payload, output_path)
     return payload
 
 
@@ -125,20 +149,42 @@ def _run_study(
     tokenizer,
     output_dir: Path,
     seed_values: tuple[int, ...],
+    existing_result: dict[str, Any] | None = None,
+    progress_callback=None,
 ) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
-    seed_runs = [
-        _run_seeded_study(
-            study=study,
-            profile=profile,
-            hf_config=hf_config,
-            adapter=adapter,
-            tokenizer=tokenizer,
-            output_dir=output_dir / f"seed_{seed}",
-            seed=seed,
+    existing_by_seed = {
+        int(item["seed"]): item
+        for item in (existing_result or {}).get("seed_runs", [])
+        if isinstance(item, dict) and item.get("seed") is not None
+    }
+    seed_runs = []
+    for seed in seed_values:
+        if seed in existing_by_seed:
+            seed_runs.append(existing_by_seed[seed])
+            continue
+        seed_runs.append(
+            _run_seeded_study(
+                study=study,
+                profile=profile,
+                hf_config=hf_config,
+                adapter=adapter,
+                tokenizer=tokenizer,
+                output_dir=output_dir / f"seed_{seed}",
+                seed=seed,
+            )
         )
-        for seed in seed_values
-    ]
+        if progress_callback is not None:
+            progress_callback(_build_study_payload(study=study, seed_values=seed_values, seed_runs=seed_runs))
+    return _build_study_payload(study=study, seed_values=seed_values, seed_runs=seed_runs)
+
+
+def _build_study_payload(
+    *,
+    study: MechanismStudySpec,
+    seed_values: tuple[int, ...],
+    seed_runs: list[dict[str, Any]],
+) -> dict[str, Any]:
     return {
         "paper_source": study.paper_source,
         "paper_note": study.paper_note,
@@ -771,6 +817,58 @@ def _collect_environment_info() -> dict[str, Any]:
         "cuda_available": torch.cuda.is_available(),
         "cuda_devices": cuda_devices,
     }
+
+
+def _write_replication_snapshot(payload: dict[str, Any], output_path: Path) -> None:
+    output_path.mkdir(parents=True, exist_ok=True)
+    (output_path / "replication_results.json").write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+def _persist_study_progress(
+    *,
+    payload: dict[str, Any],
+    output_path: Path,
+    mechanism_name: str,
+    study_result: dict[str, Any],
+) -> None:
+    payload.setdefault("mechanisms", {})[mechanism_name] = study_result
+    payload["status"] = "in_progress"
+    payload.pop("artifacts", None)
+    _write_replication_snapshot(payload, output_path)
+
+
+def _load_resume_payload(
+    *,
+    output_path: Path,
+    profile: ReplicationProfile,
+    seed_values: tuple[int, ...],
+    test_mode: bool,
+) -> dict[str, Any] | None:
+    results_path = output_path / "replication_results.json"
+    if not results_path.exists():
+        return None
+    payload = json.loads(results_path.read_text(encoding="utf-8"))
+    profile_payload = payload.get("profile", {})
+    expected = {
+        "name": profile.name,
+        "model_name_or_path": profile.model_name_or_path,
+        "context_length": profile.context_length,
+        "test_mode": test_mode,
+        "seed_values": list(seed_values),
+    }
+    actual = {
+        "name": profile_payload.get("name"),
+        "model_name_or_path": profile_payload.get("model_name_or_path"),
+        "context_length": profile_payload.get("context_length"),
+        "test_mode": profile_payload.get("test_mode"),
+        "seed_values": profile_payload.get("seed_values"),
+    }
+    if actual != expected:
+        raise ValueError(
+            "Cannot resume replication campaign because the existing output directory was created "
+            "with different profile settings."
+        )
+    return payload
 
 
 def _set_global_seed(seed: int) -> None:

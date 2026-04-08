@@ -148,18 +148,25 @@ def test_cli_fit_can_run_eval(tmp_path: Path, monkeypatch, capsys) -> None:
 
 
 def test_cli_replicate_prints_artifact_summary(monkeypatch, capsys) -> None:
+    captured = {}
+
+    def _fake_run_replication_campaign(**kwargs):
+        captured.update(kwargs)
+        return {
+            "profile": {"name": "smoke"},
+            "artifacts": {"csv": "runs/replication/claim_matrix.csv"},
+        }
+
     monkeypatch.setattr(
         cli,
         "run_replication_campaign",
-        lambda **kwargs: {
-            "profile": {"name": "smoke"},
-            "artifacts": {"csv": "runs/replication/claim_matrix.csv"},
-        },
+        _fake_run_replication_campaign,
     )
-    cli.main(["replicate", "--test"])
+    cli.main(["replicate", "--test", "--resume"])
     output = capsys.readouterr().out
     assert "profile: smoke" in output
     assert "claim_matrix.csv" in output
+    assert captured["resume"] is True
 
 
 def test_cli_module_entrypoint() -> None:
