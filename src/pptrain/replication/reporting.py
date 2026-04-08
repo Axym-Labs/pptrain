@@ -29,11 +29,11 @@ STATUS_TO_PLOT_TEXT = {True: "Yes", False: "No", None: "N/A"}
 CLAIM_LABELS = {
     "transfer_signal": "Transfer beats scratch",
     "convergence_gain": "Converges faster",
-    "compute_matched_gain": "Beats natural warm-up",
+    "compute_matched_gain": "Beats compute-matched natural baseline",
     "reasoning_transfer": "Reasoning transfer",
     "algorithmic_transfer": "Algorithmic transfer",
     "synthetic_ordering": "Preferred synthetic preset",
-    "near_real_baseline": "Close to natural warm-up",
+    "near_real_baseline": "Close to natural-text baseline",
 }
 
 MECHANISM_LABELS = {
@@ -63,6 +63,7 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
     markdown_path = output / "replication_report.md"
     markdown_path.write_text(
         _build_report_markdown(
+            payload=payload,
             dataframe=dataframe,
             claim_plot_path=claim_plot_path,
             metric_plot_path=metric_plot_path,
@@ -101,8 +102,9 @@ def _dataframe_to_markdown(dataframe) -> str:
     return "\n".join(rows) + "\n"
 
 
-def _build_report_markdown(*, dataframe, claim_plot_path: Path, metric_plot_path: Path) -> str:
+def _build_report_markdown(*, payload: dict[str, Any], dataframe, claim_plot_path: Path, metric_plot_path: Path) -> str:
     table_markdown = _dataframe_to_markdown(dataframe)
+    metrics_table_markdown = _build_metrics_table_markdown(payload)
     return "\n".join(
         [
             "# Replication Report",
@@ -125,7 +127,11 @@ def _build_report_markdown(*, dataframe, claim_plot_path: Path, metric_plot_path
             "",
             f"![Primary deltas]({metric_plot_path.name})",
             "",
-            "This plot shows the primary improvement metric used for each mechanism. For transfer-oriented studies this is roughly a perplexity delta, and for reasoning or algorithmic studies it is roughly an accuracy delta. Positive values indicate that transferred models outperformed scratch baselines on the study's primary metric.",
+            "This plot shows the primary change versus scratch on a percentage scale. For perplexity-based studies, positive values indicate relative perplexity reduction. For reasoning and algorithmic studies, positive values indicate accuracy gain on a percentage scale.",
+            "",
+            "### Run Metrics",
+            "",
+            metrics_table_markdown.rstrip(),
             "",
         ]
     )
@@ -175,10 +181,10 @@ def _save_claim_matrix_plot(payload: dict[str, Any], output_path: Path) -> Path:
 def _save_primary_metric_plot(payload: dict[str, Any], output_path: Path) -> Path:
     items = []
     for mechanism_name, result in payload["mechanisms"].items():
-        primary_delta = result.get("primary_metric_delta")
+        primary_delta = _primary_metric_percent_change(result)
         if primary_delta is None:
             continue
-        items.append((mechanism_name, float(primary_delta), _primary_metric_unit(result)))
+        items.append((mechanism_name, float(primary_delta)))
     plt.rcParams.update(
         {
             "font.family": "serif",
@@ -194,20 +200,100 @@ def _save_primary_metric_plot(payload: dict[str, Any], output_path: Path) -> Pat
         values = [item[1] for item in items]
         axis.barh(labels, values, color="#8fb3cf")
         axis.axvline(0.0, color="#444444", linewidth=0.8)
-        axis.set_xlabel("Primary delta (perplexity points or accuracy points; positive is better)")
-        for index, (_, value, unit) in enumerate(items):
-            text = "ppl" if unit == "perplexity points" else "acc"
-            x_position = value + (0.01 if value >= 0 else -0.01)
-            horizontal_alignment = "left" if value >= 0 else "right"
-            axis.text(x_position, index, text, va="center", ha=horizontal_alignment, fontsize=7, color="#35586c")
+        axis.set_xlabel("Primary change vs scratch (%)")
+        limit = max((abs(value) for value in values), default=1.0)
+        axis.set_xlim(min(-1.0, -0.15 * limit), max(1.0, 1.15 * limit))
     figure.tight_layout()
     figure.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close(figure)
     return output_path
 
 
-def _primary_metric_unit(result: dict[str, Any]) -> str:
+def _primary_metric_percent_change(result: dict[str, Any]) -> float | None:
     claims = result.get("claims", {})
-    if "algorithmic_transfer" in claims or "reasoning_transfer" in claims:
-        return "accuracy points"
-    return "perplexity points"
+    if "algorithmic_transfer" in claims:
+        scratch = claims["algorithmic_transfer"].get("scratch_accuracy")
+        transferred = claims["algorithmic_transfer"].get("transferred_accuracy")
+        if scratch is None or transferred is None:
+            return None
+        return 100.0 * (float(transferred) - float(scratch))
+    if "reasoning_transfer" in claims:
+        scratch = claims["reasoning_transfer"].get("scratch_accuracy")
+        transferred = claims["reasoning_transfer"].get("transferred_accuracy")
+        if scratch is None or transferred is None:
+            return None
+        return 100.0 * (float(transferred) - float(scratch))
+    if "transfer_signal" in claims:
+        scratch = claims["transfer_signal"].get("scratch_perplexity")
+        transferred = claims["transfer_signal"].get("transferred_perplexity")
+        if scratch is None or transferred is None or float(scratch) == 0.0:
+            return None
+        return 100.0 * (float(scratch) - float(transferred)) / float(scratch)
+    if "synthetic_ordering" in claims:
+        primary = claims["synthetic_ordering"].get("primary_perplexity")
+        comparison = claims["synthetic_ordering"].get("comparison_perplexity")
+        if comparison is None or primary is None or float(comparison) == 0.0:
+            return None
+        return 100.0 * (float(comparison) - float(primary)) / float(comparison)
+    if "near_real_baseline" in claims:
+        synthetic = claims["near_real_baseline"].get("synthetic_perplexity")
+        natural = claims["near_real_baseline"].get("natural_warmup_perplexity")
+        if natural is None or synthetic is None or float(natural) == 0.0:
+            return None
+        return 100.0 * (float(natural) - float(synthetic)) / float(natural)
+    return None
+
+
+def _build_metrics_table_markdown(payload: dict[str, Any]) -> str:
+    columns = [
+        "mechanism",
+        "preset",
+        "scratch ppl",
+        "transferred ppl",
+        "natural baseline ppl",
+        "comparison ppl",
+        "scratch reasoning",
+        "transferred reasoning",
+        "scratch algorithmic",
+        "transferred algorithmic",
+        "primary change (%)",
+    ]
+    rows = ["| " + " | ".join(columns) + " |", "| " + " | ".join(["---"] * len(columns)) + " |"]
+    for mechanism_name, result in payload["mechanisms"].items():
+        claims = result.get("claims", {})
+        transfer_claim = claims.get("transfer_signal", {})
+        reasoning_claim = claims.get("reasoning_transfer", {})
+        algorithmic_claim = claims.get("algorithmic_transfer", {})
+        compute_claim = claims.get("compute_matched_gain", {})
+        ordering_claim = claims.get("synthetic_ordering", {})
+        near_real_claim = claims.get("near_real_baseline", {})
+        comparison_ppl = ordering_claim.get("comparison_perplexity")
+        if comparison_ppl is None:
+            comparison_ppl = near_real_claim.get("natural_warmup_perplexity")
+        row = [
+            MECHANISM_LABELS.get(mechanism_name, mechanism_name),
+            str(result.get("preset", "")),
+            _format_number(transfer_claim.get("scratch_perplexity")),
+            _format_number(transfer_claim.get("transferred_perplexity") or ordering_claim.get("primary_perplexity") or near_real_claim.get("synthetic_perplexity")),
+            _format_number(compute_claim.get("natural_warmup_perplexity") or near_real_claim.get("natural_warmup_perplexity")),
+            _format_number(comparison_ppl),
+            _format_percentage(reasoning_claim.get("scratch_accuracy")),
+            _format_percentage(reasoning_claim.get("transferred_accuracy")),
+            _format_percentage(algorithmic_claim.get("scratch_accuracy")),
+            _format_percentage(algorithmic_claim.get("transferred_accuracy")),
+            _format_number(_primary_metric_percent_change(result)),
+        ]
+        rows.append("| " + " | ".join(row) + " |")
+    return "\n".join(rows) + "\n"
+
+
+def _format_number(value: Any) -> str:
+    if value is None:
+        return "N/A"
+    return f"{float(value):.3f}"
+
+
+def _format_percentage(value: Any) -> str:
+    if value is None:
+        return "N/A"
+    return f"{100.0 * float(value):.1f}%"

@@ -30,4 +30,5 @@ def test_replication_reporting_writes_matrix_and_plots(tmp_path: Path) -> None:
     assert "### Key Results" in report_text
     assert "![Claim matrix](claim_matrix.png)" in report_text
     assert "![Primary deltas](primary_deltas.png)" in report_text
+    assert "### Run Metrics" in report_text
     assert "➖" in report_text
