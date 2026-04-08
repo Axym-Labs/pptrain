@@ -21,6 +21,9 @@ def test_registry_exposes_presets() -> None:
     preset_names = [preset.name for preset in registered_presets("nca")]
     assert "paper_code" in preset_names
     assert "paper_web_text" in preset_names
+    summarization_preset_names = [preset.name for preset in registered_presets("summarization")]
+    assert "paper_ourtasks_subset_100k" in summarization_preset_names
+    assert "paper_copy_quoted_100k" in summarization_preset_names
 
 
 def test_registry_merges_preset_config_with_overrides() -> None:

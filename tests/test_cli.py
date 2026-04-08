@@ -21,6 +21,15 @@ def test_cli_lists_mechanisms(capsys) -> None:
     assert "summarization" in output
 
 
+def test_cli_filters_mechanisms(capsys) -> None:
+    cli.main(["mechanisms", "summarization"])
+    output = capsys.readouterr().out
+    first_line = output.splitlines()[0]
+    assert first_line.startswith("summarization")
+    assert "paper_ourtasks_subset_100k" in output
+    assert "\nnca " not in output
+
+
 def test_cli_lists_mechanisms_as_json(capsys) -> None:
     cli.main(["mechanisms", "--json"])
     payload = json.loads(capsys.readouterr().out)

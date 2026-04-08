@@ -1,4 +1,9 @@
-from pptrain.integrations.base import CallableAdapterConfig, CallableCausalLMAdapter, CausalLMAdapter
+from pptrain.integrations.base import (
+    CallableAdapterConfig,
+    CallableCausalLMAdapter,
+    CausalLMAdapter,
+    VocabSizeCausalLMAdapter,
+)
 from pptrain.integrations.hf import HFCausalLMAdapter, HFModelConfig
 
 __all__ = [
@@ -7,4 +12,5 @@ __all__ = [
     "CausalLMAdapter",
     "HFCausalLMAdapter",
     "HFModelConfig",
+    "VocabSizeCausalLMAdapter",
 ]

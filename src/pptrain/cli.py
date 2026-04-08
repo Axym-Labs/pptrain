@@ -69,7 +69,7 @@ def _print_fit_summary(summary: dict[str, Any], *, json_output: bool) -> None:
             print(f"  {name}: {value}")
 
 
-def _print_mechanisms(*, json_output: bool) -> None:
+def _print_mechanisms(*, json_output: bool, mechanism_name: str | None = None) -> None:
     mechanisms = [
         {
             "name": item.name,
@@ -85,6 +85,10 @@ def _print_mechanisms(*, json_output: bool) -> None:
         }
         for item in registered_mechanisms()
     ]
+    if mechanism_name is not None:
+        mechanisms = [item for item in mechanisms if item["name"] == mechanism_name]
+        if not mechanisms:
+            raise KeyError(f"Unknown mechanism '{mechanism_name}'.")
     if json_output:
         print(json.dumps(mechanisms, indent=2))
         return
@@ -126,6 +130,7 @@ def build_parser() -> argparse.ArgumentParser:
         "mechanisms",
         help="List registered upstream mechanisms.",
     )
+    mechanisms_parser.add_argument("name", nargs="?", help="Optional mechanism name filter.")
     mechanisms_parser.add_argument("--json", action="store_true", help="Print mechanism info as JSON.")
     return parser
 
@@ -139,7 +144,7 @@ def main(argv: list[str] | None = None) -> None:
         eval_path = _maybe_run_eval(args, trainer, run)
         _print_fit_summary(_fit_summary(trainer, run, eval_path=eval_path), json_output=args.json)
     elif args.command == "mechanisms":
-        _print_mechanisms(json_output=args.json)
+        _print_mechanisms(json_output=args.json, mechanism_name=args.name)
 
 
 if __name__ == "__main__":

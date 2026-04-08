@@ -1,11 +1,13 @@
+import numpy as np
+
 from pptrain.mechanisms import SummarizationConfig, SummarizationMechanism
-from pptrain.mechanisms.summarization.generator import next_sentence_example
+from pptrain.mechanisms.summarization.generator import copy_quoted_example, next_sentence_example
 
 
 def test_summarization_mechanism_builds_sequences() -> None:
     mechanism = SummarizationMechanism(
         SummarizationConfig(
-            tasks=("sentence_reordering", "next_sentence", "masked_document"),
+            tasks=("sentence_reordering", "next_sentence", "masked_document", "copy_keyword_multiple_sorted"),
             sequence_count=8,
             eval_sequence_count=3,
             max_length=128,
@@ -23,6 +25,21 @@ def test_summarization_mechanism_builds_sequences() -> None:
     assert sample["input_ids"].shape[0] <= 128
     assert sample["labels"].shape[0] <= 128
     assert "train_task_counts" in bundle.metadata
+
+
+def test_copy_quoted_example_extracts_span() -> None:
+    example = copy_quoted_example(
+        rng=np.random.default_rng(7),
+        document=[[1, 2, 3, 4], [5, 6, 7]],
+        quote_open_token_id=90,
+        quote_close_token_id=91,
+        max_quote_span_words=2,
+    )
+    flattened = [token for sentence in example.input_document for token in sentence]
+    assert 90 in flattened
+    assert 91 in flattened
+    assert len(example.target_document) == 1
+    assert 1 <= len(example.target_document[0]) <= 2
 
 
 def test_next_sentence_example_splits_document() -> None:

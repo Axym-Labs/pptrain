@@ -60,13 +60,13 @@ Use a paper-backed preset as the starting point, then override only the few valu
 ## Built-in Families
 
 - `nca`: neural cellular automata trajectories with paper presets for web-text and code bands
-- `dyck`: Dyck-style balanced-bracket generation with a long-context `k=64` preset
-- `procedural`: short procedural tasks such as identity, reverse, sort, set, union, delete, and addition
-- `simpler_tasks`: copy/set/query/set-op tasks from the simpler synthetic-task benchmark
-- `lime`: induction, deduction, and abduction tasks with benchmark and 5M mixed presets
-- `summarization`: STEP-style sentence reordering, next-sentence, and masked-document tasks
+- `dyck`: Dyck-style balanced-bracket generation with paper presets for `k=8/16/32/64`
+- `procedural`: short procedural tasks such as identity, reverse, sort, set, union, delete, and addition, with paper length presets
+- `simpler_tasks`: copy/set/query/set-op tasks from the simpler synthetic-task benchmark, including broader single-task presets
+- `lime`: induction, deduction, and abduction tasks with mixed and single-mode paper presets
+- `summarization`: STEP-style and nonsense-style document transduction tasks, including an `OurTasks`-style bounded subset
 
-Inspect them with `pptrain mechanisms` or `pptrain mechanisms --json`.
+Inspect them with `pptrain mechanisms`, `pptrain mechanisms summarization`, or `pptrain mechanisms --json`.
 
 ## CLI
 
@@ -79,7 +79,7 @@ The eval hook is intentionally lightweight. It is mainly there to sanity-check t
 
 ## Custom Models
 
-For non-Hugging-Face architectures, use `CallableCausalLMAdapter` and keep the same trainer and transfer flow. A minimal example lives in [examples/custom_adapter.py](examples/custom_adapter.py).
+For non-Hugging-Face architectures, use `CallableCausalLMAdapter` when you want full control over model construction, or `VocabSizeCausalLMAdapter` when the upstream model only needs the synthetic tokenizer vocab size. A minimal example lives in [examples/custom_adapter.py](examples/custom_adapter.py).
 
 ## Transfer
 

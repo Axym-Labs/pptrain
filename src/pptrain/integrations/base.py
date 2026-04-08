@@ -53,3 +53,20 @@ class CallableCausalLMAdapter:
         if self._load_downstream_tokenizer is None:
             return None
         return self._load_downstream_tokenizer()
+
+
+class VocabSizeCausalLMAdapter(CallableCausalLMAdapter):
+    def __init__(
+        self,
+        *,
+        create_prepretrain_model: Callable[[int], nn.Module],
+        load_downstream_model: Callable[[], nn.Module],
+        load_downstream_tokenizer: Callable[[], Any] | None = None,
+        name: str = "vocab-size",
+    ) -> None:
+        super().__init__(
+            create_prepretrain_model=lambda tokenizer_spec: create_prepretrain_model(tokenizer_spec.vocab_size),
+            load_downstream_model=load_downstream_model,
+            load_downstream_tokenizer=load_downstream_tokenizer,
+            name=name,
+        )

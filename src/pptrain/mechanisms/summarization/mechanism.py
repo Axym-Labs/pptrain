@@ -14,16 +14,40 @@ from pptrain.mechanisms._shared import (
 from pptrain.mechanisms.summarization.config import SUMMARIZATION_PRESETS, SummarizationConfig
 from pptrain.mechanisms.summarization.generator import (
     DocumentExample,
+    copy_bulleted_example,
+    copy_first_sentence_example,
+    copy_keyword_multiple_in_order_example,
+    copy_keyword_multiple_shuffled_example,
+    copy_keyword_multiple_sorted_example,
+    copy_keyword_sentence_example,
+    copy_last_sentence_example,
+    copy_quoted_example,
     masked_document_example,
     next_sentence_example,
     sample_document,
     sentence_reordering_example,
+    truncate_sentence_example,
 )
+
+SUPPORTED_SUMMARIZATION_TASKS = {
+    "sentence_reordering",
+    "next_sentence",
+    "masked_document",
+    "copy_first_sentence",
+    "copy_last_sentence",
+    "copy_bulleted",
+    "copy_quoted",
+    "copy_keyword_sentence",
+    "copy_keyword_multiple_in_order",
+    "copy_keyword_multiple_sorted",
+    "copy_keyword_multiple_shuffled",
+    "truncate_sentence",
+}
 
 
 class SummarizationMechanism(SymbolicTaskMechanism):
     name = "summarization"
-    description = "Synthetic document pre-pre-training tasks inspired by nonsense/step-task summarization corpora."
+    description = "Synthetic document transduction tasks spanning STEP-style and nonsense-style summarization pre-pre-training."
     max_sampling_attempts = 32
 
     def __init__(self, config: SummarizationConfig) -> None:
@@ -32,7 +56,7 @@ class SummarizationMechanism(SymbolicTaskMechanism):
         require_supported(
             "summarization tasks",
             self.config.tasks,
-            {"sentence_reordering", "next_sentence", "masked_document"},
+            SUPPORTED_SUMMARIZATION_TASKS,
         )
         if self.config.vocab_size < 16:
             raise ValueError("vocab_size must be at least 16.")
@@ -55,11 +79,29 @@ class SummarizationMechanism(SymbolicTaskMechanism):
             "masked_span_max_words",
             self.config.masked_span_max_words,
         )
+        if self.config.keyword_count < 2:
+            raise ValueError("keyword_count must be at least 2.")
+        if self.config.max_marked_sentences < 1:
+            raise ValueError("max_marked_sentences must be positive.")
+        if self.config.keyword_count < self.config.max_marked_sentences:
+            raise ValueError("keyword_count must be at least max_marked_sentences.")
+        if self.config.max_quote_span_words < 1:
+            raise ValueError("max_quote_span_words must be positive.")
         self._vocabulary = self._build_vocabulary()
 
     def tokenizer_spec(self) -> TokenizerSpec:
         extra_token_ids = self._vocabulary.token_ids(
-            ["sentence_sep", "output_sep", "mask", *self._task_token_names()]
+            [
+                "sentence_sep",
+                "output_sep",
+                "mask",
+                "bullet",
+                "quote_open",
+                "quote_close",
+                "cutoff",
+                *self._keyword_token_names(),
+                *self._task_token_names(),
+            ]
         )
         return self._vocabulary.tokenizer_spec(extra_token_ids=extra_token_ids)
 
@@ -100,11 +142,58 @@ class SummarizationMechanism(SymbolicTaskMechanism):
     ) -> DocumentExample:
         if task == "sentence_reordering":
             return sentence_reordering_example(rng, document)
+        if task == "copy_first_sentence":
+            return copy_first_sentence_example(document)
+        if task == "copy_last_sentence":
+            return copy_last_sentence_example(document)
+        if task == "copy_bulleted":
+            return copy_bulleted_example(rng, document, bullet_token_id=self._vocabulary.token("bullet"))
+        if task == "copy_quoted":
+            return copy_quoted_example(
+                rng,
+                document,
+                quote_open_token_id=self._vocabulary.token("quote_open"),
+                quote_close_token_id=self._vocabulary.token("quote_close"),
+                max_quote_span_words=self.config.max_quote_span_words,
+            )
         if task == "next_sentence":
             return next_sentence_example(
                 document,
                 input_sentences=self.config.next_sentence_input_sentences,
                 target_sentences=self.config.next_sentence_target_sentences,
+            )
+        if task == "copy_keyword_sentence":
+            return copy_keyword_sentence_example(
+                rng,
+                document,
+                keyword_token_id=self._vocabulary.token(self._keyword_token_names()[0]),
+            )
+        if task == "copy_keyword_multiple_in_order":
+            return copy_keyword_multiple_in_order_example(
+                rng,
+                document,
+                keyword_token_ids=self._keyword_token_ids(),
+                max_marked_sentences=self.config.max_marked_sentences,
+            )
+        if task == "copy_keyword_multiple_sorted":
+            return copy_keyword_multiple_sorted_example(
+                rng,
+                document,
+                keyword_token_ids=self._keyword_token_ids(),
+                max_marked_sentences=self.config.max_marked_sentences,
+            )
+        if task == "copy_keyword_multiple_shuffled":
+            return copy_keyword_multiple_shuffled_example(
+                rng,
+                document,
+                keyword_token_ids=self._keyword_token_ids(),
+                max_marked_sentences=self.config.max_marked_sentences,
+            )
+        if task == "truncate_sentence":
+            return truncate_sentence_example(
+                rng,
+                document,
+                cutoff_token_id=self._vocabulary.token("cutoff"),
             )
         if task == "masked_document":
             return masked_document_example(
@@ -139,9 +228,14 @@ class SummarizationMechanism(SymbolicTaskMechanism):
         builder = TokenVocabularyBuilder(start_id=self.config.vocab_size)
         builder.add_tokens(
             *self._task_token_names(),
+            *self._keyword_token_names(),
             "sentence_sep",
             "output_sep",
             "mask",
+            "bullet",
+            "quote_open",
+            "quote_close",
+            "cutoff",
             "bos",
             "eos",
             "pad",
@@ -150,6 +244,12 @@ class SummarizationMechanism(SymbolicTaskMechanism):
 
     def _task_token_names(self) -> list[str]:
         return [self._task_token_name(task) for task in self.config.tasks]
+
+    def _keyword_token_names(self) -> list[str]:
+        return [f"keyword:{index}" for index in range(self.config.keyword_count)]
+
+    def _keyword_token_ids(self) -> list[int]:
+        return [self._vocabulary.token(name) for name in self._keyword_token_names()]
 
     @staticmethod
     def _task_token_name(task: str) -> str:

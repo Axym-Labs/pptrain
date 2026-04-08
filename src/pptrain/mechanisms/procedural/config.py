@@ -17,6 +17,29 @@ class ProceduralConfig:
     max_length: int = 128
 
 
+_PROCEDURAL_REFERENCE = "Jiang et al. 2026"
+_PROCEDURAL_LENGTHS = (16, 32, 64)
+_PROCEDURAL_TASKS = ("identity", "reverse", "sort", "set", "union", "delete")
+
+
+def _paper_task_preset(task: str, *, max_length: int) -> MechanismPreset:
+    return sequence_preset(
+        f"paper_{task}_len{max_length}",
+        f"Procedural-pretraining {task} preset at sequence length {max_length}.",
+        sequence_count=160_064,
+        eval_sequence_count=4_096,
+        reference=_PROCEDURAL_REFERENCE,
+        tasks=(task,),
+        min_symbol_length=4,
+        max_symbol_length=max(8, max_length // 2),
+        max_length=max_length,
+    )
+
+
+def _paper_task_presets() -> tuple[MechanismPreset, ...]:
+    return tuple(_paper_task_preset(task, max_length=max_length) for max_length in _PROCEDURAL_LENGTHS for task in _PROCEDURAL_TASKS)
+
+
 PROCEDURAL_PRESETS: tuple[MechanismPreset, ...] = (
     sequence_preset(
         "smoke",
@@ -29,70 +52,5 @@ PROCEDURAL_PRESETS: tuple[MechanismPreset, ...] = (
         max_symbol_length=16,
         max_length=64,
     ),
-    sequence_preset(
-        "paper_identity_len64",
-        "Procedural-pretraining identity preset at sequence length 64.",
-        sequence_count=160_064,
-        eval_sequence_count=4_096,
-        reference="Jiang et al. 2026",
-        tasks=("identity",),
-        min_symbol_length=4,
-        max_symbol_length=24,
-        max_length=64,
-    ),
-    sequence_preset(
-        "paper_reverse_len64",
-        "Procedural-pretraining reverse preset at sequence length 64.",
-        sequence_count=160_064,
-        eval_sequence_count=4_096,
-        reference="Jiang et al. 2026",
-        tasks=("reverse",),
-        min_symbol_length=4,
-        max_symbol_length=24,
-        max_length=64,
-    ),
-    sequence_preset(
-        "paper_sort_len64",
-        "Procedural-pretraining sort preset at sequence length 64.",
-        sequence_count=160_064,
-        eval_sequence_count=4_096,
-        reference="Jiang et al. 2026",
-        tasks=("sort",),
-        min_symbol_length=4,
-        max_symbol_length=24,
-        max_length=64,
-    ),
-    sequence_preset(
-        "paper_set_len64",
-        "Procedural-pretraining set preset at sequence length 64.",
-        sequence_count=160_064,
-        eval_sequence_count=4_096,
-        reference="Jiang et al. 2026",
-        tasks=("set",),
-        min_symbol_length=4,
-        max_symbol_length=24,
-        max_length=64,
-    ),
-    sequence_preset(
-        "paper_union_len64",
-        "Procedural-pretraining union preset at sequence length 64.",
-        sequence_count=160_064,
-        eval_sequence_count=4_096,
-        reference="Jiang et al. 2026",
-        tasks=("union",),
-        min_symbol_length=4,
-        max_symbol_length=24,
-        max_length=64,
-    ),
-    sequence_preset(
-        "paper_delete_len64",
-        "Procedural-pretraining delete preset at sequence length 64.",
-        sequence_count=160_064,
-        eval_sequence_count=4_096,
-        reference="Jiang et al. 2026",
-        tasks=("delete",),
-        min_symbol_length=4,
-        max_symbol_length=24,
-        max_length=64,
-    ),
+    *_paper_task_presets(),
 )
