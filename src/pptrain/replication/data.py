@@ -23,7 +23,7 @@ def _require_datasets() -> Any:
 
 def _load_dataset_with_retries(*args: Any, **kwargs: Any) -> Any:
     load_dataset = _require_datasets()
-    max_attempts = 8
+    max_attempts = 30
     delay_seconds = 5.0
     last_error: Exception | None = None
     for attempt in range(1, max_attempts + 1):
@@ -33,6 +33,11 @@ def _load_dataset_with_retries(*args: Any, **kwargs: Any) -> Any:
             if not _is_retryable_hf_error(exc) or attempt == max_attempts:
                 raise
             last_error = exc
+            print(
+                f"Retryable dataset load failure on attempt {attempt}/{max_attempts}: {exc}. "
+                f"Retrying in {delay_seconds:.0f}s.",
+                flush=True,
+            )
             time.sleep(delay_seconds)
             delay_seconds = min(delay_seconds * 2.0, 120.0)
     if last_error is not None:  # pragma: no cover
