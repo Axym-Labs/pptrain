@@ -69,7 +69,7 @@ This figure measures the effective rank of midpoint hidden states for transferre
 
 ![Pairwise logit divergence matrices](pairwise_logit_divergence.png)
 
-This heatmap shows pairwise symmetric KL divergence between transferred mechanisms on one shared diagnostic text bundle. Values are shown as mean plus-or-minus standard deviation in x1e4 nats across seeds. Lower values indicate more similar predictive distributions.
+This heatmap shows pairwise Jensen-Shannon divergence between transferred mechanisms on one shared diagnostic text bundle. Values are shown as mean plus-or-minus standard deviation in x1e4 nats across seeds. Lower values indicate more similar predictive distributions.
 
 ### Pairwise Activation CKA Matrices
 

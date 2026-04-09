@@ -72,7 +72,7 @@ def collect_representation_diagnostics(
         variant_names=variant_names,
         values=features,
         key="logits",
-        metric=_symmetric_kl_divergence,
+        metric=_jensen_shannon_divergence,
         diagonal_value=0.0,
     )
     pairwise_activation = _pairwise_matrix(
@@ -130,7 +130,7 @@ def collect_cross_mechanism_representation_diagnostics(
         "pairwise_logit_divergence_by_variant": _build_cross_mechanism_matrix_bundle(
             features_by_variant,
             key="logits",
-            metric=_symmetric_kl_divergence,
+            metric=_jensen_shannon_divergence,
             diagonal_value=0.0,
         ),
         "pairwise_activation_cka_by_variant": _build_cross_mechanism_matrix_bundle(
@@ -279,6 +279,21 @@ def _symmetric_kl_divergence(left_logits: np.ndarray, right_logits: np.ndarray) 
         _reference_kl_divergence(left_logits, right_logits)
         + _reference_kl_divergence(right_logits, left_logits)
     )
+
+
+def _jensen_shannon_divergence(left_logits: np.ndarray, right_logits: np.ndarray) -> float:
+    left = torch.from_numpy(left_logits)
+    right = torch.from_numpy(right_logits)
+    left_prob = torch.softmax(left, dim=-1)
+    right_prob = torch.softmax(right, dim=-1)
+    mixture = 0.5 * (left_prob + right_prob)
+    left_log_prob = torch.log_softmax(left, dim=-1)
+    right_log_prob = torch.log_softmax(right, dim=-1)
+    divergence = 0.5 * (
+        F.kl_div(left_log_prob, mixture, reduction="batchmean")
+        + F.kl_div(right_log_prob, mixture, reduction="batchmean")
+    )
+    return float(divergence.item())
 
 
 def _linear_cka(left_hidden: np.ndarray, right_hidden: np.ndarray) -> float:

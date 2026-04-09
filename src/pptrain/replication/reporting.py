@@ -167,7 +167,7 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
         output_path=output / "pairwise_logit_divergence.png",
         value_format="{value:.2f}",
         scale=1.0e4,
-        top_label="Pairwise symmetric KL divergence between transferred mechanisms (x1e4 nats, lower is better)",
+        top_label="Pairwise Jensen-Shannon divergence between transferred mechanisms (x1e4 nats, lower is better)",
     )
     pairwise_activation_plot_path = _save_cross_mechanism_matrix_grid(
         payload,
@@ -348,7 +348,7 @@ def _build_report_markdown(
             "",
             f"![Pairwise logit divergence matrices]({pairwise_logit_plot_path.name})",
             "",
-            "This heatmap shows pairwise symmetric KL divergence between transferred mechanisms on one shared diagnostic text bundle. Values are shown as mean plus-or-minus standard deviation in x1e4 nats across seeds. Lower values indicate more similar predictive distributions.",
+            "This heatmap shows pairwise Jensen-Shannon divergence between transferred mechanisms on one shared diagnostic text bundle. Values are shown as mean plus-or-minus standard deviation in x1e4 nats across seeds. Lower values indicate more similar predictive distributions.",
             "",
             "### Pairwise Activation CKA Matrices",
             "",
