@@ -16,18 +16,20 @@ def test_smoke_replication_profile_contains_all_mechanisms(tmp_path) -> None:
 def test_full_replication_profile_defaults_to_2048_context(tmp_path) -> None:
     profile = build_replication_profile("paper_proxy_2048", output_dir=str(tmp_path), test_mode=False)
     assert profile.context_length == 2048
-    assert profile.model_name_or_path == "EleutherAI/pythia-410m-deduped"
-    assert profile.synthetic_run_config.max_steps == 240
+    assert profile.model_name_or_path == "EleutherAI/pythia-160m-deduped"
+    assert profile.synthetic_run_config.max_steps == 72
     assert profile.synthetic_run_config.learning_rate == 1e-5
-    assert profile.synthetic_run_config.warmup_steps == 12
-    assert profile.downstream_run_config.max_steps == 320
+    assert profile.synthetic_run_config.warmup_steps == 4
+    assert profile.downstream_run_config.max_steps == 1764
     assert profile.downstream_run_config.learning_rate == 1e-5
-    assert profile.downstream_run_config.warmup_steps == 16
-    assert profile.natural_warmup_run_config.max_steps == 160
+    assert profile.downstream_run_config.warmup_steps == 88
+    assert profile.natural_warmup_run_config.max_steps == 882
     assert profile.natural_warmup_run_config.learning_rate == 1e-5
-    assert profile.natural_warmup_run_config.warmup_steps == 8
+    assert profile.natural_warmup_run_config.warmup_steps == 44
     simpler_tasks = next(study for study in profile.studies if study.mechanism_name == "simpler_tasks")
-    assert simpler_tasks.synthetic_run_config_overrides == {"learning_rate": 1e-6}
+    assert simpler_tasks.synthetic_run_config_overrides["learning_rate"] == 1e-6
+    assert simpler_tasks.synthetic_run_config_overrides["max_steps"] == 288
+    assert simpler_tasks.synthetic_run_config_overrides["warmup_steps"] == 14
     assert simpler_tasks.downstream_run_config_overrides == {"learning_rate": 1e-6}
     assert profile.synthetic_run_config.remove_checkpoints is True
     assert profile.downstream_run_config.remove_checkpoints is True
@@ -37,6 +39,12 @@ def test_full_replication_profile_defaults_to_2048_context(tmp_path) -> None:
     assert profile.datasets["general_text"].dataset_name == "HuggingFaceFW/fineweb-edu"
     assert profile.datasets["math_text"].dataset_name == "HuggingFaceTB/finemath"
     assert profile.datasets["summary_text"].dataset_name == "vblagoje/cc_news"
+    nca = next(study for study in profile.studies if study.mechanism_name == "nca")
+    assert nca.synthetic_run_config_overrides["max_steps"] == 72
+    lime = next(study for study in profile.studies if study.mechanism_name == "lime")
+    assert lime.synthetic_run_config_overrides["max_steps"] == 288
+    summarization = next(study for study in profile.studies if study.mechanism_name == "summarization")
+    assert summarization.synthetic_run_config_overrides["max_steps"] == 288
 
 
 def test_perplexity_from_metrics_saturates_on_large_eval_loss() -> None:

@@ -269,9 +269,9 @@ def _build_report_markdown(
     nca_note = _build_nca_note(payload)
     probe_note = _build_probe_note(payload)
     sections = [
-        "# Replication Report",
+        "# Proxy Study Report",
         "",
-        "This report summarizes a bounded multi-seed replication campaign across the current pre-pre-training mechanisms.",
+        "This report summarizes a bounded multi-seed proxy study across the current pre-pre-training mechanisms.",
         "The goal is not exact paper reproduction, but a consistent check of whether each mechanism transfers in the expected direction under one shared setup.",
         "All mechanisms are additionally evaluated against a compute-matched natural baseline built from natural-text warm-up on the same downstream text family.",
         "Aggregated claim outcomes use a simple three-seed rule rather than a hypothesis test.",
@@ -309,7 +309,7 @@ def _build_report_markdown(
         "",
         f"![Loss overlays]({loss_overlay_path.name})",
         "",
-        "This figure overlays the downstream evaluation-loss curves for the baseline, transferred, and compute-matched natural baseline runs for each mechanism. Study-specific synthetic comparison presets are intentionally excluded so the overlay stays focused on the main replication comparison. Solid lines are means across seeds and shaded bands show one standard deviation.",
+        "This figure overlays the downstream evaluation-loss curves for the baseline, transferred, and compute-matched natural baseline runs for each mechanism. Study-specific synthetic comparison presets are intentionally excluded so the overlay stays focused on the main proxy comparison. Solid lines are means across seeds and shaded bands show one standard deviation.",
         "",
     ]
     if probe_plot_path is not None:

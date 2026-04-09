@@ -136,18 +136,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     replicate_parser = subparsers.add_parser(
         "replicate",
-        help="Run the built-in replication or paper-proxy campaign.",
+        help="Run the built-in proxy study campaign.",
     )
     replicate_parser.add_argument(
         "--profile",
         default="paper_proxy_2048",
-        help="Replication profile name. Use 'smoke' or 'paper_proxy_2048'.",
+        help="Proxy-study profile name. Use 'smoke' or 'paper_proxy_2048'.",
     )
     replicate_parser.add_argument(
         "--output-dir",
         type=Path,
         default=Path("runs/replication"),
-        help="Directory to store replication artifacts.",
+        help="Directory to store proxy-study artifacts.",
     )
     replicate_parser.add_argument(
         "--test",
@@ -162,21 +162,21 @@ def build_parser() -> argparse.ArgumentParser:
     )
     replicate_parser.add_argument(
         "--model-name-or-path",
-        help="Optional model override for the replication campaign.",
+        help="Optional model override for the proxy-study campaign.",
     )
     replicate_parser.add_argument(
         "--context-length",
         type=int,
-        help="Optional context-length override for the replication campaign.",
+        help="Optional context-length override for the proxy-study campaign.",
     )
     replicate_parser.add_argument(
         "--seeds",
-        help="Optional comma-separated seed list for the replication campaign.",
+        help="Optional comma-separated seed list for the proxy-study campaign.",
     )
     replicate_parser.add_argument(
         "--resume",
         action="store_true",
-        help="Resume a partially completed replication campaign from replication_results.json.",
+        help="Resume a partially completed proxy-study campaign from replication_results.json.",
     )
     replicate_parser.add_argument(
         "--keep-checkpoints",

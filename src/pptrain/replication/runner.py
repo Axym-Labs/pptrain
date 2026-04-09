@@ -1098,7 +1098,7 @@ def _load_resume_payload(
     }
     if actual != expected:
         raise ValueError(
-            "Cannot resume replication campaign because the existing output directory was created "
+            "Cannot resume proxy-study campaign because the existing output directory was created "
             "with different profile settings."
         )
     return payload
