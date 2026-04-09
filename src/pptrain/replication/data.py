@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from itertools import islice
+import time
 from typing import Any
 
 from transformers import PreTrainedTokenizerBase
@@ -18,6 +19,46 @@ def _require_datasets() -> Any:
     except ImportError as exc:  # pragma: no cover
         raise RuntimeError("Install pptrain with the 'eval' extra to use replication datasets.") from exc
     return load_dataset
+
+
+def _load_dataset_with_retries(*args: Any, **kwargs: Any) -> Any:
+    load_dataset = _require_datasets()
+    max_attempts = 8
+    delay_seconds = 5.0
+    last_error: Exception | None = None
+    for attempt in range(1, max_attempts + 1):
+        try:
+            return load_dataset(*args, **kwargs)
+        except Exception as exc:  # pragma: no cover - exercised with monkeypatched errors
+            if not _is_retryable_hf_error(exc) or attempt == max_attempts:
+                raise
+            last_error = exc
+            time.sleep(delay_seconds)
+            delay_seconds = min(delay_seconds * 2.0, 120.0)
+    if last_error is not None:  # pragma: no cover
+        raise last_error
+    raise RuntimeError("Dataset load failed without raising an exception.")  # pragma: no cover
+
+
+def _is_retryable_hf_error(exc: Exception) -> bool:
+    status_code = getattr(getattr(exc, "response", None), "status_code", None)
+    if status_code in {408, 409, 425, 429, 500, 502, 503, 504}:
+        return True
+    message = str(exc).lower()
+    return any(
+        marker in message
+        for marker in (
+            "429 too many requests",
+            "503 service unavailable",
+            "504 gateway timeout",
+            "502 bad gateway",
+            "500 internal server error",
+            "temporarily unavailable",
+            "connection reset",
+            "connection aborted",
+            "timed out",
+        )
+    )
 
 
 @dataclass(slots=True)
@@ -126,7 +167,6 @@ def _load_inline_texts(dataset_spec: TextDatasetSpec, split: str) -> list[str]:
 def _load_hf_texts(dataset_spec: TextDatasetSpec, split: str) -> list[str]:
     if dataset_spec.streaming:
         raise ValueError("Streaming datasets must be consumed through the token-budgeted loader.")
-    load_dataset = _require_datasets()
     split_name = {
         "warmup": dataset_spec.warmup_split,
         "train": dataset_spec.train_split,
@@ -141,7 +181,7 @@ def _load_hf_texts(dataset_spec: TextDatasetSpec, split: str) -> list[str]:
         args.append(dataset_spec.dataset_config_name)
     if dataset_spec.subset is not None:
         args.append(dataset_spec.subset)
-    dataset = load_dataset(*args, split=split_name)
+    dataset = _load_dataset_with_retries(*args, split=split_name)
     return [_format_record(dataset_spec, record) for record in dataset]
 
 
@@ -155,7 +195,6 @@ def _tokenize_streaming_hf_texts(
 ) -> tuple[list[list[int]], list[list[int]], dict[str, Any]]:
     if target_token_count is None:
         raise ValueError("target_token_count must be provided for streaming datasets.")
-    load_dataset = _require_datasets()
     split_name = {
         "warmup": dataset_spec.warmup_split,
         "train": dataset_spec.train_split,
@@ -170,7 +209,7 @@ def _tokenize_streaming_hf_texts(
         args.append(dataset_spec.dataset_config_name)
     if dataset_spec.subset is not None:
         args.append(dataset_spec.subset)
-    dataset = load_dataset(*args, split=split_name, streaming=True)
+    dataset = _load_dataset_with_retries(*args, split=split_name, streaming=True)
     if dataset_spec.shuffle_buffer_size is not None:
         dataset = dataset.shuffle(seed=dataset_spec.shuffle_seed, buffer_size=dataset_spec.shuffle_buffer_size)
     skip_records = {
