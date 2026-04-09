@@ -151,3 +151,44 @@ def test_checkpoint_removal_override_applies_to_all_stages(tmp_path: Path) -> No
     assert overridden.synthetic_run_config.remove_checkpoints is False
     assert overridden.downstream_run_config.remove_checkpoints is False
     assert overridden.natural_warmup_run_config.remove_checkpoints is False
+
+
+def test_prune_seed_artifacts_keeps_transferred_model(tmp_path: Path) -> None:
+    scratch_run = tmp_path / "scratch"
+    scratch_model = scratch_run / "model"
+    scratch_model.mkdir(parents=True)
+    (scratch_model / "weights.bin").write_text("x", encoding="utf-8")
+
+    transferred_run = tmp_path / "transferred" / "downstream"
+    transferred_model = transferred_run / "model"
+    transferred_model.mkdir(parents=True)
+    (transferred_model / "weights.bin").write_text("x", encoding="utf-8")
+
+    synthetic_run = tmp_path / "transferred" / "synthetic"
+    synthetic_model = synthetic_run / "prepretrained_model"
+    synthetic_model.mkdir(parents=True)
+    (synthetic_model / "weights.bin").write_text("x", encoding="utf-8")
+
+    baseline_run = tmp_path / "baseline"
+    baseline_model = baseline_run / "model"
+    baseline_model.mkdir(parents=True)
+    (baseline_model / "weights.bin").write_text("x", encoding="utf-8")
+
+    seed_result = {
+        "variants": {
+            "scratch": {"run_dir": str(scratch_run), "model_dir": str(scratch_model)},
+            "transferred": {
+                "run_dir": str(transferred_run),
+                "model_dir": str(transferred_model),
+                "synthetic_run": {"run_dir": str(synthetic_run), "model_dir": str(synthetic_model)},
+            },
+            "compute_matched_baseline": {"run_dir": str(baseline_run), "model_dir": str(baseline_model)},
+        }
+    }
+
+    runner._prune_seed_artifacts(seed_result)
+
+    assert transferred_model.exists()
+    assert scratch_run.exists() is False
+    assert synthetic_run.exists() is False
+    assert baseline_run.exists() is False

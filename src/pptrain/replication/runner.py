@@ -322,12 +322,14 @@ def _run_seeded_study(
         max_positions_per_batch=profile.diagnostic_max_positions_per_batch,
     )
     claims = _evaluate_claims(study=study, variants=variants)
-    return {
+    result = {
         "seed": seed,
         "variants": variants,
         "claims": claims,
         "diagnostics": diagnostics,
     }
+    _prune_seed_artifacts(result)
+    return result
 
 
 def _run_transferred_variant(
@@ -901,6 +903,41 @@ def _override_checkpoint_removal(
         downstream_run_config=replace(profile.downstream_run_config, remove_checkpoints=remove_checkpoints),
         natural_warmup_run_config=replace(profile.natural_warmup_run_config, remove_checkpoints=remove_checkpoints),
     )
+
+
+def _prune_seed_artifacts(seed_result: dict[str, Any]) -> None:
+    variants = seed_result.get("variants", {})
+    for variant_name, variant_payload in variants.items():
+        if not isinstance(variant_payload, dict):
+            continue
+        if variant_name != "transferred":
+            _remove_path_if_exists(variant_payload.get("model_dir"))
+            _remove_path_if_exists(variant_payload.get("run_dir"))
+        warmup_stage = variant_payload.get("warmup_stage")
+        if isinstance(warmup_stage, dict):
+            _remove_path_if_exists(warmup_stage.get("model_dir"))
+            _remove_path_if_exists(warmup_stage.get("run_dir"))
+        synthetic_run = variant_payload.get("synthetic_run")
+        if isinstance(synthetic_run, dict):
+            _remove_path_if_exists(synthetic_run.get("model_dir"))
+            _remove_path_if_exists(synthetic_run.get("run_dir"))
+
+
+def _remove_path_if_exists(path_value: Any) -> None:
+    if not path_value:
+        return
+    path = Path(path_value)
+    if not path.exists():
+        return
+    if path.is_file() or path.is_symlink():
+        path.unlink()
+        return
+    for child in sorted(path.rglob("*"), reverse=True):
+        if child.is_file() or child.is_symlink():
+            child.unlink()
+        elif child.is_dir():
+            child.rmdir()
+    path.rmdir()
 
 
 def _write_replication_snapshot(payload: dict[str, Any], output_path: Path) -> None:
