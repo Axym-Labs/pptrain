@@ -118,14 +118,14 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
         payload,
         metric_key="compute_matched_gap_perplexity",
         output_path=output / "compute_matched_baseline_gap.png",
-        xlabel="Perplexity delta vs compute-matched baseline (positive is better)",
+        xlabel="Eval-loss delta vs compute-matched baseline (positive is better)",
     )
     scratch_plot_path = _save_errorbar_plot(
         payload,
         metric_key="transfer_gap_perplexity",
         output_path=output / "transfer_gap_vs_scratch.png",
-        xlabel="Perplexity difference compared to baseline (no pre-pre-training) (positive is better)",
-        title="Perplexity difference compared to baseline (no pre-pre-training)",
+        xlabel="Eval-loss difference compared to baseline (no pre-pre-training) (positive is better)",
+        title="Eval-loss difference compared to baseline (no pre-pre-training)",
         annotate_values=False,
         xgrid_step=50.0,
     )
@@ -291,13 +291,13 @@ def _build_report_markdown(
         "",
         f"![Compute-matched baseline gap]({compute_plot_path.name})",
         "",
-        "This plot shows the mean perplexity-point gap between each transferred run and its compute-matched natural baseline, with standard deviation across seeds. Positive values mean the synthetic pre-pre-training path outperformed the matched natural-text baseline.",
+        "This plot shows the mean evaluation-loss gap between each transferred run and its compute-matched natural baseline, with standard deviation across seeds. Positive values mean the synthetic pre-pre-training path finished with lower evaluation loss than the matched natural-text baseline.",
         "",
-        "### Perplexity Difference Compared To Baseline",
+        "### Eval-Loss Difference Compared To Baseline",
         "",
         f"![Transfer gap versus baseline]({scratch_plot_path.name})",
         "",
-        "This plot shows the mean final-evaluation perplexity difference between the transferred run and the baseline run with no pre-pre-training after the same downstream training budget, with standard deviation across seeds. Positive values mean the transferred model finished with lower perplexity than the baseline.",
+        "This plot shows the mean final-evaluation loss difference between the transferred run and the baseline run with no pre-pre-training after the same downstream training budget, with standard deviation across seeds. Positive values mean the transferred model finished with lower loss than the baseline.",
         "",
         "### Convergence Step Delta",
         "",
@@ -450,7 +450,9 @@ def _save_errorbar_plot(
         limit = max(np.max(np.abs(values) + errors), 1.0)
         axis.set_xlim(-1.15 * limit, 1.15 * limit)
         if xgrid_step is not None:
-            axis.xaxis.set_major_locator(MultipleLocator(xgrid_step))
+            tick_count = (2.3 * limit) / xgrid_step if xgrid_step > 0 else float("inf")
+            if tick_count <= 40:
+                axis.xaxis.set_major_locator(MultipleLocator(xgrid_step))
             axis.grid(axis="x", color="#94a3b8", alpha=0.18, linewidth=0.7)
     figure.tight_layout()
     figure.savefig(output_path, dpi=150, bbox_inches="tight")
@@ -675,7 +677,10 @@ def _save_cross_mechanism_matrix_grid(
     flat_axes = np.atleast_1d(axes).flatten()
     all_values = []
     for _, diagnostic in items:
-        all_values.append(np.asarray(diagnostic["mean"], dtype=float) * scale)
+        values = np.asarray(diagnostic["mean"], dtype=float) * scale
+        finite_values = values[np.isfinite(values)]
+        if finite_values.size:
+            all_values.append(finite_values)
     if all_values and shared_scale:
         global_min = min(float(values.min()) for values in all_values)
         global_max = max(float(values.max()) for values in all_values)
@@ -685,13 +690,20 @@ def _save_cross_mechanism_matrix_grid(
     for axis, (variant_name, diagnostic) in zip(flat_axes, items):
         matrix = np.asarray(diagnostic["mean"], dtype=float) * scale
         std_matrix = np.asarray(diagnostic.get("std"), dtype=float) * scale if diagnostic.get("std") is not None else None
+        finite_matrix = matrix[np.isfinite(matrix)]
+        if finite_matrix.size == 0:
+            axis.axis("off")
+            continue
         if shared_scale and global_min is not None and global_max is not None and global_max > global_min:
             vmin = global_min
             vmax = global_max
         else:
-            vmin = float(matrix.min())
-            vmax = float(matrix.max()) if float(matrix.max()) > float(matrix.min()) else float(matrix.min()) + 1.0
-        axis.imshow(matrix, cmap=PASTEL_BLUE_MAP, aspect="auto", vmin=vmin, vmax=vmax)
+            local_min = float(finite_matrix.min())
+            local_max = float(finite_matrix.max())
+            vmin = local_min
+            vmax = local_max if local_max > local_min else local_min + 1.0
+        display_matrix = np.where(np.isfinite(matrix), matrix, vmin)
+        axis.imshow(display_matrix, cmap=PASTEL_BLUE_MAP, aspect="auto", vmin=vmin, vmax=vmax)
         labels = [MECHANISM_LABELS.get(name, name) for name in diagnostic["labels"]]
         axis.set_xticks(range(len(labels)))
         axis.set_yticks(range(len(labels)))
@@ -702,10 +714,13 @@ def _save_cross_mechanism_matrix_grid(
         for row_index in range(matrix.shape[0]):
             for col_index in range(matrix.shape[1]):
                 if std_matrix is not None and std_matrix.shape == matrix.shape:
-                    label = f"{value_format.format(value=matrix[row_index, col_index])}\n±{value_format.format(value=std_matrix[row_index, col_index])}"
+                    if np.isfinite(matrix[row_index, col_index]) and np.isfinite(std_matrix[row_index, col_index]):
+                        label = f"{value_format.format(value=matrix[row_index, col_index])}\n±{value_format.format(value=std_matrix[row_index, col_index])}"
+                    else:
+                        label = "N/A"
                 else:
-                    label = value_format.format(value=matrix[row_index, col_index])
-                normalized = 0.0 if vmax <= vmin else (matrix[row_index, col_index] - vmin) / (vmax - vmin)
+                    label = value_format.format(value=matrix[row_index, col_index]) if np.isfinite(matrix[row_index, col_index]) else "N/A"
+                normalized = 0.0 if (not np.isfinite(matrix[row_index, col_index]) or vmax <= vmin) else (matrix[row_index, col_index] - vmin) / (vmax - vmin)
                 text_color = "#ffffff" if normalized >= 0.5 else "#0f172a"
                 axis.text(col_index, row_index, label, ha="center", va="center", fontsize=6.0, color=text_color)
     for axis in flat_axes[len(items) :]:
@@ -722,8 +737,8 @@ def _save_effect_summary_plot(payload: dict[str, Any], output_path: Path) -> Pat
     std_rows = []
     labels = []
     metric_specs = (
-        ("transfer_gap_perplexity", "Transfer gap\n(ppl)"),
-        ("compute_matched_gap_perplexity", "Compute-matched gap\n(ppl)"),
+        ("transfer_gap_perplexity", "Transfer gap\n(loss)"),
+        ("compute_matched_gap_perplexity", "Compute-matched gap\n(loss)"),
         ("convergence_step_delta", "Convergence\n(steps)"),
         ("reasoning_accuracy_gain", "Reasoning\n(points)"),
         ("algorithmic_accuracy_gain", "Algorithmic\n(points)"),
@@ -744,7 +759,7 @@ def _save_effect_summary_plot(payload: dict[str, Any], output_path: Path) -> Pat
     color_matrix = np.zeros_like(matrix)
     for column_index in range(matrix.shape[1]):
         column = matrix[:, column_index]
-        valid = ~np.isnan(column)
+        valid = np.isfinite(column)
         if valid.any():
             values = column[valid]
             min_value = float(values.min())
@@ -783,9 +798,9 @@ def _build_metrics_table_markdown(payload: dict[str, Any]) -> str:
         "mechanism",
         "preset",
         "seeds",
-        "baseline ppl",
-        "transferred ppl",
-        "natural baseline ppl",
+        "baseline loss",
+        "transferred loss",
+        "natural baseline loss",
         "transfer gap",
         "baseline gap",
         "convergence delta",
@@ -825,6 +840,8 @@ def _format_summary(summary: dict[str, Any] | None, *, suffix: str = "") -> str:
         return "N/A"
     mean = float(summary["mean"])
     std = float(summary.get("std") or 0.0)
+    if not (np.isfinite(mean) and np.isfinite(std)):
+        return "N/A"
     return f"{mean:.3f} ± {std:.3f}{suffix}"
 
 
@@ -834,6 +851,8 @@ def _format_diagnostic_summary(summary: dict[str, Any] | None, variant_name: str
     entry = summary[variant_name]
     mean = float(entry["mean"])
     std = float(entry.get("std") or 0.0)
+    if not (np.isfinite(mean) and np.isfinite(std)):
+        return "N/A"
     if scientific:
         return f"{mean:.2e} ± {std:.2e}"
     return f"{mean:.3f} ± {std:.3f}"

@@ -456,14 +456,18 @@ def _evaluate_claims(*, study: MechanismStudySpec, variants: dict[str, Any]) -> 
     step_variant = variants.get("step")
 
     if CLAIM_TRANSFER_SIGNAL in study.claim_categories:
+        scratch_loss = _loss_from_metrics(scratch["metrics"]) if scratch is not None else None
+        transferred_loss = _loss_from_metrics(transferred["metrics"]) if transferred is not None else None
         scratch_ppl = _perplexity_from_metrics(scratch["metrics"]) if scratch is not None else None
         transferred_ppl = _perplexity_from_metrics(transferred["metrics"]) if transferred is not None else None
         claims[CLAIM_TRANSFER_SIGNAL] = {
-            "replicated": _both_present_and(transferred_ppl, scratch_ppl, lambda a, b: a < b),
+            "replicated": _both_present_and(transferred_loss, scratch_loss, lambda a, b: a < b),
+            "scratch_loss": scratch_loss,
+            "transferred_loss": transferred_loss,
             "scratch_perplexity": scratch_ppl,
             "transferred_perplexity": transferred_ppl,
-            "effect": _diff(scratch_ppl, transferred_ppl),
-            "effect_unit": "perplexity",
+            "effect": _diff(scratch_loss, transferred_loss),
+            "effect_unit": "eval_loss",
         }
 
     if CLAIM_CONVERGENCE_GAIN in study.claim_categories and scratch is not None and transferred is not None:
@@ -480,14 +484,18 @@ def _evaluate_claims(*, study: MechanismStudySpec, variants: dict[str, Any]) -> 
         }
 
     if CLAIM_COMPUTE_MATCHED_GAIN in study.claim_categories:
+        transferred_loss = _loss_from_metrics(transferred["metrics"]) if transferred is not None else None
+        baseline_loss = _loss_from_metrics(baseline["metrics"]) if baseline is not None else None
         transferred_ppl = _perplexity_from_metrics(transferred["metrics"]) if transferred is not None else None
         baseline_ppl = _perplexity_from_metrics(baseline["metrics"]) if baseline is not None else None
         claims[CLAIM_COMPUTE_MATCHED_GAIN] = {
-            "replicated": _both_present_and(transferred_ppl, baseline_ppl, lambda a, b: a < b),
+            "replicated": _both_present_and(transferred_loss, baseline_loss, lambda a, b: a < b),
+            "transferred_loss": transferred_loss,
+            "baseline_loss": baseline_loss,
             "transferred_perplexity": transferred_ppl,
             "baseline_perplexity": baseline_ppl,
-            "effect": _diff(baseline_ppl, transferred_ppl),
-            "effect_unit": "perplexity",
+            "effect": _diff(baseline_loss, transferred_loss),
+            "effect_unit": "eval_loss",
         }
 
     if CLAIM_REASONING_TRANSFER in study.claim_categories:
@@ -513,28 +521,41 @@ def _evaluate_claims(*, study: MechanismStudySpec, variants: dict[str, Any]) -> 
         }
 
     if CLAIM_SYNTHETIC_ORDERING in study.claim_categories:
+        transferred_loss = _loss_from_metrics(transferred["metrics"]) if transferred is not None else None
+        step_loss = _loss_from_metrics(step_variant["metrics"]) if step_variant is not None else None
         transferred_ppl = _perplexity_from_metrics(transferred["metrics"]) if transferred is not None else None
         step_ppl = _perplexity_from_metrics(step_variant["metrics"]) if step_variant is not None else None
         claims[CLAIM_SYNTHETIC_ORDERING] = {
-            "replicated": _both_present_and(transferred_ppl, step_ppl, lambda a, b: a <= b),
+            "replicated": _both_present_and(transferred_loss, step_loss, lambda a, b: a <= b),
+            "primary_loss": transferred_loss,
+            "comparison_loss": step_loss,
             "primary_perplexity": transferred_ppl,
             "comparison_perplexity": step_ppl,
-            "effect": _diff(step_ppl, transferred_ppl),
-            "effect_unit": "perplexity",
+            "effect": _diff(step_loss, transferred_loss),
+            "effect_unit": "eval_loss",
         }
 
     if CLAIM_NEAR_REAL_BASELINE in study.claim_categories:
+        transferred_loss = _loss_from_metrics(transferred["metrics"]) if transferred is not None else None
+        baseline_loss = _loss_from_metrics(baseline["metrics"]) if baseline is not None else None
         transferred_ppl = _perplexity_from_metrics(transferred["metrics"]) if transferred is not None else None
         baseline_ppl = _perplexity_from_metrics(baseline["metrics"]) if baseline is not None else None
         tolerance = 1.10
-        effect = (tolerance * baseline_ppl - transferred_ppl) if baseline_ppl is not None and transferred_ppl is not None else None
+        tolerance_margin = math.log(tolerance)
+        effect = (
+            baseline_loss + tolerance_margin - transferred_loss
+            if baseline_loss is not None and transferred_loss is not None
+            else None
+        )
         claims[CLAIM_NEAR_REAL_BASELINE] = {
-            "replicated": _both_present_and(transferred_ppl, baseline_ppl, lambda a, b: a <= b * tolerance),
+            "replicated": _both_present_and(transferred_loss, baseline_loss, lambda a, b: a <= b + tolerance_margin),
+            "synthetic_loss": transferred_loss,
+            "baseline_loss": baseline_loss,
             "synthetic_perplexity": transferred_ppl,
             "baseline_perplexity": baseline_ppl,
             "tolerance": tolerance,
             "effect": effect,
-            "effect_unit": "perplexity_margin",
+            "effect_unit": "eval_loss_margin",
         }
 
     return claims
@@ -547,7 +568,7 @@ def _aggregate_claims(seed_runs: list[dict[str, Any]]) -> dict[str, Any]:
         if not claim_values:
             continue
         replicated_values = [item.get("replicated") for item in claim_values if item.get("replicated") is not None]
-        effect_values = [float(item["effect"]) for item in claim_values if item.get("effect") is not None]
+        effect_values = _finite_values(item.get("effect") for item in claim_values)
         hypothesis = _paired_sign_flip_hypothesis_test(effect_values)
         summary: dict[str, Any] = {
             "replicated": None,
@@ -577,7 +598,7 @@ def _aggregate_claims(seed_runs: list[dict[str, Any]]) -> dict[str, Any]:
             }
         )
         for field in numeric_fields:
-            values = [float(item[field]) for item in claim_values if item.get(field) is not None]
+            values = _finite_values(item.get(field) for item in claim_values)
             summary[field] = {
                 "mean": _mean(values),
                 "std": _std(values),
@@ -619,11 +640,13 @@ def _aggregate_seed_values(
     *,
     scale: float = 1.0,
 ) -> dict[str, Any] | None:
-    values = [
-        float(seed_run["claims"][claim_name][field_name]) * scale
-        for seed_run in seed_runs
-        if claim_name in seed_run["claims"] and seed_run["claims"][claim_name].get(field_name) is not None
-    ]
+    values = _finite_values(
+        (
+            float(seed_run["claims"][claim_name][field_name]) * scale
+            for seed_run in seed_runs
+            if claim_name in seed_run["claims"] and seed_run["claims"][claim_name].get(field_name) is not None
+        )
+    )
     if not values:
         return None
     return {
@@ -645,7 +668,9 @@ def _aggregate_synthetic_metric(
         synthetic_run = seed_run.get("variants", {}).get("transferred", {}).get("synthetic_run", {})
         direct_metrics = synthetic_run.get("direct_metrics", {})
         if direct_metrics.get(metric_name) is not None:
-            values.append(float(direct_metrics[metric_name]) * scale)
+            metric_value = float(direct_metrics[metric_name]) * scale
+            if math.isfinite(metric_value):
+                values.append(metric_value)
     if not values:
         return None
     return {
@@ -729,7 +754,7 @@ def _aggregate_named_diagnostic(seed_runs: list[dict[str, Any]], key: str) -> di
     variant_names = sorted({variant_name for item in per_seed for variant_name in item.keys()})
     aggregated: dict[str, Any] = {}
     for variant_name in variant_names:
-        values = [float(item[variant_name]) for item in per_seed if item.get(variant_name) is not None]
+        values = _finite_values(item.get(variant_name) for item in per_seed)
         if values:
             aggregated[variant_name] = {
                 "label": VARIANT_LABELS.get(variant_name, variant_name),
@@ -741,7 +766,15 @@ def _aggregate_named_diagnostic(seed_runs: list[dict[str, Any]], key: str) -> di
 
 
 def _aggregate_matrix_diagnostic(seed_runs: list[dict[str, Any]], key: str) -> dict[str, Any] | None:
-    per_seed = [seed_run.get("diagnostics", {}).get(key) for seed_run in seed_runs if seed_run.get("diagnostics", {}).get(key)]
+    per_seed = []
+    for seed_run in seed_runs:
+        item = seed_run.get("diagnostics", {}).get(key)
+        if not item:
+            continue
+        matrix = np.asarray(item["matrix"], dtype=np.float64)
+        if not np.isfinite(matrix).all():
+            continue
+        per_seed.append(item)
     if not per_seed:
         return None
     matrices = np.asarray([item["matrix"] for item in per_seed], dtype=np.float64)
@@ -763,7 +796,15 @@ def _aggregate_cross_variant_matrices(seed_payloads: list[dict[str, Any]], key: 
     )
     aggregated: dict[str, Any] = {}
     for variant_name in variant_names:
-        per_seed_variant = [item.get(key, {}).get(variant_name) for item in seed_payloads if item.get(key, {}).get(variant_name)]
+        per_seed_variant = []
+        for item in seed_payloads:
+            entry = item.get(key, {}).get(variant_name)
+            if not entry:
+                continue
+            matrix = np.asarray(entry["matrix"], dtype=np.float64)
+            if not np.isfinite(matrix).all():
+                continue
+            per_seed_variant.append(entry)
         if not per_seed_variant:
             continue
         matrices = np.asarray([entry["matrix"] for entry in per_seed_variant], dtype=np.float64)
@@ -794,6 +835,13 @@ def _perplexity_from_metrics(metrics: dict[str, Any]) -> float | None:
         return math.exp(eval_loss)
     except OverflowError:
         return float("inf")
+
+
+def _loss_from_metrics(metrics: dict[str, Any]) -> float | None:
+    if "eval_loss" not in metrics:
+        return None
+    eval_loss = float(metrics["eval_loss"])
+    return eval_loss if math.isfinite(eval_loss) else None
 
 
 def _first_step_at_or_below(log_history: list[dict[str, Any]], target_loss: float) -> int | None:
@@ -1022,6 +1070,17 @@ def _std(values: list[float]) -> float | None:
     if len(values) < 2:
         return 0.0 if values else None
     return float(np.std(values, ddof=1))
+
+
+def _finite_values(values) -> list[float]:
+    finite: list[float] = []
+    for value in values:
+        if value is None:
+            continue
+        numeric = float(value)
+        if math.isfinite(numeric):
+            finite.append(numeric)
+    return finite
 
 
 def _paired_sign_flip_hypothesis_test(

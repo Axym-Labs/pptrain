@@ -539,11 +539,13 @@
           },
           "claims": {
             "transfer_signal": {
-              "replicated": false,
+              "replicated": null,
+              "scratch_loss": null,
+              "transferred_loss": 14751.294921875,
               "scratch_perplexity": NaN,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": null,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -554,11 +556,13 @@
               "effect_unit": "steps"
             },
             "compute_matched_gain": {
-              "replicated": false,
+              "replicated": true,
+              "transferred_loss": 14751.294921875,
+              "baseline_loss": 515050.625,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": 500299.330078125,
+              "effect_unit": "eval_loss"
             },
             "reasoning_transfer": {
               "replicated": false,
@@ -1137,10 +1141,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 7940.72802734375,
+              "transferred_loss": 18767.140625,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -10826.41259765625,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -1152,10 +1158,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 18767.140625,
+              "baseline_loss": 2004.3228759765625,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -16762.817749023438,
+              "effect_unit": "eval_loss"
             },
             "reasoning_transfer": {
               "replicated": false,
@@ -1734,10 +1742,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 3003.00537109375,
+              "transferred_loss": 13470.189453125,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -10467.18408203125,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -1749,10 +1759,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 13470.189453125,
+              "baseline_loss": 10199.3134765625,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -3270.8759765625,
+              "effect_unit": "eval_loss"
             },
             "reasoning_transfer": {
               "replicated": false,
@@ -2331,10 +2343,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 5808.02099609375,
+              "transferred_loss": 18844.078125,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -13036.05712890625,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -2346,10 +2360,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 18844.078125,
+              "baseline_loss": 2104.443115234375,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -16739.635009765625,
+              "effect_unit": "eval_loss"
             },
             "reasoning_transfer": {
               "replicated": false,
@@ -2928,10 +2944,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 3375.23681640625,
+              "transferred_loss": 16315.1845703125,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -12939.94775390625,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -2943,10 +2961,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 16315.1845703125,
+              "baseline_loss": 2162.515380859375,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -14152.669189453125,
+              "effect_unit": "eval_loss"
             },
             "reasoning_transfer": {
               "replicated": false,
@@ -3524,11 +3544,13 @@
           },
           "claims": {
             "transfer_signal": {
-              "replicated": false,
+              "replicated": true,
+              "scratch_loss": 366653.8125,
+              "transferred_loss": 5928.6728515625,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": 360725.1396484375,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": true,
@@ -3539,11 +3561,13 @@
               "effect_unit": "steps"
             },
             "compute_matched_gain": {
-              "replicated": false,
+              "replicated": null,
+              "transferred_loss": 5928.6728515625,
+              "baseline_loss": null,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": NaN,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": null,
+              "effect_unit": "eval_loss"
             },
             "reasoning_transfer": {
               "replicated": false,
@@ -4122,10 +4146,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 8062.19384765625,
+              "transferred_loss": 21397.50390625,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -13335.31005859375,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -4136,11 +4162,13 @@
               "effect_unit": "steps"
             },
             "compute_matched_gain": {
-              "replicated": false,
+              "replicated": true,
+              "transferred_loss": 21397.50390625,
+              "baseline_loss": 54140.265625,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": 32742.76171875,
+              "effect_unit": "eval_loss"
             },
             "reasoning_transfer": {
               "replicated": false,
@@ -4719,10 +4747,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 6285.52734375,
+              "transferred_loss": 17920.0390625,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -11634.51171875,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -4734,10 +4764,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 17920.0390625,
+              "baseline_loss": 1610.368896484375,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -16309.670166015625,
+              "effect_unit": "eval_loss"
             },
             "reasoning_transfer": {
               "replicated": false,
@@ -5316,10 +5348,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 5893.330078125,
+              "transferred_loss": 14109.83984375,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -8216.509765625,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -5331,10 +5365,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 14109.83984375,
+              "baseline_loss": 2187.892578125,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -11921.947265625,
+              "effect_unit": "eval_loss"
             },
             "reasoning_transfer": {
               "replicated": false,
@@ -5913,10 +5949,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 4858.37744140625,
+              "transferred_loss": 21197.43359375,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -16339.05615234375,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -5928,10 +5966,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 21197.43359375,
+              "baseline_loss": 1916.466552734375,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -19280.967041015625,
+              "effect_unit": "eval_loss"
             },
             "reasoning_transfer": {
               "replicated": false,
@@ -6022,24 +6062,34 @@
         "transfer_signal": {
           "replicated": null,
           "status": "inconclusive",
-          "success_rate": 0.0,
-          "num_valid_seeds": 10,
-          "effect_mean": NaN,
-          "effect_std": NaN,
-          "effect_unit": "perplexity",
+          "success_rate": 0.1111111111111111,
+          "num_valid_seeds": 9,
+          "effect_mean": 29325.572265625,
+          "effect_std": 124295.2865194823,
+          "effect_unit": "eval_loss",
           "test_name": "paired_sign_flip",
           "alpha": 0.05,
-          "p_value_support": 0.0,
-          "p_value_contradict": 0.0,
+          "p_value_support": 0.5,
+          "p_value_contradict": 0.501953125,
+          "scratch_loss": {
+            "mean": 45764.47026909722,
+            "std": 120346.15599303819,
+            "num_seeds": 9
+          },
           "scratch_perplexity": {
-            "mean": NaN,
-            "std": NaN,
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
+          },
+          "transferred_loss": {
+            "mean": 16270.1376953125,
+            "std": 4569.365398340949,
             "num_seeds": 10
           },
           "transferred_perplexity": {
-            "mean": Infinity,
-            "std": NaN,
-            "num_seeds": 10
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
           }
         },
         "convergence_gain": {
@@ -6060,9 +6110,9 @@
             "num_seeds": 9
           },
           "target_eval_loss": {
-            "mean": NaN,
-            "std": NaN,
-            "num_seeds": 10
+            "mean": 45764.47026909722,
+            "std": 120346.15599303819,
+            "num_seeds": 9
           },
           "transferred_step": {
             "mean": 20.0,
@@ -6073,24 +6123,34 @@
         "compute_matched_gain": {
           "replicated": null,
           "status": "inconclusive",
-          "success_rate": 0.0,
-          "num_valid_seeds": 10,
-          "effect_mean": NaN,
-          "effect_std": NaN,
-          "effect_unit": "perplexity",
+          "success_rate": 0.2222222222222222,
+          "num_valid_seeds": 9,
+          "effect_mean": 48289.27882215712,
+          "effect_std": 170270.7094785638,
+          "effect_unit": "eval_loss",
           "test_name": "paired_sign_flip",
           "alpha": 0.05,
-          "p_value_support": 0.0,
-          "p_value_contradict": 0.0,
+          "p_value_support": 0.44921875,
+          "p_value_contradict": 0.552734375,
+          "baseline_loss": {
+            "mean": 65708.46816677517,
+            "std": 169365.76212467102,
+            "num_seeds": 9
+          },
           "baseline_perplexity": {
-            "mean": NaN,
-            "std": NaN,
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
+          },
+          "transferred_loss": {
+            "mean": 16270.1376953125,
+            "std": 4569.365398340949,
             "num_seeds": 10
           },
           "transferred_perplexity": {
-            "mean": Infinity,
-            "std": NaN,
-            "num_seeds": 10
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
           }
         },
         "reasoning_transfer": {
@@ -6119,37 +6179,35 @@
       },
       "metrics": {
         "transfer_gap_perplexity": {
-          "mean": NaN,
-          "std": NaN,
-          "num_seeds": 10,
+          "mean": 29325.572265625,
+          "std": 124295.2865194823,
+          "num_seeds": 9,
           "values": [
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN
+            -10826.41259765625,
+            -10467.18408203125,
+            -13036.05712890625,
+            -12939.94775390625,
+            360725.1396484375,
+            -13335.31005859375,
+            -11634.51171875,
+            -8216.509765625,
+            -16339.05615234375
           ]
         },
         "compute_matched_gap_perplexity": {
-          "mean": NaN,
-          "std": NaN,
-          "num_seeds": 10,
+          "mean": 48289.27882215712,
+          "std": 170270.7094785638,
+          "num_seeds": 9,
           "values": [
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN
+            500299.330078125,
+            -16762.817749023438,
+            -3270.8759765625,
+            -16739.635009765625,
+            -14152.669189453125,
+            32742.76171875,
+            -16309.670166015625,
+            -11921.947265625,
+            -19280.967041015625
           ]
         },
         "convergence_step_delta": {
@@ -6180,57 +6238,9 @@
         "algorithmic_accuracy_gain": null,
         "synthetic_ordering_gap_perplexity": null,
         "near_baseline_margin_perplexity": null,
-        "scratch_perplexity": {
-          "mean": NaN,
-          "std": NaN,
-          "num_seeds": 10,
-          "values": [
-            NaN,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity
-          ]
-        },
-        "transferred_perplexity": {
-          "mean": Infinity,
-          "std": NaN,
-          "num_seeds": 10,
-          "values": [
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity
-          ]
-        },
-        "baseline_perplexity": {
-          "mean": NaN,
-          "std": NaN,
-          "num_seeds": 10,
-          "values": [
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            NaN,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity
-          ]
-        },
+        "scratch_perplexity": null,
+        "transferred_perplexity": null,
+        "baseline_perplexity": null,
         "scratch_reasoning_accuracy": {
           "mean": 0.0,
           "std": 0.0,
@@ -6306,15 +6316,13 @@
           },
           "scratch": {
             "label": "Baseline",
-            "mean": NaN,
-            "std": NaN,
+            "mean": 5413.897644042969,
+            "std": 2019.7097673871467,
             "values": [
-              NaN,
               8245.5791015625,
               2335.358642578125,
               5632.130859375,
               3039.340576171875,
-              NaN,
               7323.41650390625,
               5887.85546875,
               6290.21728515625,
@@ -6323,15 +6331,14 @@
           },
           "transferred": {
             "label": "Transferred",
-            "mean": NaN,
-            "std": NaN,
+            "mean": 16269.872775607639,
+            "std": 4569.879637062234,
             "values": [
               6966.24169921875,
               19359.236328125,
               14880.46875,
               18679.87109375,
               10899.001953125,
-              NaN,
               20803.73046875,
               18807.76171875,
               17213.984375,
@@ -6359,15 +6366,13 @@
           },
           "scratch": {
             "label": "Baseline",
-            "mean": NaN,
-            "std": NaN,
+            "mean": 0.011608168279053643,
+            "std": 0.006173197595986738,
             "values": [
-              NaN,
               0.012488088570535183,
               0.008101493120193481,
               0.02219267375767231,
               0.0036055122036486864,
-              NaN,
               0.007831409573554993,
               0.010663563385605812,
               0.008936678990721703,
@@ -6376,15 +6381,14 @@
           },
           "transferred": {
             "label": "Transferred",
-            "mean": NaN,
-            "std": NaN,
+            "mean": 0.022544819417008612,
+            "std": 0.02477135207293836,
             "values": [
               0.05200441554188728,
               0.026741383597254753,
               5.711913399863988e-05,
               0.007238178513944149,
               0.00627119792625308,
-              NaN,
               0.008171290159225464,
               0.027027711272239685,
               0.07184897363185883,
@@ -6459,34 +6463,34 @@
           "mean": [
             [
               0.0,
-              NaN,
-              NaN
+              6958.764940261841,
+              6708.445905685425
             ],
             [
-              NaN,
+              6958.764940261841,
               0.0,
-              NaN
+              13312.84870147705
             ],
             [
-              NaN,
-              NaN,
+              6708.445905685425,
+              13312.84870147705,
               0.0
             ]
           ],
           "std": [
             [
               0.0,
-              NaN,
-              NaN
+              6174.298638236834,
+              7930.598541967489
             ],
             [
-              NaN,
+              6174.298638236834,
               0.0,
-              NaN
+              9869.767782355644
             ],
             [
-              NaN,
-              NaN,
+              7930.598541967489,
+              9869.767782355644,
               0.0
             ]
           ]
@@ -6505,34 +6509,34 @@
           "mean": [
             [
               1.0,
-              NaN,
-              NaN
+              0.013991689629619941,
+              0.011608167318627238
             ],
             [
-              NaN,
+              0.013991689629619941,
               1.0,
-              NaN
+              0.018862374123273185
             ],
             [
-              NaN,
-              NaN,
+              0.011608167318627238,
+              0.018862374123273185,
               1.0
             ]
           ],
           "std": [
             [
               0.0,
-              NaN,
-              NaN
+              0.01270036473995855,
+              0.006173199334478888
             ],
             [
-              NaN,
+              0.01270036473995855,
               0.0,
-              NaN
+              0.023702343911815946
             ],
             [
-              NaN,
-              NaN,
+              0.006173199334478888,
+              0.023702343911815946,
               0.0
             ]
           ]
@@ -7045,10 +7049,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 7400.7275390625,
+              "transferred_loss": 40764.59765625,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -33363.8701171875,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -7059,11 +7065,13 @@
               "effect_unit": "steps"
             },
             "compute_matched_gain": {
-              "replicated": false,
+              "replicated": true,
+              "transferred_loss": 40764.59765625,
+              "baseline_loss": 72003.203125,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": 31238.60546875,
+              "effect_unit": "eval_loss"
             },
             "reasoning_transfer": {
               "replicated": false,
@@ -7638,10 +7646,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 3669.3525390625,
+              "transferred_loss": 26195.7890625,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -22526.4365234375,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -7653,10 +7663,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 26195.7890625,
+              "baseline_loss": 3977.96728515625,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -22217.82177734375,
+              "effect_unit": "eval_loss"
             },
             "reasoning_transfer": {
               "replicated": false,
@@ -8231,10 +8243,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 6475.3828125,
+              "transferred_loss": 20881.916015625,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -14406.533203125,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -8246,10 +8260,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 20881.916015625,
+              "baseline_loss": 3558.88671875,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -17323.029296875,
+              "effect_unit": "eval_loss"
             },
             "reasoning_transfer": {
               "replicated": false,
@@ -8824,10 +8840,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 8282.341796875,
+              "transferred_loss": 26661.068359375,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -18378.7265625,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -8839,10 +8857,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 26661.068359375,
+              "baseline_loss": 2745.395263671875,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -23915.673095703125,
+              "effect_unit": "eval_loss"
             },
             "reasoning_transfer": {
               "replicated": false,
@@ -9417,10 +9437,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 2686.296630859375,
+              "transferred_loss": 15870.576171875,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -13184.279541015625,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -9432,10 +9454,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 15870.576171875,
+              "baseline_loss": 4662.44189453125,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -11208.13427734375,
+              "effect_unit": "eval_loss"
             },
             "reasoning_transfer": {
               "replicated": false,
@@ -10010,10 +10034,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 12390.07421875,
+              "transferred_loss": 12471.068359375,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -80.994140625,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -10025,10 +10051,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 12471.068359375,
+              "baseline_loss": 2423.36328125,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -10047.705078125,
+              "effect_unit": "eval_loss"
             },
             "reasoning_transfer": {
               "replicated": false,
@@ -10602,11 +10630,13 @@
           },
           "claims": {
             "transfer_signal": {
-              "replicated": false,
+              "replicated": null,
+              "scratch_loss": 25732.845703125,
+              "transferred_loss": null,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": NaN,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": null,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -10617,11 +10647,13 @@
               "effect_unit": "steps"
             },
             "compute_matched_gain": {
-              "replicated": false,
+              "replicated": null,
+              "transferred_loss": null,
+              "baseline_loss": 1191.6585693359375,
               "transferred_perplexity": NaN,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": null,
+              "effect_unit": "eval_loss"
             },
             "reasoning_transfer": {
               "replicated": false,
@@ -11196,10 +11228,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 3981.85107421875,
+              "transferred_loss": 32485.98046875,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -28504.12939453125,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -11211,10 +11245,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 32485.98046875,
+              "baseline_loss": 1498.70263671875,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -30987.27783203125,
+              "effect_unit": "eval_loss"
             },
             "reasoning_transfer": {
               "replicated": false,
@@ -11789,10 +11825,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 2896.3671875,
+              "transferred_loss": 7542.6337890625,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -4646.2666015625,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -11804,10 +11842,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 7542.6337890625,
+              "baseline_loss": 2927.007080078125,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -4615.626708984375,
+              "effect_unit": "eval_loss"
             },
             "reasoning_transfer": {
               "replicated": false,
@@ -12382,10 +12422,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 2031.483154296875,
+              "transferred_loss": 22655.7890625,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -20624.305908203125,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -12397,10 +12439,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 22655.7890625,
+              "baseline_loss": 987.7872314453125,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -21668.001831054688,
+              "effect_unit": "eval_loss"
             },
             "reasoning_transfer": {
               "replicated": false,
@@ -12489,26 +12533,36 @@
       ],
       "claims": {
         "transfer_signal": {
-          "replicated": null,
-          "status": "inconclusive",
+          "replicated": false,
+          "status": "contradicted",
           "success_rate": 0.0,
-          "num_valid_seeds": 10,
-          "effect_mean": NaN,
-          "effect_std": NaN,
-          "effect_unit": "perplexity",
+          "num_valid_seeds": 9,
+          "effect_mean": -17301.726888020832,
+          "effect_std": 10636.218477438957,
+          "effect_unit": "eval_loss",
           "test_name": "paired_sign_flip",
           "alpha": 0.05,
-          "p_value_support": 0.0,
-          "p_value_contradict": 0.0,
-          "scratch_perplexity": {
-            "mean": Infinity,
-            "std": NaN,
+          "p_value_support": 1.0,
+          "p_value_contradict": 0.001953125,
+          "scratch_loss": {
+            "mean": 7554.672265625,
+            "std": 7143.8585539237365,
             "num_seeds": 10
           },
+          "scratch_perplexity": {
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
+          },
+          "transferred_loss": {
+            "mean": 22836.602105034723,
+            "std": 10211.286473093343,
+            "num_seeds": 9
+          },
           "transferred_perplexity": {
-            "mean": NaN,
-            "std": NaN,
-            "num_seeds": 10
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
           }
         },
         "convergence_gain": {
@@ -12535,26 +12589,36 @@
           }
         },
         "compute_matched_gain": {
-          "replicated": null,
-          "status": "inconclusive",
-          "success_rate": 0.0,
-          "num_valid_seeds": 10,
-          "effect_mean": NaN,
-          "effect_std": NaN,
-          "effect_unit": "perplexity",
+          "replicated": false,
+          "status": "contradicted",
+          "success_rate": 0.1111111111111111,
+          "num_valid_seeds": 9,
+          "effect_mean": -12304.962714301215,
+          "effect_std": 18222.29481028182,
+          "effect_unit": "eval_loss",
           "test_name": "paired_sign_flip",
           "alpha": 0.05,
-          "p_value_support": 0.0,
-          "p_value_contradict": 0.0,
-          "baseline_perplexity": {
-            "mean": Infinity,
-            "std": NaN,
+          "p_value_support": 0.962890625,
+          "p_value_contradict": 0.0390625,
+          "baseline_loss": {
+            "mean": 9597.64130859375,
+            "std": 21959.96730098158,
             "num_seeds": 10
           },
+          "baseline_perplexity": {
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
+          },
+          "transferred_loss": {
+            "mean": 22836.602105034723,
+            "std": 10211.286473093343,
+            "num_seeds": 9
+          },
           "transferred_perplexity": {
-            "mean": NaN,
-            "std": NaN,
-            "num_seeds": 10
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
           }
         },
         "reasoning_transfer": {
@@ -12583,37 +12647,35 @@
       },
       "metrics": {
         "transfer_gap_perplexity": {
-          "mean": NaN,
-          "std": NaN,
-          "num_seeds": 10,
+          "mean": -17301.726888020832,
+          "std": 10636.218477438957,
+          "num_seeds": 9,
           "values": [
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN
+            -33363.8701171875,
+            -22526.4365234375,
+            -14406.533203125,
+            -18378.7265625,
+            -13184.279541015625,
+            -80.994140625,
+            -28504.12939453125,
+            -4646.2666015625,
+            -20624.305908203125
           ]
         },
         "compute_matched_gap_perplexity": {
-          "mean": NaN,
-          "std": NaN,
-          "num_seeds": 10,
+          "mean": -12304.962714301215,
+          "std": 18222.29481028182,
+          "num_seeds": 9,
           "values": [
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN
+            31238.60546875,
+            -22217.82177734375,
+            -17323.029296875,
+            -23915.673095703125,
+            -11208.13427734375,
+            -10047.705078125,
+            -30987.27783203125,
+            -4615.626708984375,
+            -21668.001831054688
           ]
         },
         "convergence_step_delta": null,
@@ -12637,57 +12699,9 @@
         "algorithmic_accuracy_gain": null,
         "synthetic_ordering_gap_perplexity": null,
         "near_baseline_margin_perplexity": null,
-        "scratch_perplexity": {
-          "mean": Infinity,
-          "std": NaN,
-          "num_seeds": 10,
-          "values": [
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity
-          ]
-        },
-        "transferred_perplexity": {
-          "mean": NaN,
-          "std": NaN,
-          "num_seeds": 10,
-          "values": [
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            NaN,
-            Infinity,
-            Infinity,
-            Infinity
-          ]
-        },
-        "baseline_perplexity": {
-          "mean": Infinity,
-          "std": NaN,
-          "num_seeds": 10,
-          "values": [
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity
-          ]
-        },
+        "scratch_perplexity": null,
+        "transferred_perplexity": null,
+        "baseline_perplexity": null,
         "scratch_reasoning_accuracy": {
           "mean": 0.0,
           "std": 0.0,
@@ -12764,8 +12778,8 @@
           },
           "transferred": {
             "label": "Transferred",
-            "mean": NaN,
-            "std": NaN,
+            "mean": 22778.37331814236,
+            "std": 11382.140637742767,
             "values": [
               42351.91015625,
               28618.900390625,
@@ -12773,7 +12787,6 @@
               26831.390625,
               16205.0673828125,
               7021.35107421875,
-              NaN,
               31293.064453125,
               7345.970703125,
               23211.0
@@ -12817,8 +12830,8 @@
           },
           "transferred": {
             "label": "Transferred",
-            "mean": NaN,
-            "std": NaN,
+            "mean": 0.008332165139209893,
+            "std": 0.007786659126088009,
             "values": [
               0.0,
               0.005326784681528807,
@@ -12826,7 +12839,6 @@
               0.004842032212764025,
               0.01932334713637829,
               0.015964286401867867,
-              NaN,
               0.0,
               0.008430037647485733,
               0.018800055608153343
@@ -12900,34 +12912,34 @@
           "mean": [
             [
               0.0,
-              NaN,
-              7728.7686218261715
+              9301.832780626086,
+              7075.50395711263
             ],
             [
-              NaN,
+              9301.832780626086,
               0.0,
-              NaN
+              18660.01327175564
             ],
             [
-              7728.7686218261715,
-              NaN,
+              7075.50395711263,
+              18660.01327175564,
               0.0
             ]
           ],
           "std": [
             [
               0.0,
-              NaN,
-              8170.314181016112
+              9312.834438116486,
+              8384.34835984527
             ],
             [
-              NaN,
+              9312.834438116486,
               0.0,
-              NaN
+              13110.255914754476
             ],
             [
-              8170.314181016112,
-              NaN,
+              8384.34835984527,
+              13110.255914754476,
               0.0
             ]
           ]
@@ -12946,34 +12958,34 @@
           "mean": [
             [
               1.0,
-              NaN,
-              0.02575968550518155
+              0.019220408880048327,
+              0.028126669271538656
             ],
             [
-              NaN,
+              0.019220408880048327,
               1.0,
-              NaN
+              0.008332161879580881
             ],
             [
-              0.02575968550518155,
-              NaN,
+              0.028126669271538656,
+              0.008332161879580881,
               1.0
             ]
           ],
           "std": [
             [
               0.0,
-              NaN,
-              0.02994183827586741
+              0.023523475782262413,
+              0.0307497723986007
             ],
             [
-              NaN,
+              0.023523475782262413,
               0.0,
-              NaN
+              0.0077866549972398415
             ],
             [
-              0.02994183827586741,
-              NaN,
+              0.0307497723986007,
+              0.0077866549972398415,
               0.0
             ]
           ]
@@ -13459,10 +13471,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 6101.5556640625,
+              "transferred_loss": 18581.60546875,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -12480.0498046875,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -13474,10 +13488,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 18581.60546875,
+              "baseline_loss": 1047.409912109375,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -17534.195556640625,
+              "effect_unit": "eval_loss"
             }
           },
           "diagnostics": {
@@ -14018,10 +14034,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 6729.451171875,
+              "transferred_loss": 14465.2900390625,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -7735.8388671875,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -14033,10 +14051,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 14465.2900390625,
+              "baseline_loss": 1972.985107421875,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -12492.304931640625,
+              "effect_unit": "eval_loss"
             }
           },
           "diagnostics": {
@@ -14577,10 +14597,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 2592.54248046875,
+              "transferred_loss": 19283.37890625,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -16690.83642578125,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -14592,10 +14614,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 19283.37890625,
+              "baseline_loss": 7095.31640625,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -12188.0625,
+              "effect_unit": "eval_loss"
             }
           },
           "diagnostics": {
@@ -15136,10 +15160,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 6418.98291015625,
+              "transferred_loss": 23232.541015625,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -16813.55810546875,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -15151,10 +15177,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 23232.541015625,
+              "baseline_loss": 1431.142822265625,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -21801.398193359375,
+              "effect_unit": "eval_loss"
             }
           },
           "diagnostics": {
@@ -15695,10 +15723,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 2775.251953125,
+              "transferred_loss": 13094.626953125,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -10319.375,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -15709,11 +15739,13 @@
               "effect_unit": "steps"
             },
             "compute_matched_gain": {
-              "replicated": false,
+              "replicated": null,
+              "transferred_loss": 13094.626953125,
+              "baseline_loss": null,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": NaN,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": null,
+              "effect_unit": "eval_loss"
             }
           },
           "diagnostics": {
@@ -16254,10 +16286,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 4672.90283203125,
+              "transferred_loss": 14607.1005859375,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -9934.19775390625,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -16268,11 +16302,13 @@
               "effect_unit": "steps"
             },
             "compute_matched_gain": {
-              "replicated": false,
+              "replicated": true,
+              "transferred_loss": 14607.1005859375,
+              "baseline_loss": 35893.1328125,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": 21286.0322265625,
+              "effect_unit": "eval_loss"
             }
           },
           "diagnostics": {
@@ -16813,10 +16849,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 5941.57861328125,
+              "transferred_loss": 24609.611328125,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -18668.03271484375,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -16828,10 +16866,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 24609.611328125,
+              "baseline_loss": 1843.363037109375,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -22766.248291015625,
+              "effect_unit": "eval_loss"
             }
           },
           "diagnostics": {
@@ -17372,10 +17412,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 9010.326171875,
+              "transferred_loss": 15375.009765625,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -6364.68359375,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -17386,11 +17428,13 @@
               "effect_unit": "steps"
             },
             "compute_matched_gain": {
-              "replicated": false,
+              "replicated": true,
+              "transferred_loss": 15375.009765625,
+              "baseline_loss": 20345.1171875,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": 4970.107421875,
+              "effect_unit": "eval_loss"
             }
           },
           "diagnostics": {
@@ -17931,10 +17975,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 6432.9404296875,
+              "transferred_loss": 14882.46484375,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -8449.5244140625,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -17945,11 +17991,13 @@
               "effect_unit": "steps"
             },
             "compute_matched_gain": {
-              "replicated": false,
+              "replicated": true,
+              "transferred_loss": 14882.46484375,
+              "baseline_loss": 318440.4375,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": 303557.97265625,
+              "effect_unit": "eval_loss"
             }
           },
           "diagnostics": {
@@ -18490,10 +18538,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 6542.29833984375,
+              "transferred_loss": 27809.5234375,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -21267.22509765625,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -18504,11 +18554,13 @@
               "effect_unit": "steps"
             },
             "compute_matched_gain": {
-              "replicated": false,
+              "replicated": true,
+              "transferred_loss": 27809.5234375,
+              "baseline_loss": 1214011.5,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": 1186201.9765625,
+              "effect_unit": "eval_loss"
             }
           },
           "diagnostics": {
@@ -18590,26 +18642,36 @@
       ],
       "claims": {
         "transfer_signal": {
-          "replicated": null,
-          "status": "inconclusive",
+          "replicated": false,
+          "status": "contradicted",
           "success_rate": 0.0,
           "num_valid_seeds": 10,
-          "effect_mean": NaN,
-          "effect_std": NaN,
-          "effect_unit": "perplexity",
+          "effect_mean": -12872.332177734375,
+          "effect_std": 5140.006487230638,
+          "effect_unit": "eval_loss",
           "test_name": "paired_sign_flip",
           "alpha": 0.05,
-          "p_value_support": 0.0,
-          "p_value_contradict": 0.0,
+          "p_value_support": 1.0,
+          "p_value_contradict": 0.0009765625,
+          "scratch_loss": {
+            "mean": 5721.783056640625,
+            "std": 1922.4367580800367,
+            "num_seeds": 10
+          },
           "scratch_perplexity": {
-            "mean": Infinity,
-            "std": NaN,
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
+          },
+          "transferred_loss": {
+            "mean": 18594.115234375,
+            "std": 5059.940925577247,
             "num_seeds": 10
           },
           "transferred_perplexity": {
-            "mean": Infinity,
-            "std": NaN,
-            "num_seeds": 10
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
           }
         },
         "convergence_gain": {
@@ -18638,60 +18700,69 @@
         "compute_matched_gain": {
           "replicated": null,
           "status": "inconclusive",
-          "success_rate": 0.0,
-          "num_valid_seeds": 10,
-          "effect_mean": NaN,
-          "effect_std": NaN,
-          "effect_unit": "perplexity",
+          "success_rate": 0.4444444444444444,
+          "num_valid_seeds": 9,
+          "effect_mean": 158803.76437717013,
+          "effect_std": 399114.37998159014,
+          "effect_unit": "eval_loss",
           "test_name": "paired_sign_flip",
           "alpha": 0.05,
-          "p_value_support": 0.0,
-          "p_value_contradict": 0.0,
+          "p_value_support": 0.2265625,
+          "p_value_contradict": 0.775390625,
+          "baseline_loss": {
+            "mean": 178008.93386501737,
+            "std": 401840.55135896197,
+            "num_seeds": 9
+          },
           "baseline_perplexity": {
-            "mean": NaN,
-            "std": NaN,
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
+          },
+          "transferred_loss": {
+            "mean": 18594.115234375,
+            "std": 5059.940925577247,
             "num_seeds": 10
           },
           "transferred_perplexity": {
-            "mean": Infinity,
-            "std": NaN,
-            "num_seeds": 10
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
           }
         }
       },
       "metrics": {
         "transfer_gap_perplexity": {
-          "mean": NaN,
-          "std": NaN,
+          "mean": -12872.332177734375,
+          "std": 5140.006487230638,
           "num_seeds": 10,
           "values": [
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN
+            -12480.0498046875,
+            -7735.8388671875,
+            -16690.83642578125,
+            -16813.55810546875,
+            -10319.375,
+            -9934.19775390625,
+            -18668.03271484375,
+            -6364.68359375,
+            -8449.5244140625,
+            -21267.22509765625
           ]
         },
         "compute_matched_gap_perplexity": {
-          "mean": NaN,
-          "std": NaN,
-          "num_seeds": 10,
+          "mean": 158803.76437717013,
+          "std": 399114.37998159014,
+          "num_seeds": 9,
           "values": [
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN
+            -17534.195556640625,
+            -12492.304931640625,
+            -12188.0625,
+            -21801.398193359375,
+            21286.0322265625,
+            -22766.248291015625,
+            4970.107421875,
+            303557.97265625,
+            1186201.9765625
           ]
         },
         "convergence_step_delta": null,
@@ -18699,57 +18770,9 @@
         "algorithmic_accuracy_gain": null,
         "synthetic_ordering_gap_perplexity": null,
         "near_baseline_margin_perplexity": null,
-        "scratch_perplexity": {
-          "mean": Infinity,
-          "std": NaN,
-          "num_seeds": 10,
-          "values": [
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity
-          ]
-        },
-        "transferred_perplexity": {
-          "mean": Infinity,
-          "std": NaN,
-          "num_seeds": 10,
-          "values": [
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity
-          ]
-        },
-        "baseline_perplexity": {
-          "mean": NaN,
-          "std": NaN,
-          "num_seeds": 10,
-          "values": [
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            NaN,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity
-          ]
-        },
+        "scratch_perplexity": null,
+        "transferred_perplexity": null,
+        "baseline_perplexity": null,
         "scratch_reasoning_accuracy": null,
         "transferred_reasoning_accuracy": null,
         "scratch_algorithmic_accuracy": null,
@@ -18777,14 +18800,13 @@
           },
           "scratch": {
             "label": "Baseline",
-            "mean": NaN,
-            "std": NaN,
+            "mean": 6732.110053168402,
+            "std": 2039.6941841406665,
             "values": [
               5953.94873046875,
               6925.13134765625,
               2308.119873046875,
               6826.654296875,
-              NaN,
               9705.1337890625,
               6329.833984375,
               8707.140625,
@@ -18794,14 +18816,13 @@
           },
           "transferred": {
             "label": "Transferred",
-            "mean": NaN,
-            "std": NaN,
+            "mean": 18745.171440972223,
+            "std": 7016.363959390591,
             "values": [
               18748.341796875,
               15208.8310546875,
               17932.212890625,
               24777.943359375,
-              NaN,
               5718.083984375,
               26674.462890625,
               14753.8720703125,
@@ -18830,14 +18851,13 @@
           },
           "scratch": {
             "label": "Baseline",
-            "mean": NaN,
-            "std": NaN,
+            "mean": 0.00966718711424619,
+            "std": 0.014438957993828027,
             "values": [
               0.004459223244339228,
               0.026458827778697014,
               0.006759628653526306,
               0.0415547676384449,
-              NaN,
               0.001914349151775241,
               0.0013300360878929496,
               0.0029076039791107178,
@@ -18847,14 +18867,13 @@
           },
           "transferred": {
             "label": "Transferred",
-            "mean": NaN,
-            "std": NaN,
+            "mean": 0.010234016019644009,
+            "std": 0.006745922590271671,
             "values": [
               0.005009676329791546,
               0.009226209484040737,
               0.0036901815328747034,
               0.012633678503334522,
-              NaN,
               0.018537037074565887,
               0.020764363929629326,
               0.010405577719211578,
@@ -18930,34 +18949,34 @@
           "mean": [
             [
               0.0,
-              9955.867457580567,
-              NaN
+              10935.893088446723,
+              95921.1638285319
             ],
             [
-              9955.867457580567,
+              10935.893088446723,
               0.0,
-              NaN
+              96034.70037502713
             ],
             [
-              NaN,
-              NaN,
+              95921.1638285319,
+              96034.70037502713,
               0.0
             ]
           ],
           "std": [
             [
               0.0,
-              7578.436185048343,
-              NaN
+              7335.306177605472,
+              195259.94252467764
             ],
             [
-              7578.436185048343,
+              7335.306177605472,
               0.0,
-              NaN
+              199005.44528460637
             ],
             [
-              NaN,
-              NaN,
+              195259.94252467764,
+              199005.44528460637,
               0.0
             ]
           ]
@@ -18976,34 +18995,34 @@
           "mean": [
             [
               1.0,
-              0.016881745564751326,
-              NaN
+              0.01597369138875769,
+              0.009667186661519937
             ],
             [
-              0.016881745564751326,
+              0.01597369138875769,
               1.0,
-              NaN
+              0.010234011544121636
             ],
             [
-              NaN,
-              NaN,
+              0.009667186661519937,
+              0.010234011544121636,
               1.0
             ]
           ],
           "std": [
             [
               0.0,
-              0.014166885386431599,
-              NaN
+              0.014714343169090364,
+              0.0144389545494483
             ],
             [
-              0.014166885386431599,
+              0.014714343169090364,
               0.0,
-              NaN
+              0.006745910552151692
             ],
             [
-              NaN,
-              NaN,
+              0.0144389545494483,
+              0.006745910552151692,
               0.0
             ]
           ]
@@ -19516,10 +19535,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 6611.3583984375,
+              "transferred_loss": 27426.87109375,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -20815.5126953125,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -19531,10 +19552,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 27426.87109375,
+              "baseline_loss": 3867.4091796875,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -23559.4619140625,
+              "effect_unit": "eval_loss"
             },
             "algorithmic_transfer": {
               "replicated": false,
@@ -20108,11 +20131,13 @@
           },
           "claims": {
             "transfer_signal": {
-              "replicated": false,
+              "replicated": null,
+              "scratch_loss": 6153.5888671875,
+              "transferred_loss": null,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": NaN,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": null,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -20123,11 +20148,13 @@
               "effect_unit": "steps"
             },
             "compute_matched_gain": {
-              "replicated": false,
+              "replicated": null,
+              "transferred_loss": null,
+              "baseline_loss": 671.977294921875,
               "transferred_perplexity": NaN,
               "baseline_perplexity": 6.855373933951456e+291,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": null,
+              "effect_unit": "eval_loss"
             },
             "algorithmic_transfer": {
               "replicated": false,
@@ -20702,10 +20729,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 5352.13037109375,
+              "transferred_loss": 9193.0234375,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -3840.89306640625,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -20716,11 +20745,13 @@
               "effect_unit": "steps"
             },
             "compute_matched_gain": {
-              "replicated": false,
+              "replicated": true,
+              "transferred_loss": 9193.0234375,
+              "baseline_loss": 84622.0546875,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": 75429.03125,
+              "effect_unit": "eval_loss"
             },
             "algorithmic_transfer": {
               "replicated": false,
@@ -21295,10 +21326,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 6596.8916015625,
+              "transferred_loss": 17468.91015625,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -10872.0185546875,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -21310,10 +21343,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 17468.91015625,
+              "baseline_loss": 771.2172241210938,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -16697.692932128906,
+              "effect_unit": "eval_loss"
             },
             "algorithmic_transfer": {
               "replicated": false,
@@ -21888,10 +21923,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 4603.857421875,
+              "transferred_loss": 15440.921875,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -10837.064453125,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -21903,10 +21940,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 15440.921875,
+              "baseline_loss": 1935.6971435546875,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -13505.224731445312,
+              "effect_unit": "eval_loss"
             },
             "algorithmic_transfer": {
               "replicated": false,
@@ -22481,10 +22520,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 7291.966796875,
+              "transferred_loss": 11024.578125,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -3732.611328125,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -22496,10 +22537,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 11024.578125,
+              "baseline_loss": 5359.52001953125,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -5665.05810546875,
+              "effect_unit": "eval_loss"
             },
             "algorithmic_transfer": {
               "replicated": false,
@@ -23074,10 +23117,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 4910.66943359375,
+              "transferred_loss": 14204.3828125,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -9293.71337890625,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -23089,10 +23134,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 14204.3828125,
+              "baseline_loss": 7043.943359375,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -7160.439453125,
+              "effect_unit": "eval_loss"
             },
             "algorithmic_transfer": {
               "replicated": false,
@@ -23667,10 +23714,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 7539.275390625,
+              "transferred_loss": 14941.28125,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -7402.005859375,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -23682,10 +23731,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 14941.28125,
+              "baseline_loss": 676.0310668945312,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": 3.9496803329689574e+293,
-              "effect": -Infinity,
-              "effect_unit": "perplexity"
+              "effect": -14265.250183105469,
+              "effect_unit": "eval_loss"
             },
             "algorithmic_transfer": {
               "replicated": false,
@@ -24260,10 +24311,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 4957.96044921875,
+              "transferred_loss": 17516.375,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -12558.41455078125,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -24275,10 +24328,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 17516.375,
+              "baseline_loss": 1824.9501953125,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -15691.4248046875,
+              "effect_unit": "eval_loss"
             },
             "algorithmic_transfer": {
               "replicated": false,
@@ -24853,10 +24908,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 6432.5078125,
+              "transferred_loss": 10117.87890625,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -3685.37109375,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -24867,11 +24924,13 @@
               "effect_unit": "steps"
             },
             "compute_matched_gain": {
-              "replicated": false,
+              "replicated": true,
+              "transferred_loss": 10117.87890625,
+              "baseline_loss": 17831.43359375,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": 7713.5546875,
+              "effect_unit": "eval_loss"
             },
             "algorithmic_transfer": {
               "replicated": false,
@@ -24960,26 +25019,36 @@
       ],
       "claims": {
         "transfer_signal": {
-          "replicated": null,
-          "status": "inconclusive",
+          "replicated": false,
+          "status": "contradicted",
           "success_rate": 0.0,
-          "num_valid_seeds": 10,
-          "effect_mean": NaN,
-          "effect_std": NaN,
-          "effect_unit": "perplexity",
+          "num_valid_seeds": 9,
+          "effect_mean": -9226.400553385416,
+          "effect_std": 5521.9278761316,
+          "effect_unit": "eval_loss",
           "test_name": "paired_sign_flip",
           "alpha": 0.05,
-          "p_value_support": 0.0,
-          "p_value_contradict": 0.0,
-          "scratch_perplexity": {
-            "mean": Infinity,
-            "std": NaN,
+          "p_value_support": 1.0,
+          "p_value_contradict": 0.001953125,
+          "scratch_loss": {
+            "mean": 6045.020654296875,
+            "std": 1032.8174102071687,
             "num_seeds": 10
           },
+          "scratch_perplexity": {
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
+          },
+          "transferred_loss": {
+            "mean": 15259.358072916666,
+            "std": 5482.2476588900945,
+            "num_seeds": 9
+          },
           "transferred_perplexity": {
-            "mean": NaN,
-            "std": NaN,
-            "num_seeds": 10
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
           }
         },
         "convergence_gain": {
@@ -25008,24 +25077,34 @@
         "compute_matched_gain": {
           "replicated": null,
           "status": "inconclusive",
-          "success_rate": 0.0,
-          "num_valid_seeds": 10,
-          "effect_mean": NaN,
-          "effect_std": NaN,
-          "effect_unit": "perplexity",
+          "success_rate": 0.2222222222222222,
+          "num_valid_seeds": 9,
+          "effect_mean": -1489.1073540581597,
+          "effect_std": 30162.924171269373,
+          "effect_unit": "eval_loss",
           "test_name": "paired_sign_flip",
           "alpha": 0.05,
-          "p_value_support": 0.0,
-          "p_value_contradict": 0.0,
-          "baseline_perplexity": {
-            "mean": Infinity,
-            "std": NaN,
+          "p_value_support": 0.5234375,
+          "p_value_contradict": 0.478515625,
+          "baseline_loss": {
+            "mean": 12460.423376464843,
+            "std": 25880.300996725564,
             "num_seeds": 10
           },
+          "baseline_perplexity": {
+            "mean": 2.009117036154236e+293,
+            "std": Infinity,
+            "num_seeds": 2
+          },
+          "transferred_loss": {
+            "mean": 15259.358072916666,
+            "std": 5482.2476588900945,
+            "num_seeds": 9
+          },
           "transferred_perplexity": {
-            "mean": NaN,
-            "std": NaN,
-            "num_seeds": 10
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
           }
         },
         "algorithmic_transfer": {
@@ -25054,37 +25133,35 @@
       },
       "metrics": {
         "transfer_gap_perplexity": {
-          "mean": NaN,
-          "std": NaN,
-          "num_seeds": 10,
+          "mean": -9226.400553385416,
+          "std": 5521.9278761316,
+          "num_seeds": 9,
           "values": [
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN
+            -20815.5126953125,
+            -3840.89306640625,
+            -10872.0185546875,
+            -10837.064453125,
+            -3732.611328125,
+            -9293.71337890625,
+            -7402.005859375,
+            -12558.41455078125,
+            -3685.37109375
           ]
         },
         "compute_matched_gap_perplexity": {
-          "mean": NaN,
-          "std": NaN,
-          "num_seeds": 10,
+          "mean": -1489.1073540581597,
+          "std": 30162.924171269373,
+          "num_seeds": 9,
           "values": [
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            -Infinity,
-            NaN,
-            NaN
+            -23559.4619140625,
+            75429.03125,
+            -16697.692932128906,
+            -13505.224731445312,
+            -5665.05810546875,
+            -7160.439453125,
+            -14265.250183105469,
+            -15691.4248046875,
+            7713.5546875
           ]
         },
         "convergence_step_delta": null,
@@ -25108,55 +25185,15 @@
         },
         "synthetic_ordering_gap_perplexity": null,
         "near_baseline_margin_perplexity": null,
-        "scratch_perplexity": {
-          "mean": Infinity,
-          "std": NaN,
-          "num_seeds": 10,
-          "values": [
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity
-          ]
-        },
-        "transferred_perplexity": {
-          "mean": NaN,
-          "std": NaN,
-          "num_seeds": 10,
-          "values": [
-            Infinity,
-            NaN,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity
-          ]
-        },
+        "scratch_perplexity": null,
+        "transferred_perplexity": null,
         "baseline_perplexity": {
-          "mean": Infinity,
-          "std": NaN,
-          "num_seeds": 10,
+          "mean": 2.009117036154236e+293,
+          "std": Infinity,
+          "num_seeds": 2,
           "values": [
-            Infinity,
             6.855373933951456e+291,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            3.9496803329689574e+293,
-            Infinity,
-            Infinity
+            3.9496803329689574e+293
           ]
         },
         "scratch_reasoning_accuracy": null,
@@ -25235,11 +25272,10 @@
           },
           "transferred": {
             "label": "Transferred",
-            "mean": NaN,
-            "std": NaN,
+            "mean": 14403.154296875,
+            "std": 3651.1339850465515,
             "values": [
               16554.21484375,
-              NaN,
               9418.62890625,
               18222.00390625,
               16080.8359375,
@@ -25288,11 +25324,10 @@
           },
           "transferred": {
             "label": "Transferred",
-            "mean": NaN,
-            "std": NaN,
+            "mean": 0.007186376800139745,
+            "std": 0.006146108899231911,
             "values": [
               0.0031284696888178587,
-              NaN,
               0.0034088208340108395,
               0.005222029983997345,
               0.021727455779910088,
@@ -25371,34 +25406,34 @@
           "mean": [
             [
               0.0,
-              NaN,
-              8377.84783592224
+              8044.250176323785,
+              8951.235454983182
             ],
             [
-              NaN,
+              8044.250176323785,
               0.0,
-              NaN
+              13162.699623955621
             ],
             [
-              8377.84783592224,
-              NaN,
+              8951.235454983182,
+              13162.699623955621,
               0.0
             ]
           ],
           "std": [
             [
               0.0,
-              NaN,
-              11322.784837238556
+              6715.073678070513,
+              11854.637835470136
             ],
             [
-              NaN,
+              6715.073678070513,
               0.0,
-              NaN
+              10584.446849051204
             ],
             [
-              11322.784837238556,
-              NaN,
+              11854.637835470136,
+              10584.446849051204,
               0.0
             ]
           ]
@@ -25417,34 +25452,34 @@
           "mean": [
             [
               1.0,
-              NaN,
-              0.013510940282139927
+              0.03261193688700183,
+              0.008921047116422819
             ],
             [
-              NaN,
+              0.03261193688700183,
               1.0,
-              NaN
+              0.007186376256868243
             ],
             [
-              0.013510940282139927,
-              NaN,
+              0.008921047116422819,
+              0.007186376256868243,
               1.0
             ]
           ],
           "std": [
             [
               0.0,
-              NaN,
-              0.015599805627835774
+              0.03269020820123256,
+              0.006063669331494079
             ],
             [
-              NaN,
+              0.03269020820123256,
               0.0,
-              NaN
+              0.00614611048015033
             ],
             [
-              0.015599805627835774,
-              NaN,
+              0.006063669331494079,
+              0.00614611048015033,
               0.0
             ]
           ]
@@ -25956,11 +25991,13 @@
           },
           "claims": {
             "transfer_signal": {
-              "replicated": false,
+              "replicated": null,
+              "scratch_loss": null,
+              "transferred_loss": 11367.9365234375,
               "scratch_perplexity": NaN,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": null,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -25972,10 +26009,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 11367.9365234375,
+              "baseline_loss": 3399.91845703125,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -7968.01806640625,
+              "effect_unit": "eval_loss"
             },
             "algorithmic_transfer": {
               "replicated": false,
@@ -26550,10 +26589,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 6493.70654296875,
+              "transferred_loss": 18883.26953125,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -12389.56298828125,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -26565,10 +26606,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 18883.26953125,
+              "baseline_loss": 575.384033203125,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": 7.693263283050612e+249,
-              "effect": -Infinity,
-              "effect_unit": "perplexity"
+              "effect": -18307.885498046875,
+              "effect_unit": "eval_loss"
             },
             "algorithmic_transfer": {
               "replicated": false,
@@ -27143,10 +27186,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 4490.32421875,
+              "transferred_loss": 14217.3349609375,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -9727.0107421875,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -27157,11 +27202,13 @@
               "effect_unit": "steps"
             },
             "compute_matched_gain": {
-              "replicated": false,
+              "replicated": null,
+              "transferred_loss": 14217.3349609375,
+              "baseline_loss": null,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": NaN,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": null,
+              "effect_unit": "eval_loss"
             },
             "algorithmic_transfer": {
               "replicated": false,
@@ -27736,10 +27783,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 6189.8291015625,
+              "transferred_loss": 18659.953125,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -12470.1240234375,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -27750,11 +27799,13 @@
               "effect_unit": "steps"
             },
             "compute_matched_gain": {
-              "replicated": false,
+              "replicated": true,
+              "transferred_loss": 18659.953125,
+              "baseline_loss": 260991.4375,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": 242331.484375,
+              "effect_unit": "eval_loss"
             },
             "algorithmic_transfer": {
               "replicated": false,
@@ -28329,10 +28380,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 3249.35107421875,
+              "transferred_loss": 20893.64453125,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -17644.29345703125,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -28344,10 +28397,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 20893.64453125,
+              "baseline_loss": 1078.46435546875,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -19815.18017578125,
+              "effect_unit": "eval_loss"
             },
             "algorithmic_transfer": {
               "replicated": false,
@@ -28922,10 +28977,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 6476.2958984375,
+              "transferred_loss": 20534.275390625,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -14057.9794921875,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -28937,10 +28994,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 20534.275390625,
+              "baseline_loss": 3193.17578125,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -17341.099609375,
+              "effect_unit": "eval_loss"
             },
             "algorithmic_transfer": {
               "replicated": false,
@@ -29515,10 +29574,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 3652.3525390625,
+              "transferred_loss": 21385.03515625,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -17732.6826171875,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -29530,10 +29591,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 21385.03515625,
+              "baseline_loss": 2026.4793701171875,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -19358.555786132812,
+              "effect_unit": "eval_loss"
             },
             "algorithmic_transfer": {
               "replicated": false,
@@ -30108,10 +30171,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 6408.6640625,
+              "transferred_loss": 28766.666015625,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -22358.001953125,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -30123,10 +30188,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 28766.666015625,
+              "baseline_loss": 20307.134765625,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -8459.53125,
+              "effect_unit": "eval_loss"
             },
             "algorithmic_transfer": {
               "replicated": false,
@@ -30701,10 +30768,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 7301.03369140625,
+              "transferred_loss": 13885.8466796875,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -6584.81298828125,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -30716,10 +30785,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 13885.8466796875,
+              "baseline_loss": 1208.930419921875,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -12676.916259765625,
+              "effect_unit": "eval_loss"
             },
             "algorithmic_transfer": {
               "replicated": false,
@@ -31294,10 +31365,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 5679.603515625,
+              "transferred_loss": 24904.072265625,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -19224.46875,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -31309,10 +31382,12 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 24904.072265625,
+              "baseline_loss": 1668.4111328125,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -23235.6611328125,
+              "effect_unit": "eval_loss"
             },
             "algorithmic_transfer": {
               "replicated": false,
@@ -31401,26 +31476,36 @@
       ],
       "claims": {
         "transfer_signal": {
-          "replicated": null,
-          "status": "inconclusive",
+          "replicated": false,
+          "status": "contradicted",
           "success_rate": 0.0,
-          "num_valid_seeds": 10,
-          "effect_mean": NaN,
-          "effect_std": NaN,
-          "effect_unit": "perplexity",
+          "num_valid_seeds": 9,
+          "effect_mean": -14687.65966796875,
+          "effect_std": 4978.579207832025,
+          "effect_unit": "eval_loss",
           "test_name": "paired_sign_flip",
           "alpha": 0.05,
-          "p_value_support": 0.0,
-          "p_value_contradict": 0.0,
+          "p_value_support": 1.0,
+          "p_value_contradict": 0.001953125,
+          "scratch_loss": {
+            "mean": 5549.017849392361,
+            "std": 1413.9997740157182,
+            "num_seeds": 9
+          },
           "scratch_perplexity": {
-            "mean": NaN,
-            "std": NaN,
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
+          },
+          "transferred_loss": {
+            "mean": 19349.80341796875,
+            "std": 5249.937493777792,
             "num_seeds": 10
           },
           "transferred_perplexity": {
-            "mean": Infinity,
-            "std": NaN,
-            "num_seeds": 10
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
           }
         },
         "convergence_gain": {
@@ -31441,32 +31526,42 @@
             "num_seeds": 9
           },
           "target_eval_loss": {
-            "mean": NaN,
-            "std": NaN,
-            "num_seeds": 10
+            "mean": 5549.017849392361,
+            "std": 1413.9997740157182,
+            "num_seeds": 9
           }
         },
         "compute_matched_gain": {
           "replicated": null,
           "status": "inconclusive",
-          "success_rate": 0.0,
-          "num_valid_seeds": 10,
-          "effect_mean": NaN,
-          "effect_std": NaN,
-          "effect_unit": "perplexity",
+          "success_rate": 0.1111111111111111,
+          "num_valid_seeds": 9,
+          "effect_mean": 12796.515177408854,
+          "effect_std": 86233.49965560631,
+          "effect_unit": "eval_loss",
           "test_name": "paired_sign_flip",
           "alpha": 0.05,
-          "p_value_support": 0.0,
-          "p_value_contradict": 0.0,
+          "p_value_support": 0.5,
+          "p_value_contradict": 0.501953125,
+          "baseline_loss": {
+            "mean": 32716.592868381078,
+            "std": 85824.77266705179,
+            "num_seeds": 9
+          },
           "baseline_perplexity": {
-            "mean": NaN,
-            "std": NaN,
+            "mean": 7.693263283050612e+249,
+            "std": 0.0,
+            "num_seeds": 1
+          },
+          "transferred_loss": {
+            "mean": 19349.80341796875,
+            "std": 5249.937493777792,
             "num_seeds": 10
           },
           "transferred_perplexity": {
-            "mean": Infinity,
-            "std": NaN,
-            "num_seeds": 10
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
           }
         },
         "algorithmic_transfer": {
@@ -31495,37 +31590,35 @@
       },
       "metrics": {
         "transfer_gap_perplexity": {
-          "mean": NaN,
-          "std": NaN,
-          "num_seeds": 10,
+          "mean": -14687.65966796875,
+          "std": 4978.579207832025,
+          "num_seeds": 9,
           "values": [
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN
+            -12389.56298828125,
+            -9727.0107421875,
+            -12470.1240234375,
+            -17644.29345703125,
+            -14057.9794921875,
+            -17732.6826171875,
+            -22358.001953125,
+            -6584.81298828125,
+            -19224.46875
           ]
         },
         "compute_matched_gap_perplexity": {
-          "mean": NaN,
-          "std": NaN,
-          "num_seeds": 10,
+          "mean": 12796.515177408854,
+          "std": 86233.49965560631,
+          "num_seeds": 9,
           "values": [
-            NaN,
-            -Infinity,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN
+            -7968.01806640625,
+            -18307.885498046875,
+            242331.484375,
+            -19815.18017578125,
+            -17341.099609375,
+            -19358.555786132812,
+            -8459.53125,
+            -12676.916259765625,
+            -23235.6611328125
           ]
         },
         "convergence_step_delta": null,
@@ -31549,55 +31642,14 @@
         },
         "synthetic_ordering_gap_perplexity": null,
         "near_baseline_margin_perplexity": null,
-        "scratch_perplexity": {
-          "mean": NaN,
-          "std": NaN,
-          "num_seeds": 10,
-          "values": [
-            NaN,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity
-          ]
-        },
-        "transferred_perplexity": {
-          "mean": Infinity,
-          "std": NaN,
-          "num_seeds": 10,
-          "values": [
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity
-          ]
-        },
+        "scratch_perplexity": null,
+        "transferred_perplexity": null,
         "baseline_perplexity": {
-          "mean": NaN,
-          "std": NaN,
-          "num_seeds": 10,
+          "mean": 7.693263283050612e+249,
+          "std": 0.0,
+          "num_seeds": 1,
           "values": [
-            Infinity,
-            7.693263283050612e+249,
-            NaN,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity
+            7.693263283050612e+249
           ]
         },
         "scratch_reasoning_accuracy": null,
@@ -31659,12 +31711,10 @@
           },
           "scratch": {
             "label": "Baseline",
-            "mean": NaN,
-            "std": NaN,
+            "mean": 6285.843536376953,
+            "std": 3165.6829062682077,
             "values": [
-              NaN,
               13162.1826171875,
-              NaN,
               6340.05859375,
               2713.89794921875,
               6656.88037109375,
@@ -31676,12 +31726,11 @@
           },
           "transferred": {
             "label": "Transferred",
-            "mean": NaN,
-            "std": NaN,
+            "mean": 18041.145345052082,
+            "std": 6018.402189337662,
             "values": [
               7798.34912109375,
               18372.51171875,
-              NaN,
               20040.060546875,
               10880.998046875,
               21525.447265625,
@@ -31712,12 +31761,10 @@
           },
           "scratch": {
             "label": "Baseline",
-            "mean": NaN,
-            "std": NaN,
+            "mean": 0.020972663420252502,
+            "std": 0.02595598842020401,
             "values": [
-              NaN,
               0.041013553738594055,
-              NaN,
               0.0,
               0.004138551652431488,
               0.010478205047547817,
@@ -31729,12 +31776,11 @@
           },
           "transferred": {
             "label": "Transferred",
-            "mean": NaN,
-            "std": NaN,
+            "mean": 0.020692282097621098,
+            "std": 0.03379666380628517,
             "values": [
               0.00989571213722229,
               0.10773518681526184,
-              NaN,
               0.0,
               0.00440550222992897,
               0.029187217354774475,
@@ -31812,34 +31858,34 @@
           "mean": [
             [
               0.0,
-              NaN,
-              NaN
+              9294.726655960083,
+              21142.158628463745
             ],
             [
-              NaN,
+              9294.726655960083,
               0.0,
-              NaN
+              27927.768466949463
             ],
             [
-              NaN,
-              NaN,
+              21142.158628463745,
+              27927.768466949463,
               0.0
             ]
           ],
           "std": [
             [
               0.0,
-              NaN,
-              NaN
+              11077.989471204792,
+              45338.02106027731
             ],
             [
-              NaN,
+              11077.989471204792,
               0.0,
-              NaN
+              46146.11019528421
             ],
             [
-              NaN,
-              NaN,
+              45338.02106027731,
+              46146.11019528421,
               0.0
             ]
           ]
@@ -31858,34 +31904,34 @@
           "mean": [
             [
               1.0,
-              NaN,
-              NaN
+              0.03557134448783472,
+              0.020972645143046975
             ],
             [
-              NaN,
+              0.03557134448783472,
               1.0,
-              NaN
+              0.02204188535688445
             ],
             [
-              NaN,
-              NaN,
+              0.020972645143046975,
+              0.02204188535688445,
               1.0
             ]
           ],
           "std": [
             [
               0.0,
-              NaN,
-              NaN
+              0.04864742008535653,
+              0.025955966702300704
             ],
             [
-              NaN,
+              0.04864742008535653,
               0.0,
-              NaN
+              0.0358700439726596
             ],
             [
-              NaN,
-              NaN,
+              0.025955966702300704,
+              0.0358700439726596,
               0.0
             ]
           ]
@@ -32524,10 +32570,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 3494.35693359375,
+              "transferred_loss": 11098.36328125,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -7604.00634765625,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -32539,25 +32587,31 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 11098.36328125,
+              "baseline_loss": 2576.010498046875,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -8522.352783203125,
+              "effect_unit": "eval_loss"
             },
             "synthetic_ordering": {
-              "replicated": true,
+              "replicated": false,
+              "primary_loss": 11098.36328125,
+              "comparison_loss": 5792.3349609375,
               "primary_perplexity": Infinity,
               "comparison_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -5306.0283203125,
+              "effect_unit": "eval_loss"
             },
             "near_real_baseline": {
-              "replicated": true,
+              "replicated": false,
+              "synthetic_loss": 11098.36328125,
+              "baseline_loss": 2576.010498046875,
               "synthetic_perplexity": Infinity,
               "baseline_perplexity": Infinity,
               "tolerance": 1.1,
-              "effect": NaN,
-              "effect_unit": "perplexity_margin"
+              "effect": -8522.257473023321,
+              "effect_unit": "eval_loss_margin"
             }
           },
           "diagnostics": {
@@ -33276,10 +33330,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 3602.04833984375,
+              "transferred_loss": 7857.923828125,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -4255.87548828125,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -33291,25 +33347,31 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 7857.923828125,
+              "baseline_loss": 3391.470458984375,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -4466.453369140625,
+              "effect_unit": "eval_loss"
             },
             "synthetic_ordering": {
-              "replicated": true,
+              "replicated": false,
+              "primary_loss": 7857.923828125,
+              "comparison_loss": 6168.76708984375,
               "primary_perplexity": Infinity,
               "comparison_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -1689.15673828125,
+              "effect_unit": "eval_loss"
             },
             "near_real_baseline": {
-              "replicated": true,
+              "replicated": false,
+              "synthetic_loss": 7857.923828125,
+              "baseline_loss": 3391.470458984375,
               "synthetic_perplexity": Infinity,
               "baseline_perplexity": Infinity,
               "tolerance": 1.1,
-              "effect": NaN,
-              "effect_unit": "perplexity_margin"
+              "effect": -4466.358058960821,
+              "effect_unit": "eval_loss_margin"
             }
           },
           "diagnostics": {
@@ -34028,10 +34090,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 3013.567138671875,
+              "transferred_loss": 9346.322265625,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -6332.755126953125,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -34042,26 +34106,32 @@
               "effect_unit": "steps"
             },
             "compute_matched_gain": {
-              "replicated": false,
+              "replicated": true,
+              "transferred_loss": 9346.322265625,
+              "baseline_loss": 22303.556640625,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": 12957.234375,
+              "effect_unit": "eval_loss"
             },
             "synthetic_ordering": {
-              "replicated": true,
+              "replicated": false,
+              "primary_loss": 9346.322265625,
+              "comparison_loss": 7405.3330078125,
               "primary_perplexity": Infinity,
               "comparison_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -1940.9892578125,
+              "effect_unit": "eval_loss"
             },
             "near_real_baseline": {
               "replicated": true,
+              "synthetic_loss": 9346.322265625,
+              "baseline_loss": 22303.556640625,
               "synthetic_perplexity": Infinity,
               "baseline_perplexity": Infinity,
               "tolerance": 1.1,
-              "effect": NaN,
-              "effect_unit": "perplexity_margin"
+              "effect": 12957.329685179804,
+              "effect_unit": "eval_loss_margin"
             }
           },
           "diagnostics": {
@@ -34779,11 +34849,13 @@
           },
           "claims": {
             "transfer_signal": {
-              "replicated": false,
+              "replicated": true,
+              "scratch_loss": 8976.18359375,
+              "transferred_loss": 8650.4609375,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": 325.72265625,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -34795,25 +34867,31 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 8650.4609375,
+              "baseline_loss": 3284.81396484375,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -5365.64697265625,
+              "effect_unit": "eval_loss"
             },
             "synthetic_ordering": {
-              "replicated": true,
+              "replicated": false,
+              "primary_loss": 8650.4609375,
+              "comparison_loss": 8626.357421875,
               "primary_perplexity": Infinity,
               "comparison_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -24.103515625,
+              "effect_unit": "eval_loss"
             },
             "near_real_baseline": {
-              "replicated": true,
+              "replicated": false,
+              "synthetic_loss": 8650.4609375,
+              "baseline_loss": 3284.81396484375,
               "synthetic_perplexity": Infinity,
               "baseline_perplexity": Infinity,
               "tolerance": 1.1,
-              "effect": NaN,
-              "effect_unit": "perplexity_margin"
+              "effect": -5365.551662476446,
+              "effect_unit": "eval_loss_margin"
             }
           },
           "diagnostics": {
@@ -35532,10 +35610,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 4600.015625,
+              "transferred_loss": 14175.796875,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -9575.78125,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -35547,25 +35627,31 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 14175.796875,
+              "baseline_loss": 731.17529296875,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -13444.62158203125,
+              "effect_unit": "eval_loss"
             },
             "synthetic_ordering": {
               "replicated": true,
+              "primary_loss": 14175.796875,
+              "comparison_loss": 122058.984375,
               "primary_perplexity": Infinity,
               "comparison_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": 107883.1875,
+              "effect_unit": "eval_loss"
             },
             "near_real_baseline": {
-              "replicated": true,
+              "replicated": false,
+              "synthetic_loss": 14175.796875,
+              "baseline_loss": 731.17529296875,
               "synthetic_perplexity": Infinity,
               "baseline_perplexity": Infinity,
               "tolerance": 1.1,
-              "effect": NaN,
-              "effect_unit": "perplexity_margin"
+              "effect": -13444.526271851446,
+              "effect_unit": "eval_loss_margin"
             }
           },
           "diagnostics": {
@@ -36284,10 +36370,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 3650.6826171875,
+              "transferred_loss": 17056.447265625,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -13405.7646484375,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -36299,25 +36387,31 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 17056.447265625,
+              "baseline_loss": 2338.3623046875,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -14718.0849609375,
+              "effect_unit": "eval_loss"
             },
             "synthetic_ordering": {
-              "replicated": true,
+              "replicated": false,
+              "primary_loss": 17056.447265625,
+              "comparison_loss": 5877.66552734375,
               "primary_perplexity": Infinity,
               "comparison_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -11178.78173828125,
+              "effect_unit": "eval_loss"
             },
             "near_real_baseline": {
-              "replicated": true,
+              "replicated": false,
+              "synthetic_loss": 17056.447265625,
+              "baseline_loss": 2338.3623046875,
               "synthetic_perplexity": Infinity,
               "baseline_perplexity": Infinity,
               "tolerance": 1.1,
-              "effect": NaN,
-              "effect_unit": "perplexity_margin"
+              "effect": -14717.989650757696,
+              "effect_unit": "eval_loss_margin"
             }
           },
           "diagnostics": {
@@ -37036,10 +37130,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 4798.5615234375,
+              "transferred_loss": 12554.017578125,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -7755.4560546875,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -37051,25 +37147,31 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 12554.017578125,
+              "baseline_loss": 983.781494140625,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -11570.236083984375,
+              "effect_unit": "eval_loss"
             },
             "synthetic_ordering": {
-              "replicated": true,
+              "replicated": false,
+              "primary_loss": 12554.017578125,
+              "comparison_loss": 6632.8212890625,
               "primary_perplexity": Infinity,
               "comparison_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -5921.1962890625,
+              "effect_unit": "eval_loss"
             },
             "near_real_baseline": {
-              "replicated": true,
+              "replicated": false,
+              "synthetic_loss": 12554.017578125,
+              "baseline_loss": 983.781494140625,
               "synthetic_perplexity": Infinity,
               "baseline_perplexity": Infinity,
               "tolerance": 1.1,
-              "effect": NaN,
-              "effect_unit": "perplexity_margin"
+              "effect": -11570.140773804571,
+              "effect_unit": "eval_loss_margin"
             }
           },
           "diagnostics": {
@@ -37788,10 +37890,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 1566.181884765625,
+              "transferred_loss": 10680.7939453125,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -9114.612060546875,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -37803,25 +37907,31 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 10680.7939453125,
+              "baseline_loss": 2648.266357421875,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -8032.527587890625,
+              "effect_unit": "eval_loss"
             },
             "synthetic_ordering": {
-              "replicated": true,
+              "replicated": false,
+              "primary_loss": 10680.7939453125,
+              "comparison_loss": 9745.62109375,
               "primary_perplexity": Infinity,
               "comparison_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -935.1728515625,
+              "effect_unit": "eval_loss"
             },
             "near_real_baseline": {
-              "replicated": true,
+              "replicated": false,
+              "synthetic_loss": 10680.7939453125,
+              "baseline_loss": 2648.266357421875,
               "synthetic_perplexity": Infinity,
               "baseline_perplexity": Infinity,
               "tolerance": 1.1,
-              "effect": NaN,
-              "effect_unit": "perplexity_margin"
+              "effect": -8032.432277710821,
+              "effect_unit": "eval_loss_margin"
             }
           },
           "diagnostics": {
@@ -38540,10 +38650,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 3301.01171875,
+              "transferred_loss": 13766.38671875,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -10465.375,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -38555,25 +38667,31 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 13766.38671875,
+              "baseline_loss": 2492.982421875,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -11273.404296875,
+              "effect_unit": "eval_loss"
             },
             "synthetic_ordering": {
-              "replicated": true,
+              "replicated": false,
+              "primary_loss": 13766.38671875,
+              "comparison_loss": 10399.306640625,
               "primary_perplexity": Infinity,
               "comparison_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -3367.080078125,
+              "effect_unit": "eval_loss"
             },
             "near_real_baseline": {
-              "replicated": true,
+              "replicated": false,
+              "synthetic_loss": 13766.38671875,
+              "baseline_loss": 2492.982421875,
               "synthetic_perplexity": Infinity,
               "baseline_perplexity": Infinity,
               "tolerance": 1.1,
-              "effect": NaN,
-              "effect_unit": "perplexity_margin"
+              "effect": -11273.308986695196,
+              "effect_unit": "eval_loss_margin"
             }
           },
           "diagnostics": {
@@ -39292,10 +39410,12 @@
           "claims": {
             "transfer_signal": {
               "replicated": false,
+              "scratch_loss": 2718.588134765625,
+              "transferred_loss": 15048.69921875,
               "scratch_perplexity": Infinity,
               "transferred_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -12330.111083984375,
+              "effect_unit": "eval_loss"
             },
             "convergence_gain": {
               "replicated": false,
@@ -39307,25 +39427,31 @@
             },
             "compute_matched_gain": {
               "replicated": false,
+              "transferred_loss": 15048.69921875,
+              "baseline_loss": 2672.680908203125,
               "transferred_perplexity": Infinity,
               "baseline_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -12376.018310546875,
+              "effect_unit": "eval_loss"
             },
             "synthetic_ordering": {
-              "replicated": true,
+              "replicated": false,
+              "primary_loss": 15048.69921875,
+              "comparison_loss": 7654.9833984375,
               "primary_perplexity": Infinity,
               "comparison_perplexity": Infinity,
-              "effect": NaN,
-              "effect_unit": "perplexity"
+              "effect": -7393.7158203125,
+              "effect_unit": "eval_loss"
             },
             "near_real_baseline": {
-              "replicated": true,
+              "replicated": false,
+              "synthetic_loss": 15048.69921875,
+              "baseline_loss": 2672.680908203125,
               "synthetic_perplexity": Infinity,
               "baseline_perplexity": Infinity,
               "tolerance": 1.1,
-              "effect": NaN,
-              "effect_unit": "perplexity_margin"
+              "effect": -12375.923000367071,
+              "effect_unit": "eval_loss_margin"
             }
           },
           "diagnostics": {
@@ -39432,26 +39558,36 @@
       ],
       "claims": {
         "transfer_signal": {
-          "replicated": null,
-          "status": "inconclusive",
-          "success_rate": 0.0,
+          "replicated": false,
+          "status": "contradicted",
+          "success_rate": 0.1,
           "num_valid_seeds": 10,
-          "effect_mean": NaN,
-          "effect_std": NaN,
-          "effect_unit": "perplexity",
+          "effect_mean": -8051.401440429688,
+          "effect_std": 4001.134521410229,
+          "effect_unit": "eval_loss",
           "test_name": "paired_sign_flip",
           "alpha": 0.05,
-          "p_value_support": 0.0,
-          "p_value_contradict": 0.0,
+          "p_value_support": 0.9990234375,
+          "p_value_contradict": 0.001953125,
+          "scratch_loss": {
+            "mean": 3972.1197509765625,
+            "std": 1980.8958073112503,
+            "num_seeds": 10
+          },
           "scratch_perplexity": {
-            "mean": Infinity,
-            "std": NaN,
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
+          },
+          "transferred_loss": {
+            "mean": 12023.52119140625,
+            "std": 2999.802008658746,
             "num_seeds": 10
           },
           "transferred_perplexity": {
-            "mean": Infinity,
-            "std": NaN,
-            "num_seeds": 10
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
           }
         },
         "convergence_gain": {
@@ -39483,72 +39619,102 @@
           }
         },
         "compute_matched_gain": {
-          "replicated": null,
-          "status": "inconclusive",
-          "success_rate": 0.0,
+          "replicated": false,
+          "status": "contradicted",
+          "success_rate": 0.1,
           "num_valid_seeds": 10,
-          "effect_mean": NaN,
-          "effect_std": NaN,
-          "effect_unit": "perplexity",
+          "effect_mean": -7681.211157226562,
+          "effect_std": 7994.977276595188,
+          "effect_unit": "eval_loss",
           "test_name": "paired_sign_flip",
           "alpha": 0.05,
-          "p_value_support": 0.0,
-          "p_value_contradict": 0.0,
+          "p_value_support": 0.990234375,
+          "p_value_contradict": 0.0107421875,
+          "baseline_loss": {
+            "mean": 4342.310034179687,
+            "std": 6369.736259444901,
+            "num_seeds": 10
+          },
           "baseline_perplexity": {
-            "mean": Infinity,
-            "std": NaN,
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
+          },
+          "transferred_loss": {
+            "mean": 12023.52119140625,
+            "std": 2999.802008658746,
             "num_seeds": 10
           },
           "transferred_perplexity": {
-            "mean": Infinity,
-            "std": NaN,
-            "num_seeds": 10
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
           }
         },
         "synthetic_ordering": {
           "replicated": null,
           "status": "inconclusive",
-          "success_rate": 1.0,
+          "success_rate": 0.1,
           "num_valid_seeds": 10,
-          "effect_mean": NaN,
-          "effect_std": NaN,
-          "effect_unit": "perplexity",
+          "effect_mean": 7012.6962890625,
+          "effect_std": 35603.81190082941,
+          "effect_unit": "eval_loss",
           "test_name": "paired_sign_flip",
           "alpha": 0.05,
-          "p_value_support": 0.0,
-          "p_value_contradict": 0.0,
+          "p_value_support": 0.5,
+          "p_value_contradict": 0.5009765625,
+          "comparison_loss": {
+            "mean": 19036.21748046875,
+            "std": 36233.41074554355,
+            "num_seeds": 10
+          },
           "comparison_perplexity": {
-            "mean": Infinity,
-            "std": NaN,
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
+          },
+          "primary_loss": {
+            "mean": 12023.52119140625,
+            "std": 2999.802008658746,
             "num_seeds": 10
           },
           "primary_perplexity": {
-            "mean": Infinity,
-            "std": NaN,
-            "num_seeds": 10
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
           }
         },
         "near_real_baseline": {
-          "replicated": null,
-          "status": "inconclusive",
-          "success_rate": 1.0,
+          "replicated": false,
+          "status": "contradicted",
+          "success_rate": 0.1,
           "num_valid_seeds": 10,
-          "effect_mean": NaN,
-          "effect_std": NaN,
-          "effect_unit": "perplexity_margin",
+          "effect_mean": -7681.115847046758,
+          "effect_std": 7994.977276595188,
+          "effect_unit": "eval_loss_margin",
           "test_name": "paired_sign_flip",
           "alpha": 0.05,
-          "p_value_support": 0.0,
-          "p_value_contradict": 0.0,
+          "p_value_support": 0.990234375,
+          "p_value_contradict": 0.0107421875,
+          "baseline_loss": {
+            "mean": 4342.310034179687,
+            "std": 6369.736259444901,
+            "num_seeds": 10
+          },
           "baseline_perplexity": {
-            "mean": Infinity,
-            "std": NaN,
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
+          },
+          "synthetic_loss": {
+            "mean": 12023.52119140625,
+            "std": 2999.802008658746,
             "num_seeds": 10
           },
           "synthetic_perplexity": {
-            "mean": Infinity,
-            "std": NaN,
-            "num_seeds": 10
+            "mean": null,
+            "std": null,
+            "num_seeds": 0
           },
           "tolerance": {
             "mean": 1.1,
@@ -39559,37 +39725,37 @@
       },
       "metrics": {
         "transfer_gap_perplexity": {
-          "mean": NaN,
-          "std": NaN,
+          "mean": -8051.401440429688,
+          "std": 4001.134521410229,
           "num_seeds": 10,
           "values": [
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN
+            -7604.00634765625,
+            -4255.87548828125,
+            -6332.755126953125,
+            325.72265625,
+            -9575.78125,
+            -13405.7646484375,
+            -7755.4560546875,
+            -9114.612060546875,
+            -10465.375,
+            -12330.111083984375
           ]
         },
         "compute_matched_gap_perplexity": {
-          "mean": NaN,
-          "std": NaN,
+          "mean": -7681.211157226562,
+          "std": 7994.977276595188,
           "num_seeds": 10,
           "values": [
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN
+            -8522.352783203125,
+            -4466.453369140625,
+            12957.234375,
+            -5365.64697265625,
+            -13444.62158203125,
+            -14718.0849609375,
+            -11570.236083984375,
+            -8032.527587890625,
+            -11273.404296875,
+            -12376.018310546875
           ]
         },
         "convergence_step_delta": {
@@ -39603,90 +39769,42 @@
         "reasoning_accuracy_gain": null,
         "algorithmic_accuracy_gain": null,
         "synthetic_ordering_gap_perplexity": {
-          "mean": NaN,
-          "std": NaN,
+          "mean": 7012.6962890625,
+          "std": 35603.81190082941,
           "num_seeds": 10,
           "values": [
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN
+            -5306.0283203125,
+            -1689.15673828125,
+            -1940.9892578125,
+            -24.103515625,
+            107883.1875,
+            -11178.78173828125,
+            -5921.1962890625,
+            -935.1728515625,
+            -3367.080078125,
+            -7393.7158203125
           ]
         },
         "near_baseline_margin_perplexity": {
-          "mean": NaN,
-          "std": NaN,
+          "mean": -7681.115847046758,
+          "std": 7994.977276595188,
           "num_seeds": 10,
           "values": [
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN,
-            NaN
+            -8522.257473023321,
+            -4466.358058960821,
+            12957.329685179804,
+            -5365.551662476446,
+            -13444.526271851446,
+            -14717.989650757696,
+            -11570.140773804571,
+            -8032.432277710821,
+            -11273.308986695196,
+            -12375.923000367071
           ]
         },
-        "scratch_perplexity": {
-          "mean": Infinity,
-          "std": NaN,
-          "num_seeds": 10,
-          "values": [
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity
-          ]
-        },
-        "transferred_perplexity": {
-          "mean": Infinity,
-          "std": NaN,
-          "num_seeds": 10,
-          "values": [
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity
-          ]
-        },
-        "baseline_perplexity": {
-          "mean": Infinity,
-          "std": NaN,
-          "num_seeds": 10,
-          "values": [
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity,
-            Infinity
-          ]
-        },
+        "scratch_perplexity": null,
+        "transferred_perplexity": null,
+        "baseline_perplexity": null,
         "scratch_reasoning_accuracy": null,
         "transferred_reasoning_accuracy": null,
         "scratch_algorithmic_accuracy": null,
@@ -40062,100 +40180,100 @@
         "mean": [
           [
             0.0,
-            NaN,
-            12213.694051361084,
-            NaN,
-            7725.952310276031,
-            16488.307690429687
+            21922.401794433594,
+            13103.027522087097,
+            8617.742807717994,
+            7684.462955594063,
+            16514.81558227539
           ],
           [
-            NaN,
+            21922.401794433594,
             0.0,
-            NaN,
-            NaN,
-            NaN,
-            NaN
+            19812.775421142578,
+            19889.803100585938,
+            21592.988525390625,
+            18937.685485839844
           ],
           [
-            12213.694051361084,
-            NaN,
+            13103.027522087097,
+            19812.775421142578,
             0.0,
-            NaN,
-            10363.216228199006,
-            14534.133178710938
+            5136.2799168629,
+            12165.503215432167,
+            14309.589385986328
           ],
           [
-            NaN,
-            NaN,
-            NaN,
+            8617.742807717994,
+            19889.803100585938,
+            5136.2799168629,
             0.0,
-            NaN,
-            NaN
+            10598.135651111603,
+            14101.853485107422
           ],
           [
-            7725.952310276031,
-            NaN,
-            10363.216228199006,
-            NaN,
+            7684.462955594063,
+            21592.988525390625,
+            12165.503215432167,
+            10598.135651111603,
             0.0,
-            15784.716748046874
+            15748.474487304688
           ],
           [
-            16488.307690429687,
-            NaN,
-            14534.133178710938,
-            NaN,
-            15784.716748046874,
+            16514.81558227539,
+            18937.685485839844,
+            14309.589385986328,
+            14101.853485107422,
+            15748.474487304688,
             0.0
           ]
         ],
         "std": [
           [
             0.0,
-            NaN,
-            10511.212652608627,
-            NaN,
-            4889.3005554382335,
-            3539.0142054817716
+            6573.601117523099,
+            11167.921885606345,
+            8987.363772453642,
+            5458.540334668401,
+            3986.087665808069
           ],
           [
-            NaN,
+            6573.601117523099,
             0.0,
-            NaN,
-            NaN,
-            NaN,
-            NaN
+            7185.338073781839,
+            7928.349722434751,
+            7072.337966486953,
+            5030.545503924044
           ],
           [
-            10511.212652608627,
-            NaN,
+            11167.921885606345,
+            7185.338073781839,
             0.0,
-            NaN,
-            10416.636013198973,
-            1978.8638114234727
+            6392.27314881932,
+            10969.805420168124,
+            2155.7449149553045
           ],
           [
-            NaN,
-            NaN,
-            NaN,
+            8987.363772453642,
+            7928.349722434751,
+            6392.27314881932,
             0.0,
-            NaN,
-            NaN
+            3733.2752763771914,
+            3057.494386881026
           ],
           [
-            4889.3005554382335,
-            NaN,
-            10416.636013198973,
-            NaN,
+            5458.540334668401,
+            7072.337966486953,
+            10969.805420168124,
+            3733.2752763771914,
             0.0,
-            2680.8920205390145
+            2524.867374538621
           ],
           [
-            3539.0142054817716,
-            NaN,
-            1978.8638114234727,
-            NaN,
-            2680.8920205390145,
+            3986.087665808069,
+            5030.545503924044,
+            2155.7449149553045,
+            3057.494386881026,
+            2524.867374538621,
             0.0
           ]
         ]
@@ -40182,100 +40300,100 @@
         "mean": [
           [
             1.0,
-            NaN,
-            0.03280195395927876,
-            NaN,
-            0.053086514677852394,
-            0.04798837322741747
+            0.04130811959839775,
+            0.038585480564506724,
+            0.07330176956020296,
+            0.054971639707218856,
+            0.04180966760031879
           ],
           [
-            NaN,
+            0.04130811959839775,
             1.0,
-            NaN,
-            NaN,
-            NaN,
-            NaN
+            0.018615059525473043,
+            0.03177916689310223,
+            0.02370129532937426,
+            0.020064267635461874
           ],
           [
-            0.03280195395927876,
-            NaN,
+            0.038585480564506724,
+            0.018615059525473043,
             1.0,
-            NaN,
-            0.04046429800800979,
-            0.03892056988552213
+            0.04918776819249615,
+            0.04817391646793112,
+            0.04280979291070253
           ],
           [
-            NaN,
-            NaN,
-            NaN,
+            0.07330176956020296,
+            0.03177916689310223,
+            0.04918776819249615,
             1.0,
-            NaN,
-            NaN
+            0.07894473953638226,
+            0.09668403881369159
           ],
           [
-            0.053086514677852394,
-            NaN,
-            0.04046429800800979,
-            NaN,
+            0.054971639707218856,
+            0.02370129532937426,
+            0.04817391646793112,
+            0.07894473953638226,
             1.0,
-            0.06298433896154165
+            0.07085009175352752
           ],
           [
-            0.04798837322741747,
-            NaN,
-            0.03892056988552213,
-            NaN,
-            0.06298433896154165,
+            0.04180966760031879,
+            0.020064267635461874,
+            0.04280979291070253,
+            0.09668403881369159,
+            0.07085009175352752,
             1.0
           ]
         ],
         "std": [
           [
             0.0,
-            NaN,
-            0.04644657288199747,
-            NaN,
-            0.04403240349333389,
-            0.03408732495190257
+            0.05628997770051736,
+            0.05074086088724467,
+            0.06556355262774627,
+            0.045171443231637444,
+            0.018500206036416594
           ],
           [
-            NaN,
+            0.05628997770051736,
             0.0,
-            NaN,
-            NaN,
-            NaN,
-            NaN
+            0.0217540348561696,
+            0.04058938641465538,
+            0.026039764432885,
+            0.023000701970850093
           ],
           [
-            0.04644657288199747,
-            NaN,
+            0.05074086088724467,
+            0.0217540348561696,
             0.0,
-            NaN,
-            0.04191580155513893,
-            0.06520684380563878
+            0.04471155425445511,
+            0.043809148866728646,
+            0.0731062308191893
           ],
           [
-            NaN,
-            NaN,
-            NaN,
+            0.06556355262774627,
+            0.04058938641465538,
+            0.04471155425445511,
             0.0,
-            NaN,
-            NaN
+            0.05181332053620109,
+            0.08067658652995581
           ],
           [
-            0.04403240349333389,
-            NaN,
-            0.04191580155513893,
-            NaN,
+            0.045171443231637444,
+            0.026039764432885,
+            0.043809148866728646,
+            0.05181332053620109,
             0.0,
-            0.06216939766894978
+            0.06786881280672376
           ],
           [
-            0.03408732495190257,
-            NaN,
-            0.06520684380563878,
-            NaN,
-            0.06216939766894978,
+            0.018500206036416594,
+            0.023000701970850093,
+            0.0731062308191893,
+            0.08067658652995581,
+            0.06786881280672376,
             0.0
           ]
         ]
