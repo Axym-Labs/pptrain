@@ -125,6 +125,34 @@ def build_replication_profile(
     )
 
 
+def _build_summary_fallback_corpus() -> tuple[str, ...]:
+    leads = (
+        ("City transit agencies tested demand-based bus lanes after weekday delays climbed for three consecutive quarters.", "Transit agencies expanded reserved lanes and reliability audits after delays worsened."),
+        ("Hospital systems shifted routine follow-up visits to evening telehealth blocks to reduce appointment backlogs.", "Health networks used evening telehealth sessions to cut routine follow-up wait times."),
+        ("Regional power operators coordinated battery dispatch plans as summer heat raised concerns about evening grid stress.", "Grid operators leaned on battery dispatch planning to manage summer evening demand."),
+        ("Port authorities rewrote truck appointment windows after cargo dwell times increased during holiday shipping peaks.", "Ports tightened truck scheduling rules to reduce cargo dwell time during peak weeks."),
+        ("School districts piloted tutoring labs before first period when attendance data showed missed after-school sessions.", "Districts moved tutoring into the morning after after-school attendance lagged."),
+        ("Water managers expanded leak-detection surveys after drought rules pushed cities to document conservation gains.", "Utilities widened leak-detection programs to prove conservation progress during drought restrictions."),
+        ("Manufacturers redesigned shift handoff checklists after defect reviews traced stoppages to incomplete line notes.", "Factories added stricter handoff checklists after defect reviews exposed missing shift notes."),
+        ("University libraries reworked study-room policies when demand spikes left graduate students without quiet space.", "Libraries changed room-booking policies after demand spikes crowded out graduate study space."),
+    )
+    details = (
+        "Officials compared weekly operations reports, interviewed line supervisors, and tracked whether the new process changed wait times, missed deadlines, or overtime.",
+        "Managers said the policy mattered less for headlines than for reducing repeated small failures that had accumulated over several months.",
+        "Analysts noted that the intervention was cheap relative to new infrastructure because it mostly reallocated staff time, scheduling slots, and reporting routines.",
+        "Early audits showed mixed performance across sites, but nearly every site improved once local teams standardized the measurement and review process.",
+    )
+    corpus: list[str] = []
+    for topic_index, (lead, summary) in enumerate(leads, start=1):
+        for detail_index, detail in enumerate(details, start=1):
+            corpus.append(
+                f"Article: Report {topic_index}.{detail_index}. {lead} {detail} "
+                f"Local leaders said the next phase will focus on keeping the gains stable through peak demand periods rather than expanding the pilot too quickly.\n"
+                f"TL;DR: {summary}"
+            )
+    return tuple(corpus)
+
+
 def _build_smoke_profile(
     *,
     output_dir: str,
@@ -329,6 +357,7 @@ def _build_paper_proxy_profile(
     context_length: int | None,
 ) -> ReplicationProfile:
     resolved_context = context_length or 2048
+    summary_fallback = _build_summary_fallback_corpus()
     datasets = {
         "general_text": TextDatasetSpec(
             source="hf",
@@ -370,6 +399,9 @@ def _build_paper_proxy_profile(
             warmup_skip_records=0,
             train_skip_records=4_000,
             eval_skip_records=8_000,
+            inline_warmup_texts=summary_fallback[:16],
+            inline_train_texts=summary_fallback,
+            inline_eval_texts=summary_fallback[8:],
         ),
     }
     studies = (

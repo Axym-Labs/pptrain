@@ -110,3 +110,39 @@ def test_streaming_loader_retries_retryable_dataset_errors(monkeypatch) -> None:
     assert sleeps == [5.0, 10.0]
     assert len(sequences) == len(labels) >= 1
     assert metadata["streaming"] is True
+
+
+def test_streaming_loader_falls_back_to_inline_texts_after_retries(monkeypatch) -> None:
+    class FakeRateLimitError(Exception):
+        def __init__(self) -> None:
+            self.response = SimpleNamespace(status_code=429)
+            super().__init__("429 Too Many Requests")
+
+    def failing_load_dataset(*args, **kwargs):
+        del args, kwargs
+        raise FakeRateLimitError()
+
+    monkeypatch.setattr(data, "_require_datasets", lambda: failing_load_dataset)
+    monkeypatch.setattr(data.time, "sleep", lambda seconds: None)
+    spec = TextDatasetSpec(
+        source="hf",
+        formatter="plain_text",
+        dataset_name="dummy",
+        train_split="train",
+        eval_split="train",
+        streaming=True,
+        inline_train_texts=("Article: alpha beta gamma delta\nTL;DR: alpha beta",),
+        inline_eval_texts=("Article: epsilon zeta eta theta\nTL;DR: epsilon zeta",),
+    )
+
+    sequences, labels, metadata = data._build_tokenized_sequences(
+        tokenizer=DummyTokenizer(),
+        dataset_spec=spec,
+        block_size=4,
+        split="train",
+        target_token_count=20,
+    )
+
+    assert len(sequences) == len(labels) >= 1
+    assert metadata["fallback_source"] == "inline"
+    assert metadata["target_token_count"] == 20

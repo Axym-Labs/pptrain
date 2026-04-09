@@ -148,7 +148,12 @@ def _build_tokenized_sequences(
             target_token_count=target_token_count,
         )
     texts = _load_texts(dataset_spec, split)
-    return _tokenize_texts(tokenizer=tokenizer, texts=texts, block_size=block_size)
+    return _tokenize_texts(
+        tokenizer=tokenizer,
+        texts=texts,
+        block_size=block_size,
+        target_token_count=target_token_count,
+    )
 
 
 def _load_texts(dataset_spec: TextDatasetSpec, split: str) -> list[str]:
@@ -186,7 +191,13 @@ def _load_hf_texts(dataset_spec: TextDatasetSpec, split: str) -> list[str]:
         args.append(dataset_spec.dataset_config_name)
     if dataset_spec.subset is not None:
         args.append(dataset_spec.subset)
-    dataset = _load_dataset_with_retries(*args, split=split_name)
+    try:
+        dataset = _load_dataset_with_retries(*args, split=split_name)
+    except Exception:
+        fallback_texts = _load_inline_fallback_texts(dataset_spec, split)
+        if fallback_texts is None:
+            raise
+        return fallback_texts
     return [_format_record(dataset_spec, record) for record in dataset]
 
 
@@ -214,7 +225,21 @@ def _tokenize_streaming_hf_texts(
         args.append(dataset_spec.dataset_config_name)
     if dataset_spec.subset is not None:
         args.append(dataset_spec.subset)
-    dataset = _load_dataset_with_retries(*args, split=split_name, streaming=True)
+    try:
+        dataset = _load_dataset_with_retries(*args, split=split_name, streaming=True)
+    except Exception:
+        fallback_texts = _load_inline_fallback_texts(dataset_spec, split)
+        if fallback_texts is None:
+            raise
+        sequences, labels, metadata = _tokenize_texts(
+            tokenizer=tokenizer,
+            texts=fallback_texts,
+            block_size=block_size,
+            target_token_count=target_token_count,
+        )
+        metadata["fallback_source"] = "inline"
+        metadata["target_token_count"] = target_token_count
+        return sequences, labels, metadata
     if dataset_spec.shuffle_buffer_size is not None:
         dataset = dataset.shuffle(seed=dataset_spec.shuffle_seed, buffer_size=dataset_spec.shuffle_buffer_size)
     skip_records = {
@@ -271,27 +296,62 @@ def _tokenize_texts(
     tokenizer: PreTrainedTokenizerBase,
     texts: list[str],
     block_size: int,
+    target_token_count: int | None = None,
 ) -> tuple[list[list[int]], list[list[int]], dict[str, Any]]:
     eos_token_id = tokenizer.eos_token_id or tokenizer.pad_token_id
     if eos_token_id is None:
         raise ValueError("Tokenizer must provide either eos_token_id or pad_token_id.")
 
     tokens: list[int] = []
-    for text in texts:
-        encoded = tokenizer(text, add_special_tokens=False, verbose=False)["input_ids"]
-        if not encoded:
-            continue
-        tokens.extend(encoded)
-        tokens.append(eos_token_id)
+    if target_token_count is None:
+        text_budget = len(texts)
+    else:
+        if not texts:
+            raise ValueError("Cannot satisfy target_token_count with an empty text corpus.")
+        text_budget = 0
+        while len(tokens) < target_token_count:
+            for text in texts:
+                encoded = tokenizer(text, add_special_tokens=False, verbose=False)["input_ids"]
+                if not encoded:
+                    continue
+                tokens.extend(encoded)
+                tokens.append(eos_token_id)
+                text_budget += 1
+                if len(tokens) >= target_token_count:
+                    break
+    if target_token_count is None:
+        for text in texts:
+            encoded = tokenizer(text, add_special_tokens=False, verbose=False)["input_ids"]
+            if not encoded:
+                continue
+            tokens.extend(encoded)
+            tokens.append(eos_token_id)
+    else:
+        text_budget = max(text_budget, len(texts))
 
     sequences, labels, metadata = _chunk_token_buffer(
         tokens=tokens,
         block_size=block_size,
-        num_texts=len(texts),
+        num_texts=text_budget,
     )
     metadata["streaming"] = False
     metadata["raw_token_count"] = len(tokens)
     return sequences, labels, metadata
+
+
+def _load_inline_fallback_texts(dataset_spec: TextDatasetSpec, split: str) -> list[str] | None:
+    fallback_texts = {
+        "warmup": dataset_spec.inline_warmup_texts,
+        "train": dataset_spec.inline_train_texts,
+        "eval": dataset_spec.inline_eval_texts,
+    }[split]
+    if not fallback_texts:
+        return None
+    print(
+        f"Falling back to bundled inline text for split '{split}' after Hugging Face dataset load failures.",
+        flush=True,
+    )
+    return list(fallback_texts)
 
 
 def _chunk_token_buffer(
