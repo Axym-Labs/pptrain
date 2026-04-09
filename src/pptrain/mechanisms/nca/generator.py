@@ -225,7 +225,7 @@ def create_training_example(
         masked_targets[idx] = -100
 
     input_ids = tokens[:-1][:max_length]
-    labels = masked_targets[1:][:max_length]
+    labels = masked_targets[:-1][:max_length]
     return input_ids, labels
 
 

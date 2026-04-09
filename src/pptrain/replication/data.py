@@ -312,7 +312,7 @@ def _chunk_token_buffer(
         if len(chunk) < chunk_size:
             continue
         sequences.append(chunk[:-1])
-        labels.append(chunk[1:])
+        labels.append(chunk[:-1])
 
     avg_chunk_length = (sum(len(item) for item in sequences) / len(sequences)) if sequences else 0.0
     return sequences, labels, {"num_texts": num_texts, "avg_chunk_length": avg_chunk_length}

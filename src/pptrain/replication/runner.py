@@ -212,16 +212,21 @@ def _run_seeded_study(
     seed: int,
 ) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
+    downstream_run_config = _apply_run_config_overrides(profile.downstream_run_config, study.downstream_run_config_overrides)
+    natural_warmup_run_config = _apply_run_config_overrides(
+        profile.natural_warmup_run_config,
+        study.natural_warmup_run_config_overrides,
+    )
     downstream_bundle = build_text_train_eval_bundle(
         tokenizer=tokenizer,
         dataset_spec=profile.datasets[study.dataset_key],
         block_size=profile.context_length,
         train_target_token_count=_training_token_budget(
-            run_config=profile.downstream_run_config,
+            run_config=downstream_run_config,
             block_size=profile.context_length,
         ),
         eval_target_token_count=_eval_token_budget(
-            run_config=profile.downstream_run_config,
+            run_config=downstream_run_config,
             block_size=profile.context_length,
         ),
     )
@@ -236,7 +241,7 @@ def _run_seeded_study(
     scratch_result = train_downstream_stage(
         model=scratch_model,
         datasets=downstream_bundle,
-        run_config=_with_auto_precision(profile.downstream_run_config, output_dir / "scratch", seed=seed),
+        run_config=_with_auto_precision(downstream_run_config, output_dir / "scratch", seed=seed),
         output_dir=output_dir / "scratch",
         metadata={"variant": "scratch", "study": study.mechanism_name, "seed": seed},
     )
@@ -281,7 +286,7 @@ def _run_seeded_study(
             block_size=profile.context_length,
             split="warmup",
             target_token_count=_training_token_budget(
-                run_config=profile.natural_warmup_run_config,
+                run_config=natural_warmup_run_config,
                 block_size=profile.context_length,
             ),
         )
@@ -295,14 +300,14 @@ def _run_seeded_study(
             warmup_stage = train_downstream_stage(
                 model=warmup_model,
                 datasets=warmup_bundle.dataset_bundle,
-                run_config=_with_auto_precision(profile.natural_warmup_run_config, output_dir / "baseline_stage1", seed=seed),
+                run_config=_with_auto_precision(natural_warmup_run_config, output_dir / "baseline_stage1", seed=seed),
                 output_dir=output_dir / "baseline_stage1",
                 metadata={"variant": "baseline_stage1", "study": study.mechanism_name, "seed": seed},
             )
             continuation_stage = train_downstream_stage(
                 model=warmup_model,
                 datasets=downstream_bundle,
-                run_config=_with_auto_precision(profile.downstream_run_config, output_dir / "compute_matched_baseline", seed=seed),
+                run_config=_with_auto_precision(downstream_run_config, output_dir / "compute_matched_baseline", seed=seed),
                 output_dir=output_dir / "compute_matched_baseline",
                 metadata={"variant": "compute_matched_baseline", "study": study.mechanism_name, "seed": seed},
             )
@@ -345,6 +350,8 @@ def _run_transferred_variant(
     output_dir: Path,
     seed: int,
 ) -> dict[str, Any]:
+    synthetic_run_config = _apply_run_config_overrides(profile.synthetic_run_config, study.synthetic_run_config_overrides)
+    downstream_run_config = _apply_run_config_overrides(profile.downstream_run_config, study.downstream_run_config_overrides)
     mechanism = create_mechanism(
         study.mechanism_name,
         {
@@ -355,7 +362,7 @@ def _run_transferred_variant(
             **study.config_overrides,
         },
     )
-    synthetic_run_config = _with_auto_precision(profile.synthetic_run_config, output_dir / "synthetic", seed=seed)
+    synthetic_run_config = _with_auto_precision(synthetic_run_config, output_dir / "synthetic", seed=seed)
     _set_global_seed(seed)
     trainer = PrePreTrainer(
         mechanism=mechanism,
@@ -375,7 +382,7 @@ def _run_transferred_variant(
     continuation_result = train_downstream_stage(
         model=transferred_model,
         datasets=downstream_bundle,
-        run_config=_with_auto_precision(profile.downstream_run_config, output_dir / "downstream", seed=seed),
+        run_config=_with_auto_precision(downstream_run_config, output_dir / "downstream", seed=seed),
         output_dir=output_dir / "downstream",
         metadata={"variant": variant_name, "study": study.mechanism_name, "preset": preset_name, "seed": seed},
     )
@@ -421,6 +428,12 @@ def _run_probes(*, study: MechanismStudySpec, profile: ReplicationProfile, model
         result = run_needle_probe(model=model, tokenizer=tokenizer, config=profile.needle_probe)
         probes["algorithmic"] = {"metrics": dict(result.metrics), "artifacts": dict(result.artifacts)}
     return probes
+
+
+def _apply_run_config_overrides(run_config: RunConfig, overrides: dict[str, Any]) -> RunConfig:
+    if not overrides:
+        return run_config
+    return replace(run_config, **overrides)
 
 
 def _serialize_variant_result(
@@ -569,7 +582,7 @@ def _aggregate_claims(seed_runs: list[dict[str, Any]]) -> dict[str, Any]:
             continue
         replicated_values = [item.get("replicated") for item in claim_values if item.get("replicated") is not None]
         effect_values = _finite_values(item.get("effect") for item in claim_values)
-        hypothesis = _paired_sign_flip_hypothesis_test(effect_values)
+        decision = _three_seed_majority_rule(effect_values)
         summary: dict[str, Any] = {
             "replicated": None,
             "status": "not_evaluated",
@@ -578,17 +591,17 @@ def _aggregate_claims(seed_runs: list[dict[str, Any]]) -> dict[str, Any]:
             "effect_mean": _mean(effect_values),
             "effect_std": _std(effect_values),
             "effect_unit": next((item.get("effect_unit") for item in claim_values if item.get("effect_unit")), None),
-            "test_name": hypothesis.get("test_name"),
-            "alpha": hypothesis.get("alpha"),
-            "p_value_support": hypothesis.get("p_value_support"),
-            "p_value_contradict": hypothesis.get("p_value_contradict"),
+            "test_name": decision.get("test_name"),
+            "rule_description": decision.get("rule_description"),
+            "positive_seed_count": decision.get("positive_seed_count"),
+            "negative_seed_count": decision.get("negative_seed_count"),
         }
         if replicated_values:
             success_rate = sum(bool(value) for value in replicated_values) / len(replicated_values)
             summary["success_rate"] = success_rate
-        if hypothesis["status"] != "not_evaluated":
-            summary["status"] = hypothesis["status"]
-            summary["replicated"] = True if hypothesis["status"] == "supported" else False if hypothesis["status"] == "contradicted" else None
+        if decision["status"] != "not_evaluated":
+            summary["status"] = decision["status"]
+            summary["replicated"] = True if decision["status"] == "supported" else False if decision["status"] == "contradicted" else None
         numeric_fields = sorted(
             {
                 key
@@ -610,13 +623,33 @@ def _aggregate_claims(seed_runs: list[dict[str, Any]]) -> dict[str, Any]:
 
 def _aggregate_metrics(seed_runs: list[dict[str, Any]]) -> dict[str, Any]:
     metrics = {
-        "transfer_gap_perplexity": _aggregate_seed_values(seed_runs, CLAIM_TRANSFER_SIGNAL, "effect"),
-        "compute_matched_gap_perplexity": _aggregate_seed_values(seed_runs, CLAIM_COMPUTE_MATCHED_GAIN, "effect"),
+        "transfer_gap_percent": _aggregate_relative_percent(
+            seed_runs,
+            claim_name=CLAIM_TRANSFER_SIGNAL,
+            better_value_field="transferred_loss",
+            reference_value_field="scratch_loss",
+        ),
+        "compute_matched_gap_percent": _aggregate_relative_percent(
+            seed_runs,
+            claim_name=CLAIM_COMPUTE_MATCHED_GAIN,
+            better_value_field="transferred_loss",
+            reference_value_field="baseline_loss",
+        ),
         "convergence_step_delta": _aggregate_seed_values(seed_runs, CLAIM_CONVERGENCE_GAIN, "effect"),
         "reasoning_accuracy_gain": _aggregate_seed_values(seed_runs, CLAIM_REASONING_TRANSFER, "effect", scale=100.0),
         "algorithmic_accuracy_gain": _aggregate_seed_values(seed_runs, CLAIM_ALGORITHMIC_TRANSFER, "effect", scale=100.0),
-        "synthetic_ordering_gap_perplexity": _aggregate_seed_values(seed_runs, CLAIM_SYNTHETIC_ORDERING, "effect"),
-        "near_baseline_margin_perplexity": _aggregate_seed_values(seed_runs, CLAIM_NEAR_REAL_BASELINE, "effect"),
+        "synthetic_ordering_gap_percent": _aggregate_relative_percent(
+            seed_runs,
+            claim_name=CLAIM_SYNTHETIC_ORDERING,
+            better_value_field="primary_loss",
+            reference_value_field="comparison_loss",
+        ),
+        "near_baseline_margin_percent": _aggregate_relative_percent(
+            seed_runs,
+            claim_name=CLAIM_NEAR_REAL_BASELINE,
+            better_value_field="synthetic_loss",
+            reference_value_field="baseline_loss",
+        ),
     }
     metrics["scratch_perplexity"] = _aggregate_seed_values(seed_runs, CLAIM_TRANSFER_SIGNAL, "scratch_perplexity")
     metrics["transferred_perplexity"] = _aggregate_seed_values(seed_runs, CLAIM_TRANSFER_SIGNAL, "transferred_perplexity")
@@ -671,6 +704,37 @@ def _aggregate_synthetic_metric(
             metric_value = float(direct_metrics[metric_name]) * scale
             if math.isfinite(metric_value):
                 values.append(metric_value)
+    if not values:
+        return None
+    return {
+        "mean": _mean(values),
+        "std": _std(values),
+        "num_seeds": len(values),
+        "values": values,
+    }
+
+
+def _aggregate_relative_percent(
+    seed_runs: list[dict[str, Any]],
+    *,
+    claim_name: str,
+    better_value_field: str,
+    reference_value_field: str,
+) -> dict[str, Any] | None:
+    values = []
+    for seed_run in seed_runs:
+        claim = seed_run.get("claims", {}).get(claim_name)
+        if not isinstance(claim, dict):
+            continue
+        better_value = claim.get(better_value_field)
+        reference_value = claim.get(reference_value_field)
+        if better_value is None or reference_value is None:
+            continue
+        better_numeric = float(better_value)
+        reference_numeric = float(reference_value)
+        if not math.isfinite(better_numeric) or not math.isfinite(reference_numeric) or reference_numeric == 0.0:
+            continue
+        values.append(((reference_numeric - better_numeric) / abs(reference_numeric)) * 100.0)
     if not values:
         return None
     return {
@@ -1131,6 +1195,43 @@ def _paired_sign_flip_hypothesis_test(
         "alpha": alpha,
         "p_value_support": p_value_support,
         "p_value_contradict": p_value_contradict,
+    }
+
+
+def _three_seed_majority_rule(effect_values: list[float]) -> dict[str, Any]:
+    if not effect_values:
+        return {
+            "status": "not_evaluated",
+            "test_name": "three_seed_majority",
+            "rule_description": "mean effect in target direction and at least 2 of 3 seeds in target direction",
+            "positive_seed_count": 0,
+            "negative_seed_count": 0,
+        }
+    if len(effect_values) < 3:
+        positive_seed_count = sum(value > 0.0 for value in effect_values)
+        negative_seed_count = sum(value < 0.0 for value in effect_values)
+        return {
+            "status": "inconclusive",
+            "test_name": "three_seed_majority",
+            "rule_description": "mean effect in target direction and at least 2 of 3 seeds in target direction",
+            "positive_seed_count": positive_seed_count,
+            "negative_seed_count": negative_seed_count,
+        }
+    mean_effect = float(np.mean(effect_values))
+    positive_seed_count = sum(value > 0.0 for value in effect_values)
+    negative_seed_count = sum(value < 0.0 for value in effect_values)
+    if mean_effect > 0.0 and positive_seed_count >= 2:
+        status = "supported"
+    elif mean_effect < 0.0 and negative_seed_count >= 2:
+        status = "contradicted"
+    else:
+        status = "inconclusive"
+    return {
+        "status": status,
+        "test_name": "three_seed_majority",
+        "rule_description": "mean effect in target direction and at least 2 of 3 seeds in target direction",
+        "positive_seed_count": positive_seed_count,
+        "negative_seed_count": negative_seed_count,
     }
 
 

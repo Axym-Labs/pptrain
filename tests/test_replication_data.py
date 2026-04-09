@@ -65,6 +65,7 @@ def test_streaming_loader_stops_at_token_budget_and_respects_skip(monkeypatch) -
         target_token_count=8,
     )
     assert len(train_sequences) == len(train_labels) >= 1
+    assert train_sequences[0] == train_labels[0]
     assert metadata["streaming"] is True
     assert metadata["skip_records"] == 2
     assert metadata["target_token_count"] == 8
@@ -109,4 +110,5 @@ def test_streaming_loader_retries_retryable_dataset_errors(monkeypatch) -> None:
     assert attempts["count"] == 3
     assert sleeps == [5.0, 10.0]
     assert len(sequences) == len(labels) >= 1
+    assert sequences[0] == labels[0]
     assert metadata["streaming"] is True

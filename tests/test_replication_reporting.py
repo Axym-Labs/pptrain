@@ -17,8 +17,8 @@ def test_replication_reporting_writes_matrix_and_plots(tmp_path: Path) -> None:
                     "scratch_perplexity": {"mean": 100.0, "std": 5.0},
                     "transferred_perplexity": {"mean": 95.0, "std": 4.0},
                     "baseline_perplexity": {"mean": 98.0, "std": 3.0},
-                    "transfer_gap_perplexity": {"mean": 5.0, "std": 1.0},
-                    "compute_matched_gap_perplexity": {"mean": 3.0, "std": 0.5},
+                    "transfer_gap_percent": {"mean": 5.0, "std": 1.0},
+                    "compute_matched_gap_percent": {"mean": 3.0, "std": 0.5},
                     "convergence_step_delta": {"mean": 12.0, "std": 2.0},
                     "reasoning_accuracy_gain": {"mean": 1.5, "std": 0.2},
                 },
@@ -59,8 +59,8 @@ def test_replication_reporting_skips_nonfinite_errorbar_metrics(tmp_path: Path) 
                 "preset": "paper_web_text",
                 "seed_values": [11],
                 "metrics": {
-                    "compute_matched_gap_perplexity": {"mean": float("inf"), "std": 0.5},
-                    "transfer_gap_perplexity": {"mean": float("nan"), "std": 1.0},
+                    "compute_matched_gap_percent": {"mean": float("inf"), "std": 0.5},
+                    "transfer_gap_percent": {"mean": float("nan"), "std": 1.0},
                     "convergence_step_delta": {"mean": 12.0, "std": 2.0},
                 },
                 "diagnostics": {
@@ -77,7 +77,7 @@ def test_replication_reporting_skips_nonfinite_errorbar_metrics(tmp_path: Path) 
                 "preset": "paper_benchmark_100k",
                 "seed_values": [11],
                 "metrics": {
-                    "compute_matched_gap_perplexity": {"mean": 3.0, "std": 0.5},
+                    "compute_matched_gap_percent": {"mean": 3.0, "std": 0.5},
                     "reasoning_accuracy_gain": {"mean": 0.4, "std": 0.1},
                 },
                 "diagnostics": {

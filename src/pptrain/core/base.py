@@ -133,7 +133,7 @@ class TokenSequenceMechanism(Mechanism):
         for _ in range(count):
             tokens, item_metadata = self._sample_bounded_example(rng, spec)
             inputs.append(tokens[:-1][:max_length])
-            labels.append(tokens[1:][:max_length])
+            labels.append(tokens[:-1][:max_length])
             metadata.append(item_metadata)
         return inputs, labels, metadata
 

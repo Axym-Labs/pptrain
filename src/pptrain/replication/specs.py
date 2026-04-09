@@ -81,6 +81,9 @@ class MechanismStudySpec:
     max_length_override: int
     config_overrides: dict[str, Any] = field(default_factory=dict)
     comparison_presets: dict[str, str] = field(default_factory=dict)
+    synthetic_run_config_overrides: dict[str, Any] = field(default_factory=dict)
+    downstream_run_config_overrides: dict[str, Any] = field(default_factory=dict)
+    natural_warmup_run_config_overrides: dict[str, Any] = field(default_factory=dict)
     compare_against_natural_warmup: bool = False
     run_reasoning_probe: bool = False
     run_algorithmic_probe: bool = False
@@ -424,6 +427,8 @@ def _build_paper_proxy_profile(
             sequence_count_override=1024,
             eval_sequence_count_override=128,
             max_length_override=512,
+            synthetic_run_config_overrides={"learning_rate": 1e-6},
+            downstream_run_config_overrides={"learning_rate": 1e-6},
             compare_against_natural_warmup=True,
         ),
         MechanismStudySpec(
@@ -487,36 +492,42 @@ def _build_paper_proxy_profile(
         description="Paper-aligned proxy campaign with 2k context and public datasets.",
         model_name_or_path=model_name_or_path or "EleutherAI/pythia-410m-deduped",
         context_length=resolved_context,
-        seed_values=(11, 23, 37, 47, 59, 71, 83, 97, 109, 131),
+        seed_values=(11, 23, 37),
         config_overrides={"max_position_embeddings": resolved_context},
         synthetic_run_config=RunConfig(
             output_dir=f"{output_dir}/synthetic",
-            max_steps=60,
+            max_steps=240,
             per_device_train_batch_size=2,
             per_device_eval_batch_size=2,
+            learning_rate=1e-5,
             logging_steps=10,
-            save_steps=60,
-            eval_steps=20,
+            save_steps=240,
+            eval_steps=80,
+            warmup_steps=12,
             gradient_accumulation_steps=4,
         ),
         downstream_run_config=RunConfig(
             output_dir=f"{output_dir}/downstream",
-            max_steps=80,
+            max_steps=320,
             per_device_train_batch_size=2,
             per_device_eval_batch_size=2,
+            learning_rate=1e-5,
             logging_steps=10,
-            save_steps=80,
-            eval_steps=20,
+            save_steps=320,
+            eval_steps=80,
+            warmup_steps=16,
             gradient_accumulation_steps=4,
         ),
         natural_warmup_run_config=RunConfig(
             output_dir=f"{output_dir}/warmup",
-            max_steps=40,
+            max_steps=160,
             per_device_train_batch_size=2,
             per_device_eval_batch_size=2,
+            learning_rate=1e-5,
             logging_steps=10,
-            save_steps=40,
-            eval_steps=20,
+            save_steps=160,
+            eval_steps=80,
+            warmup_steps=8,
             gradient_accumulation_steps=4,
         ),
         datasets=datasets,

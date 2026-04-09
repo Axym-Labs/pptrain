@@ -20,6 +20,7 @@ def test_nca_mechanism_builds_sequences() -> None:
     sample = bundle.train_dataset[0]
     assert sample["input_ids"].shape[0] <= 128
     assert sample["labels"].shape[0] <= 128
+    assert sample["input_ids"].shape[0] == sample["labels"].shape[0]
     assert (sample["labels"] == -100).any()
 
 

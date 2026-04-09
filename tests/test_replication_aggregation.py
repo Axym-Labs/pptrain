@@ -78,3 +78,40 @@ def test_aggregate_helpers_ignore_nonfinite_values() -> None:
 
     matrix = runner._aggregate_matrix_diagnostic(seed_runs, "pairwise_logit_divergence")
     assert matrix["mean"] == [[0.0, 1.0], [1.0, 0.0]]
+
+
+def test_aggregate_claims_uses_three_seed_majority_rule() -> None:
+    seed_runs = [
+        {"claims": {CLAIM_TRANSFER_SIGNAL: {"replicated": True, "effect": 3.0, "scratch_loss": 10.0}}},
+        {"claims": {CLAIM_TRANSFER_SIGNAL: {"replicated": True, "effect": 1.0, "scratch_loss": 11.0}}},
+        {"claims": {CLAIM_TRANSFER_SIGNAL: {"replicated": False, "effect": -0.5, "scratch_loss": 12.0}}},
+    ]
+
+    claims = runner._aggregate_claims(seed_runs)
+
+    assert claims[CLAIM_TRANSFER_SIGNAL]["status"] == "supported"
+    assert claims[CLAIM_TRANSFER_SIGNAL]["replicated"] is True
+    assert claims[CLAIM_TRANSFER_SIGNAL]["positive_seed_count"] == 2
+    assert claims[CLAIM_TRANSFER_SIGNAL]["negative_seed_count"] == 1
+
+
+def test_aggregate_metrics_uses_percentage_gaps() -> None:
+    seed_runs = [
+        {
+            "claims": {
+                CLAIM_TRANSFER_SIGNAL: {"scratch_loss": 10.0, "transferred_loss": 8.0},
+                CLAIM_COMPUTE_MATCHED_GAIN: {"baseline_loss": 20.0, "transferred_loss": 10.0},
+            }
+        },
+        {
+            "claims": {
+                CLAIM_TRANSFER_SIGNAL: {"scratch_loss": 12.0, "transferred_loss": 9.0},
+                CLAIM_COMPUTE_MATCHED_GAIN: {"baseline_loss": 15.0, "transferred_loss": 12.0},
+            }
+        },
+    ]
+
+    metrics = runner._aggregate_metrics(seed_runs)
+
+    assert metrics["transfer_gap_percent"]["values"] == [20.0, 25.0]
+    assert metrics["compute_matched_gap_percent"]["values"] == [50.0, 20.0]
