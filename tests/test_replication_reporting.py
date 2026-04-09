@@ -49,3 +49,53 @@ def test_replication_reporting_writes_matrix_and_plots(tmp_path: Path) -> None:
     assert "### Run Metrics" in report_text
     assert "### Run Metrics" in report_text
     assert "➖" in report_text
+
+
+def test_replication_reporting_skips_nonfinite_errorbar_metrics(tmp_path: Path) -> None:
+    payload = {
+        "mechanisms": {
+            "nca": {
+                "claims": {},
+                "preset": "paper_web_text",
+                "seed_values": [11],
+                "metrics": {
+                    "compute_matched_gap_perplexity": {"mean": float("inf"), "std": 0.5},
+                    "transfer_gap_perplexity": {"mean": float("nan"), "std": 1.0},
+                    "convergence_step_delta": {"mean": 12.0, "std": 2.0},
+                },
+                "diagnostics": {
+                    "activation_cka_to_baseline": {
+                        "transferred": {"mean": float("inf"), "std": 0.0},
+                    },
+                    "activation_effective_rank": {
+                        "transferred": {"mean": float("nan"), "std": 0.0},
+                    },
+                },
+            },
+            "lime": {
+                "claims": {},
+                "preset": "paper_benchmark_100k",
+                "seed_values": [11],
+                "metrics": {
+                    "compute_matched_gap_perplexity": {"mean": 3.0, "std": 0.5},
+                    "reasoning_accuracy_gain": {"mean": 0.4, "std": 0.1},
+                },
+                "diagnostics": {
+                    "activation_cka_to_baseline": {
+                        "transferred": {"mean": 0.8, "std": 0.1},
+                    },
+                    "activation_effective_rank": {
+                        "transferred": {"mean": 5.0, "std": 0.5},
+                    },
+                },
+            },
+        },
+    }
+
+    paths = save_replication_reports(payload, tmp_path)
+
+    assert paths["compute_matched_plot"].exists()
+    assert paths["scratch_gap_plot"].exists()
+    assert paths["convergence_plot"].exists()
+    assert paths["activation_cka_plot"].exists()
+    assert paths["activation_rank_plot"].exists()

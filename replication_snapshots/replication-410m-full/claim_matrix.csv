@@ -1,0 +1,7 @@
+mechanism,Transfer beats baseline,Converges faster,Beats compute-matched baseline,Reasoning transfer,Algorithmic transfer,Preferred synthetic preset,Close to matched baseline
+NCA,❔,❔,❔,❔,➖,➖,➖
+LIME,❔,➖,❔,❔,➖,➖,➖
+Simpler tasks,❔,➖,❔,➖,➖,➖,➖
+Procedural,❔,➖,❔,➖,❔,➖,➖
+Dyck,❔,➖,❔,➖,❔,➖,➖
+Summarization,❔,❔,❔,➖,➖,❔,❔

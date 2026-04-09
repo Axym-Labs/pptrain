@@ -79,6 +79,10 @@ WARM_BAR_EDGE = "#c4744c"
 PASTEL_BLUE_MAP = ListedColormap(["#edf5ff", "#d8e9ff", "#bad6ff", "#8ab7ff"])
 
 
+def _finite_mean_std(mean: float, std: float) -> bool:
+    return bool(np.isfinite(mean) and np.isfinite(std))
+
+
 def _claim_status(claim: dict[str, Any] | None) -> str:
     if not claim:
         return "not_evaluated"
@@ -421,7 +425,11 @@ def _save_errorbar_plot(
         metric = result.get("metrics", {}).get(metric_key)
         if metric is None or metric.get("mean") is None:
             continue
-        items.append((MECHANISM_LABELS.get(mechanism_name, mechanism_name), float(metric["mean"]), float(metric.get("std") or 0.0)))
+        mean = float(metric["mean"])
+        std = float(metric.get("std") or 0.0)
+        if not (np.isfinite(mean) and np.isfinite(std)):
+            continue
+        items.append((MECHANISM_LABELS.get(mechanism_name, mechanism_name), mean, std))
     _set_plot_style()
     figure, axis = plt.subplots(1, 1, figsize=(9, max(2.8, 0.45 * max(len(items), 1))))
     if items:
@@ -457,9 +465,15 @@ def _save_probe_gain_plot(payload: dict[str, Any], output_path: Path) -> Path | 
         reasoning = metrics.get("reasoning_accuracy_gain")
         algorithmic = metrics.get("algorithmic_accuracy_gain")
         if reasoning is not None and reasoning.get("mean") is not None:
-            items.append((f"{MECHANISM_LABELS.get(mechanism_name, mechanism_name)} reasoning", float(reasoning["mean"]), float(reasoning.get("std") or 0.0)))
+            mean = float(reasoning["mean"])
+            std = float(reasoning.get("std") or 0.0)
+            if _finite_mean_std(mean, std):
+                items.append((f"{MECHANISM_LABELS.get(mechanism_name, mechanism_name)} reasoning", mean, std))
         if algorithmic is not None and algorithmic.get("mean") is not None:
-            items.append((f"{MECHANISM_LABELS.get(mechanism_name, mechanism_name)} algorithmic", float(algorithmic["mean"]), float(algorithmic.get("std") or 0.0)))
+            mean = float(algorithmic["mean"])
+            std = float(algorithmic.get("std") or 0.0)
+            if _finite_mean_std(mean, std):
+                items.append((f"{MECHANISM_LABELS.get(mechanism_name, mechanism_name)} algorithmic", mean, std))
     if not items:
         return None
     values = np.asarray([item[1] for item in items], dtype=float)
@@ -546,13 +560,16 @@ def _save_variant_category_plot(
             if summary is None or variant_name not in summary:
                 continue
             entry = summary[variant_name]
-            rows.append(
-                (
-                    MECHANISM_LABELS.get(mechanism_name, mechanism_name),
-                    float(entry["mean"]) * scale,
-                    float(entry.get("std") or 0.0) * scale,
+            mean = float(entry["mean"]) * scale
+            std = float(entry.get("std") or 0.0) * scale
+            if _finite_mean_std(mean, std):
+                rows.append(
+                    (
+                        MECHANISM_LABELS.get(mechanism_name, mechanism_name),
+                        mean,
+                        std,
+                    )
                 )
-            )
         if rows:
             categories.append((variant_name, rows))
     _set_plot_style()
@@ -606,13 +623,16 @@ def _save_transferred_metric_plot(
         summary = diagnostics.get("activation_effective_rank")
         if metric_key == "transferred_effective_rank" and summary and "transferred" in summary:
             entry = summary["transferred"]
-            items.append(
-                (
-                    MECHANISM_LABELS.get(mechanism_name, mechanism_name),
-                    float(entry["mean"]),
-                    float(entry.get("std") or 0.0),
+            mean = float(entry["mean"])
+            std = float(entry.get("std") or 0.0)
+            if _finite_mean_std(mean, std):
+                items.append(
+                    (
+                        MECHANISM_LABELS.get(mechanism_name, mechanism_name),
+                        mean,
+                        std,
+                    )
                 )
-            )
     _set_plot_style()
     figure, axis = plt.subplots(1, 1, figsize=(8.5, max(2.8, 0.45 * max(len(items), 1))))
     if items:
