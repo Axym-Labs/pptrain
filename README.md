@@ -7,9 +7,11 @@ Use a paper-backed preset as the starting point, then override only the few valu
 ## Install
 
 ```bash
-python -m venv .venv
-.venv\Scripts\activate
-pip install -e .[dev]
+pip install pptrain
+```
+
+```bash
+pip install "pptrain[eval]"
 ```
 
 ## Built-in Task Families
@@ -36,19 +38,19 @@ trainer = PrePreTrainer(
 bundle = trainer.fit().load_transfer_bundle()
 ```
 
-For a full runnable version of this example, go to [docs/quickstart.md](docs/quickstart.md).
+For a full runnable version of this example, go to [docs/quickstart.md](https://github.com/Axym-Labs/pptrain/blob/main/docs/quickstart.md).
 
 ## Examples
 
-- [Preset-first test configs](configs)
-- [Minimal Python examples](examples)
-- [Full quickstart example](docs/quickstart.md)
-- [Notes on adding or extending a task family](docs/extending.md)
+- [Preset-first test configs](https://github.com/Axym-Labs/pptrain/tree/main/configs)
+- [Minimal Python examples](https://github.com/Axym-Labs/pptrain/tree/main/examples)
+- [Full quickstart example](https://github.com/Axym-Labs/pptrain/blob/main/docs/quickstart.md)
+- [Notes on adding or extending a task family](https://github.com/Axym-Labs/pptrain/blob/main/docs/extending.md)
 ## Custom Task Families
 
 To add a custom task family, define how tasks are sampled, executed, and serialized, then register presets around that family. `pptrain` handles the trainer path, tokenizer-spec plumbing, transfer-bundle export, and Hugging Face integration.
 
-Most symbolic or transduction-style additions can start from `SymbolicTaskMechanism`; lower-level simulators can implement `Mechanism` directly. For non-Hugging-Face architectures, use `CallableCausalLMAdapter` when you want full control over model construction, or `VocabSizeCausalLMAdapter` when the upstream model only depends on the synthetic tokenizer vocab size. See [docs/extending.md](docs/extending.md) and [examples/custom_adapter.py](examples/custom_adapter.py).
+Most symbolic or transduction-style additions can start from `SymbolicTaskMechanism`; lower-level simulators can implement `Mechanism` directly. For non-Hugging-Face architectures, use `CallableCausalLMAdapter` when you want full control over model construction, or `VocabSizeCausalLMAdapter` when the upstream model only depends on the synthetic tokenizer vocab size. See [docs/extending.md](https://github.com/Axym-Labs/pptrain/blob/main/docs/extending.md) and [examples/custom_adapter.py](https://github.com/Axym-Labs/pptrain/blob/main/examples/custom_adapter.py).
 
 ## Transfer
 
@@ -69,6 +71,7 @@ For custom modules where embedding names do not follow the HF interface, `SkipPa
 Assess downstream transfer, compute-matched baseline comparisons, and basic representational measures (pairwise midlayer CKA, KL-divergence of predictions) with an analytics suite that produces plots and markdown/CSV reports for the built-in synthetic tasks.
 
 ```bash
+# These example config files live in the repository checkout.
 pptrain fit configs/nca_minimal.yaml --eval-config configs/eval_perplexity_smoke.yaml
 pptrain replicate --test
 ```
