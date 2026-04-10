@@ -2,6 +2,8 @@
 
 This repository includes a GitHub Actions workflow at `.github/workflows/publish.yml` that builds the package, runs `twine check`, and publishes through PyPI Trusted Publishing.
 
+The publish workflow is manual-only. Creating a GitHub release page does not trigger a second PyPI upload.
+
 ## One-Time Setup
 
 1. On TestPyPI, add a GitHub Actions Trusted Publisher for the `pptrain` project.
@@ -23,10 +25,11 @@ pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://
 ## PyPI Release
 
 1. Confirm the TestPyPI artifact installs and the README renders correctly.
-2. Create a GitHub release for the version tag.
-3. The `Publish` workflow will build once and publish to the `pypi` environment automatically.
-4. Verify the public install with:
+2. In GitHub Actions, run the `Publish` workflow manually and choose `pypi`.
+3. Verify the public install with:
 
 ```bash
 pip install pptrain
 ```
+
+4. Optionally create a GitHub release page for the matching tag after the PyPI upload succeeds.

@@ -9,8 +9,9 @@ description = "Lean PyTorch tooling for pre-pre-training language models on synt
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
+license-files = ["LICENSE"]
 authors = [
-  { name = "OpenAI Codex" }
+  { name = "Davide Wiest" }
 ]
 keywords = ["language-models", "pytorch", "synthetic-data", "transformers", "pretraining"]
 classifiers = [
