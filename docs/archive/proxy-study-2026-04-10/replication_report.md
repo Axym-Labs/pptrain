@@ -55,7 +55,7 @@ LIME and Summarization use different downstream text families from the other tas
 
 ![Activation CKA to baseline](activation_cka_to_baseline.png)
 
-This plot compares each task's task-pretrained model against its own compute-matched natural baseline using midpoint linear CKA on held-out downstream tokens. Higher values mean the internal representation geometry is more similar despite different parameter initializations.
+This plot compares each task's task-pretrained model against its own compute-matched natural baseline using midpoint linear CKA on held-out downstream tokens. Higher values mean the internal representation geometry is more similar despite different parameter initializations. This is a descriptive representation-level diagnostic rather than a direct measure of successful transfer.
 
 ### Activation Effective Rank
 

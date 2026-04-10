@@ -167,14 +167,14 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
         output_path=output / "pairwise_logit_divergence.png",
         value_format="{value:.2f}",
         scale=1.0e4,
-        top_label="Pairwise Jensen-Shannon divergence between transferred mechanisms (x1e4 nats, lower is better)",
+        top_label="Pairwise Jensen-Shannon divergence between task-pretrained models (x1e4 nats, lower is better)",
     )
     pairwise_activation_plot_path = _save_cross_mechanism_matrix_grid(
         payload,
         cross_key="pairwise_activation_cka_by_variant",
         output_path=output / "pairwise_activation_cka.png",
         value_format="{value:.2f}",
-        top_label="Pairwise midpoint linear CKA between transferred mechanisms (higher is better)",
+        top_label="Pairwise midpoint linear CKA between task-pretrained models (higher is better)",
         shared_scale=False,
     )
     summary_plot_path = _save_effect_summary_plot(payload, output / "effect_summary.png")
@@ -337,7 +337,7 @@ def _build_report_markdown(
             "",
             f"![Activation CKA to baseline]({activation_cka_plot_path.name})",
             "",
-            "This plot compares each task's task-pretrained model against its own compute-matched natural baseline using midpoint linear CKA on held-out downstream tokens. Higher values mean the internal representation geometry is more similar despite different parameter initializations.",
+            "This plot compares each task's task-pretrained model against its own compute-matched natural baseline using midpoint linear CKA on held-out downstream tokens. Higher values mean the internal representation geometry is more similar despite different parameter initializations. This is a descriptive representation-level diagnostic rather than a direct measure of successful transfer.",
             "",
             "### Activation Effective Rank",
             "",

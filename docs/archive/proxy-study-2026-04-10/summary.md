@@ -30,7 +30,7 @@ The loss overlays show that this conclusion is not driven by a single unstable s
 
 ![Activation CKA to baseline](activation_cka_to_baseline.png)
 
-The representational diagnostics do not reverse the main conclusion. Midlayer CKA relative to the compute-matched natural baseline varies across tasks, but even where the task-pretrained condition produces representations that are not grossly dissimilar, this does not translate into a downstream advantage. The partial result is therefore not just a matter of one scalar loss metric; the broader diagnostic picture also fails to reveal a compensating positive signal.
+The representational diagnostics are best read as descriptive rather than dispositive. Midlayer CKA relative to the compute-matched natural baseline varies across tasks, but this quantity is orthogonal to the main transfer question addressed here. In the completed subset, the more relevant point is that the representational picture does not reveal a simple failure mode such as obvious collapse or identical behavior across all tasks, even though the downstream comparison remains negative.
 
 ## Interpretation and Limitations
 
