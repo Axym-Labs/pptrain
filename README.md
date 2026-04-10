@@ -45,15 +45,6 @@ For a full runnable version of this example, go to [docs/quickstart.md](docs/qui
 - [Full quickstart example](docs/quickstart.md)
 - [Notes on adding or extending a task family](docs/extending.md)
 
-## Analytics
-
-Assess downstream transfer, compute-matched baseline comparisons, reasoning and algorithmic probes with a built-in analytics suite that produces plots plus markdown/CSV reports.
-
-```bash
-pptrain fit configs/nca_minimal.yaml --eval-config configs/eval_perplexity_smoke.yaml
-pptrain replicate --test
-```
-
 The same tooling can also run larger paper replications with baseline corpora and seeded aggregation.
 
 ## Custom Task Families
@@ -75,6 +66,15 @@ print(report.loaded_parameter_count)
 ```
 
 For custom modules where embedding names do not follow the HF interface, `SkipParametersTransferPolicy` lets you skip explicit parameter prefixes instead.
+
+## Analytics
+
+Assess downstream transfer, compute-matched baseline comparisons, and basic interrpetability measures with an analytics suite that produces plots and markdown/CSV reports.
+
+```bash
+pptrain fit configs/nca_minimal.yaml --eval-config configs/eval_perplexity_smoke.yaml
+pptrain replicate --test
+```
 
 ## Citations
 
