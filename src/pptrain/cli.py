@@ -43,7 +43,7 @@ def _fit_summary(
     eval_path: Path | None = None,
 ) -> dict[str, Any]:
     return {
-        "mechanism": trainer.mechanism.name,
+        "task": trainer.mechanism.name,
         "run_dir": str(run.run_dir),
         "model_dir": str(run.model_dir),
         "plot_path": str(run.plot_path) if run.plot_path is not None else None,
@@ -56,7 +56,7 @@ def _print_fit_summary(summary: dict[str, Any], *, json_output: bool) -> None:
     if json_output:
         print(json.dumps(summary, indent=2, sort_keys=True))
         return
-    print(f"mechanism: {summary['mechanism']}")
+    print(f"task: {summary['task']}")
     print(f"run_dir: {summary['run_dir']}")
     print(f"model_dir: {summary['model_dir']}")
     if summary["plot_path"] is not None:
@@ -89,7 +89,7 @@ def _print_mechanisms(*, json_output: bool, mechanism_name: str | None = None) -
     if mechanism_name is not None:
         mechanisms = [item for item in mechanisms if item["name"] == mechanism_name]
         if not mechanisms:
-            raise KeyError(f"Unknown mechanism '{mechanism_name}'.")
+            raise KeyError(f"Unknown task '{mechanism_name}'.")
     if json_output:
         print(json.dumps(mechanisms, indent=2))
         return
@@ -129,10 +129,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     mechanisms_parser = subparsers.add_parser(
         "mechanisms",
-        help="List registered upstream mechanisms.",
+        help="List registered upstream tasks.",
     )
-    mechanisms_parser.add_argument("name", nargs="?", help="Optional mechanism name filter.")
-    mechanisms_parser.add_argument("--json", action="store_true", help="Print mechanism info as JSON.")
+    mechanisms_parser.add_argument("name", nargs="?", help="Optional task name filter.")
+    mechanisms_parser.add_argument("--json", action="store_true", help="Print task info as JSON.")
 
     replicate_parser = subparsers.add_parser(
         "replicate",
@@ -158,7 +158,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--mechanism",
         action="append",
         dest="mechanisms",
-        help="Optional mechanism name filter. Can be passed multiple times.",
+        help="Optional task name filter. Can be passed multiple times.",
     )
     replicate_parser.add_argument(
         "--model-name-or-path",

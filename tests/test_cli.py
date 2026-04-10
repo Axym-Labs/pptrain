@@ -79,7 +79,7 @@ def test_cli_fit_prints_summary(tmp_path: Path, monkeypatch, capsys) -> None:
     monkeypatch.setattr(cli, "_build_trainer", lambda config: DummyTrainer())
     cli.main(["fit", str(config_path)])
     output = capsys.readouterr().out
-    assert "mechanism: nca" in output
+    assert "task: nca" in output
     assert "train_loss: 1.25" in output
 
 

@@ -233,13 +233,13 @@ def _build_claim_dataframe(pd, payload: dict[str, Any]):
             for column in CLAIM_COLUMNS
         }
     dataframe = pd.DataFrame.from_dict(rows, orient="index")
-    dataframe.index.name = "mechanism"
+    dataframe.index.name = "task"
     dataframe = dataframe.rename(index=MECHANISM_LABELS, columns=CLAIM_LABELS)
     return dataframe
 
 
 def _dataframe_to_markdown(dataframe) -> str:
-    columns = ["mechanism", *list(dataframe.columns)]
+    columns = ["task", *list(dataframe.columns)]
     rows = ["| " + " | ".join(columns) + " |", "| " + " | ".join(["---"] * len(columns)) + " |"]
     for mechanism_name, values in dataframe.iterrows():
         row = [mechanism_name, *[str(value) for value in values.tolist()]]
@@ -271,11 +271,11 @@ def _build_report_markdown(
     sections = [
         "# Proxy Study Report",
         "",
-        "This report summarizes a bounded multi-seed proxy study across the current pre-pre-training mechanisms.",
-        "The goal is not exact paper reproduction, but a consistent check of whether each mechanism transfers in the expected direction under one shared setup.",
-        "All mechanisms are additionally evaluated against a compute-matched natural baseline built from natural-text warm-up on the same downstream text family.",
+        "This report summarizes a bounded multi-seed proxy study across the current synthetic pre-pretraining tasks.",
+        "The goal is not exact paper reproduction, but a consistent check of whether each synthetic task transfers in the expected direction under one shared setup.",
+        "All tasks are additionally evaluated against a compute-matched natural baseline built from natural-text warm-up on the same downstream text family.",
         "Aggregated claim outcomes use a simple three-seed rule rather than a hypothesis test.",
-        "In the table, `✅` means the three runs had a better average in the target direction and at least 2 of the 3 seeds moved in that direction, `❌` means the opposite pattern held, `❔` means the result was inconclusive, and `➖` means the claim was not evaluated for that mechanism in this profile.",
+        "In the table, `✅` means the three runs had a better average in the target direction and at least 2 of the 3 seeds moved in that direction, `❌` means the opposite pattern held, `❔` means the result was inconclusive, and `➖` means the claim was not evaluated for that task in this profile.",
         "",
         "### Key Results",
         "",
@@ -285,31 +285,31 @@ def _build_report_markdown(
         "",
         f"![Claim matrix]({claim_plot_path.name})",
         "",
-        "This matrix shows the aggregated claim outcomes. Rows are mechanisms, columns are natural-language claim categories, and each cell reports whether the corresponding proxy claim was supported, contradicted, or left inconclusive after aggregating across seeds.",
+        "This matrix shows the aggregated claim outcomes. Rows are synthetic tasks, columns are natural-language claim categories, and each cell reports whether the corresponding proxy claim was supported, contradicted, or left inconclusive after aggregating across seeds.",
         "",
         "### Compute-Matched Baseline Gap",
         "",
         f"![Compute-matched baseline gap]({compute_plot_path.name})",
         "",
-        "This plot shows the mean percentage evaluation-loss improvement of each transferred run over its compute-matched natural baseline, with standard deviation across seeds. Positive values mean the synthetic pre-pre-training path finished with lower evaluation loss than the matched natural-text baseline.",
+        "This plot shows the mean percentage evaluation-loss improvement of each task-pretrained run over its compute-matched natural baseline, with standard deviation across seeds. Positive values mean the task-pretrained path finished with lower evaluation loss than the matched natural-text baseline.",
         "",
         "### Eval-Loss Difference Compared To Baseline",
         "",
         f"![Transfer gap versus baseline]({scratch_plot_path.name})",
         "",
-        "This plot shows the mean percentage evaluation-loss improvement of the transferred run over the baseline run with no pre-pre-training after the same downstream training budget, with standard deviation across seeds. Positive values mean the transferred model finished with lower loss than the baseline.",
+        "This plot shows the mean percentage evaluation-loss improvement of the task-pretrained run over the baseline run with no pre-pre-training after the same downstream training budget, with standard deviation across seeds. Positive values mean the task-pretrained model finished with lower loss than the baseline.",
         "",
         "### Convergence Step Delta",
         "",
         f"![Convergence step delta]({convergence_plot_path.name})",
         "",
-        "This plot shows how many optimization steps earlier the transferred model reaches the baseline run's final loss level. Positive values indicate faster convergence.",
+        "This plot shows how many optimization steps earlier the task-pretrained model reaches the baseline run's final loss level. Positive values indicate faster convergence.",
         "",
         "### Loss Overlays",
         "",
         f"![Loss overlays]({loss_overlay_path.name})",
         "",
-        "This figure overlays the downstream evaluation-loss curves for the baseline, transferred, and compute-matched natural baseline runs for each mechanism. Study-specific synthetic comparison presets are intentionally excluded so the overlay stays focused on the main proxy comparison. Solid lines are means across seeds and shaded bands show one standard deviation.",
+        "This figure overlays the downstream evaluation-loss curves for the baseline, task-pretrained, and compute-matched natural baseline runs for each task. Study-specific synthetic comparison presets are intentionally excluded so the overlay stays focused on the main proxy comparison. Solid lines are means across seeds and shaded bands show one standard deviation.",
         "",
     ]
     if probe_plot_path is not None:
@@ -330,38 +330,38 @@ def _build_report_markdown(
             "",
             f"![Logit divergence to baseline]({logit_baseline_plot_path.name})",
             "",
-            "This plot compares each mechanism's transferred model against its own compute-matched natural baseline using reference KL divergence over held-out downstream tokens. Values are plotted in x1e4 nats for readability. Lower values mean the transferred predictive distribution is closer to the matched compute baseline.",
-            "LIME and Summarization use different downstream text families from the other mechanisms, so their KL and CKA values are partly affected by that dataset difference and should not be over-read as if every mechanism used the same held-out distribution.",
+            "This plot compares each task's task-pretrained model against its own compute-matched natural baseline using reference KL divergence over held-out downstream tokens. Values are plotted in x1e4 nats for readability. Lower values mean the task-pretrained predictive distribution is closer to the matched compute baseline.",
+            "LIME and Summarization use different downstream text families from the other tasks, so their KL and CKA values are partly affected by that dataset difference and should not be over-read as if every task used the same held-out distribution.",
             "",
             "### Activation CKA To Baseline",
             "",
             f"![Activation CKA to baseline]({activation_cka_plot_path.name})",
             "",
-            "This plot compares each mechanism's transferred model against its own compute-matched natural baseline using midpoint linear CKA on held-out downstream tokens. Higher values mean the internal representation geometry is more similar despite different parameter initializations.",
+            "This plot compares each task's task-pretrained model against its own compute-matched natural baseline using midpoint linear CKA on held-out downstream tokens. Higher values mean the internal representation geometry is more similar despite different parameter initializations.",
             "",
             "### Activation Effective Rank",
             "",
             f"![Activation effective rank]({activation_rank_plot_path.name})",
             "",
-            "This figure measures the effective rank of midpoint hidden states for transferred models on held-out downstream tokens. Higher values indicate more diverse internal representations rather than collapsed activity.",
+            "This figure measures the effective rank of midpoint hidden states for task-pretrained models on held-out downstream tokens. Higher values indicate more diverse internal representations rather than collapsed activity.",
             "",
             "### Pairwise Logit Divergence Matrices",
             "",
             f"![Pairwise logit divergence matrices]({pairwise_logit_plot_path.name})",
             "",
-            "This heatmap shows pairwise Jensen-Shannon divergence between transferred mechanisms on one shared diagnostic text bundle. Values are shown as mean plus-or-minus standard deviation in x1e4 nats across seeds. Lower values indicate more similar predictive distributions.",
+            "This heatmap shows pairwise Jensen-Shannon divergence between task-pretrained models on one shared diagnostic text bundle. Values are shown as mean plus-or-minus standard deviation in x1e4 nats across seeds. Lower values indicate more similar predictive distributions.",
             "",
             "### Pairwise Activation CKA Matrices",
             "",
             f"![Pairwise activation CKA matrices]({pairwise_activation_plot_path.name})",
             "",
-            "This heatmap shows pairwise midpoint linear CKA between transferred mechanisms on one shared diagnostic text bundle. Higher values indicate more similar internal representation structure.",
+            "This heatmap shows pairwise midpoint linear CKA between task-pretrained models on one shared diagnostic text bundle. Higher values indicate more similar internal representation structure.",
             "",
             "### Effect Summary",
             "",
             f"![Effect summary]({summary_plot_path.name})",
             "",
-            "This summary heatmap collects the main mechanism-level effect sizes in one place. Each column is scaled independently for readability and cell text shows the raw mean plus-or-minus standard deviation.",
+            "This summary heatmap collects the main task-level effect sizes in one place. Each column is scaled independently for readability and cell text shows the raw mean plus-or-minus standard deviation.",
             "",
         ]
     )
@@ -796,20 +796,20 @@ def _save_effect_summary_plot(payload: dict[str, Any], output_path: Path) -> Pat
 
 def _build_metrics_table_markdown(payload: dict[str, Any]) -> str:
     columns = [
-        "mechanism",
+        "task",
         "preset",
         "seeds",
         "baseline loss",
-        "transferred loss",
+        "task-pretrained loss",
         "natural baseline loss",
-        "transfer gap %",
+        "task-pretrained gap %",
         "baseline gap %",
         "convergence delta",
         "reasoning gain",
         "algorithmic gain",
-        "transferred KL",
-        "transferred CKA",
-        "transferred rank",
+        "task-pretrained KL",
+        "task-pretrained CKA",
+        "task-pretrained rank",
         "nca synth acc",
     ]
     rows = ["| " + " | ".join(columns) + " |", "| " + " | ".join(["---"] * len(columns)) + " |"]

@@ -2,12 +2,12 @@
 
 This is an internal replication/proxy runner. It is meant to answer two questions:
 
-- Does each mechanism train, transfer, and evaluate correctly?
+- Does each synthetic task train, transfer, and evaluate correctly?
 - Do we see paper-adjacent signal under one consistent, reduced-budget setup?
 
 `--test` is only a plumbing check. It is not evidence for or against the papers.
 
-In other words: this is a proxy replication suite, not a claim of exact paper reproduction. Shared claims such as transfer, faster convergence, and compute-matched baseline outperformance are tested consistently across mechanisms. Paper-specific headline results outside that shared core are only partially covered.
+In other words: this is a proxy replication suite, not a claim of exact paper reproduction. Shared claims such as transfer, faster convergence, and compute-matched baseline outperformance are tested consistently across tasks. Paper-specific headline results outside that shared core are only partially covered.
 
 ## Commands
 
@@ -41,7 +41,7 @@ Resume a partial or interrupted campaign:
 python -m pptrain.cli replicate --profile paper_proxy_2048 --context-length 2048 --model-name-or-path EleutherAI/pythia-410m-deduped --output-dir runs/replication-2048 --resume
 ```
 
-Single-mechanism debugging:
+Single-task debugging:
 
 ```powershell
 python -m pptrain.cli replicate --profile paper_proxy_2048 --mechanism nca --output-dir runs/replication-nca
@@ -66,22 +66,22 @@ The command writes:
 - `activation_effective_rank.png`: midpoint hidden-state effective rank
 - `pairwise_logit_divergence.png`: pairwise symmetric-KL matrices between variants
 - `pairwise_activation_cka.png`: pairwise activation-CKA matrices between variants
-- `effect_summary.png`: compact cross-metric mechanism summary
+- `effect_summary.png`: compact cross-metric task summary
 
-Each mechanism also gets its own subdirectory with scratch, transferred, comparison, and natural-warmup runs when applicable.
+Each task also gets its own subdirectory with scratch, transferred, comparison, and natural-warmup runs when applicable.
 
 ## Paper Claims And Proxy Criteria
 
 This runner does not claim exact reproduction. It checks a bounded proxy that stays close to the paper claim direction.
 
-| Mechanism | Paper claim to check | Implemented presets | Proxy success criterion |
+| Task | Paper claim to check | Implemented presets | Proxy success criterion |
 | --- | --- | --- | --- |
-| `nca` | NCA upstream warm-up improves downstream LM performance, converges faster, and beats compute-matched natural-text baselines; the paper reports gains on web/code continuation and downstream `GSM8K` / `HumanEval` / `BBL` style tasks. | `paper_web_text`, `paper_code` | Generic claims for all mechanisms: `transfer_signal`, `convergence_gain`, `compute_matched_gain`. NCA-specific proxy: `reasoning_transfer`. |
-| `lime` | LIME-style primitives improve mathematical reasoning transfer. | `paper_benchmark_100k`, `paper_benchmark_1m`, `paper_mixed_5m`, `paper_individual_*` | Generic claims for all mechanisms plus `reasoning_transfer`. |
-| `simpler_tasks` | Very simple synthetic tasks still produce non-trivial downstream transfer; in the follow-up comparison, simple families capture much of the benefit of earlier synthetic schemes. | `paper_unary_core_100k`, `paper_unary_core_1m`, `paper_binary_1m`, `paper_set_1m`, `paper_copy_1m`, `paper_identity_1m` | Generic claims for all mechanisms. |
-| `procedural` | Procedural abstract tasks improve downstream transfer and produce stronger long-context algorithmic behavior. | `paper_identity_len*`, `paper_reverse_len*`, `paper_sort_len*`, `paper_set_len*`, `paper_union_len*`, `paper_delete_len*` | Generic claims for all mechanisms plus `algorithmic_transfer`. |
-| `dyck` | Dyck-style abstract syntax training should help long-context symbolic retrieval / structure-sensitive probes. | `paper_k8`, `paper_k16`, `paper_k32`, `paper_k64` | Generic claims for all mechanisms plus `algorithmic_transfer`. |
-| `summarization` | Synthetic summarization-style pretraining can transfer, and synthetic tasks can get close to natural-text baselines. | `paper_step_tasks_100k`, `paper_sentence_reordering_100k`, `paper_next_sentence_100k`, `paper_masked_document_100k`, `paper_nonsense_copy_ops_100k`, `paper_nonsense_keyword_100k`, `paper_ourtasks_subset_100k` | Generic claims for all mechanisms plus `synthetic_ordering` and `near_real_baseline`. |
+| `nca` | NCA upstream warm-up improves downstream LM performance, converges faster, and beats compute-matched natural-text baselines; the paper reports gains on web/code continuation and downstream `GSM8K` / `HumanEval` / `BBL` style tasks. | `paper_web_text`, `paper_code` | Generic claims for all tasks: `transfer_signal`, `convergence_gain`, `compute_matched_gain`. NCA-specific proxy: `reasoning_transfer`. |
+| `lime` | LIME-style primitives improve mathematical reasoning transfer. | `paper_benchmark_100k`, `paper_benchmark_1m`, `paper_mixed_5m`, `paper_individual_*` | Generic claims for all tasks plus `reasoning_transfer`. |
+| `simpler_tasks` | Very simple synthetic tasks still produce non-trivial downstream transfer; in the follow-up comparison, simple families capture much of the benefit of earlier synthetic schemes. | `paper_unary_core_100k`, `paper_unary_core_1m`, `paper_binary_1m`, `paper_set_1m`, `paper_copy_1m`, `paper_identity_1m` | Generic claims for all tasks. |
+| `procedural` | Procedural abstract tasks improve downstream transfer and produce stronger long-context algorithmic behavior. | `paper_identity_len*`, `paper_reverse_len*`, `paper_sort_len*`, `paper_set_len*`, `paper_union_len*`, `paper_delete_len*` | Generic claims for all tasks plus `algorithmic_transfer`. |
+| `dyck` | Dyck-style abstract syntax training should help long-context symbolic retrieval / structure-sensitive probes. | `paper_k8`, `paper_k16`, `paper_k32`, `paper_k64` | Generic claims for all tasks plus `algorithmic_transfer`. |
+| `summarization` | Synthetic summarization-style pretraining can transfer, and synthetic tasks can get close to natural-text baselines. | `paper_step_tasks_100k`, `paper_sentence_reordering_100k`, `paper_next_sentence_100k`, `paper_masked_document_100k`, `paper_nonsense_copy_ops_100k`, `paper_nonsense_keyword_100k`, `paper_ourtasks_subset_100k` | Generic claims for all tasks plus `synthetic_ordering` and `near_real_baseline`. |
 
 ### Current full-profile preset mapping
 
@@ -107,7 +107,7 @@ NCA note:
 - algorithmic probe: local needle-in-a-haystack proxy scored by exact-answer accuracy; the reported gain is transferred accuracy minus scratch accuracy
 - reasoning probe: `GSM8K` when enabled, otherwise a small local arithmetic probe; the reported gain is transferred accuracy minus scratch accuracy
 
-This is intentionally smaller than the original papers, but no longer relies on tiny benchmark slices for the natural baseline. It is meant to rank mechanisms and detect broken or missing transfer, not to claim paper-level headline numbers.
+This is intentionally smaller than the original papers, but no longer relies on tiny benchmark slices for the natural baseline. It is meant to rank tasks and detect broken or missing transfer, not to claim paper-level headline numbers.
 
 Operational notes:
 
@@ -132,7 +132,7 @@ python -m pptrain.cli replicate --profile paper_proxy_2048 --seeds 11,23,37,47,5
 
 ## Claim Coverage Limits
 
-The current suite covers the major shared transfer claims and a subset of mechanism-specific claims, but not every headline result in every paper.
+The current suite covers the major shared transfer claims and a subset of task-specific claims, but not every headline result in every paper.
 
 Major claims still not covered directly:
 
@@ -158,4 +158,4 @@ If time and validity matter more than budget:
 
 `❌` means the proxy claim was not met.
 
-`➖` means that claim category was intentionally not evaluated for that mechanism in the current profile. It is not missing data, and it can appear in real runs.
+`➖` means that claim category was intentionally not evaluated for that task in the current profile. It is not missing data, and it can appear in real runs.
