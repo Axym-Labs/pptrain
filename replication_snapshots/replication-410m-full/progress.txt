@@ -1,7 +1,0 @@
-status: completed
-nca: 10
-lime: 10
-simpler_tasks: 10
-procedural: 10
-dyck: 10
-summarization: 10

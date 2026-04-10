@@ -415,10 +415,10 @@ def _run_transferred_variant(
 def _run_probes(*, study: MechanismStudySpec, profile: ReplicationProfile, model, tokenizer) -> dict[str, Any]:
     probes: dict[str, Any] = {}
     if study.run_reasoning_probe:
-        if profile.gsm8k_eval is not None:
-            result = run_gsm8k_probe(model=model, tokenizer=tokenizer, config=profile.gsm8k_eval)
-        elif profile.arithmetic_probe is not None:
+        if profile.arithmetic_probe is not None:
             result = run_arithmetic_probe(model=model, tokenizer=tokenizer, config=profile.arithmetic_probe)
+        elif profile.gsm8k_eval is not None:
+            result = run_gsm8k_probe(model=model, tokenizer=tokenizer, config=profile.gsm8k_eval)
         else:
             result = None
         if result is not None:

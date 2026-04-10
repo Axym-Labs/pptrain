@@ -8,6 +8,7 @@ from typing import Any
 from transformers import Trainer, TrainerCallback
 
 from pptrain.core.base import Mechanism
+from pptrain.core.checkpoints import find_latest_checkpoint
 from pptrain.core.config import RunConfig
 from pptrain.core.plotting import save_training_summary_plot
 from pptrain.core.transfer import TransferBundle
@@ -89,7 +90,7 @@ class PrePreTrainer:
             callbacks=[refresh_callback] if refresh_callback is not None else None,
         )
 
-        train_result = trainer.train()
+        train_result = trainer.train(resume_from_checkpoint=find_latest_checkpoint(run_dir))
         metrics = dict(train_result.metrics)
         if datasets.eval_dataset is not None:
             metrics.update(trainer.evaluate())

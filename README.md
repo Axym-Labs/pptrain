@@ -1,8 +1,8 @@
 # `pptrain`
 
-`pptrain` is a the PyTorch- and HuggingFace-native library for pre-pretraining language models. Pre-pretraining involves training on synthetic tasks before standard language pretraining, with recent work [1] showing gains beyond what additional natural-language pretraining alone achieves.
+`pptrain` is a small PyTorch- and HuggingFace-native library for pre-pretraining language models. Pre-pretraining involves training on synthetic tasks before standard language pretraining, with recent work [1] showing gains beyond what additional natural-language pretraining alone achieves.
 
-Use a paper-backed preset as the starting point, then override only the few values you actually need for a local run or experiment. Alternatively, define custom task families by extending a flexible task abstraction and plugging in your own model adapter. Assess downstream transfer and performance with a built-in analytics suite that compares against baselines and produces plots plus reports.
+Use a paper-backed preset as the starting point, then override only the few values you actually need for a local run or experiment. Alternatively, define custom task families by extending a flexible task abstraction and plugging in your own model adapter.
 
 ## Install
 
@@ -44,9 +44,6 @@ For a full runnable version of this example, go to [docs/quickstart.md](docs/qui
 - [Minimal Python examples](examples)
 - [Full quickstart example](docs/quickstart.md)
 - [Notes on adding or extending a task family](docs/extending.md)
-
-The same tooling can also run larger paper replications with baseline corpora and seeded aggregation.
-
 ## Custom Task Families
 
 To add a custom task family, define how tasks are sampled, executed, and serialized, then register presets around that family. `pptrain` handles the trainer path, tokenizer-spec plumbing, transfer-bundle export, and Hugging Face integration.
@@ -69,7 +66,7 @@ For custom modules where embedding names do not follow the HF interface, `SkipPa
 
 ## Analytics
 
-Assess downstream transfer, compute-matched baseline comparisons, and basic representational measures (pairwise midlayer CYK, KL-divergence of predictions) with an analytics suite that produces plots and markdown/CSV reports.
+Assess downstream transfer, compute-matched baseline comparisons, and basic representational measures (pairwise midlayer CKA, KL-divergence of predictions) with an analytics suite that produces plots and markdown/CSV reports.
 
 ```bash
 pptrain fit configs/nca_minimal.yaml --eval-config configs/eval_perplexity_smoke.yaml

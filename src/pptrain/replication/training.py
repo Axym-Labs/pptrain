@@ -9,6 +9,7 @@ import torch
 from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, Trainer
 
 from pptrain.core.base import DatasetBundle
+from pptrain.core.checkpoints import find_latest_checkpoint
 from pptrain.core.config import RunConfig
 from pptrain.core.plotting import save_training_summary_plot
 from pptrain.core.transfer import ReinitializeEmbeddingTransferPolicy, TransferBundle, TransferReport
@@ -77,7 +78,7 @@ def train_downstream_stage(
         data_collator=datasets.data_collator,
     )
 
-    train_result = trainer.train()
+    train_result = trainer.train(resume_from_checkpoint=find_latest_checkpoint(output_dir))
     metrics = dict(train_result.metrics)
     if datasets.eval_dataset is not None:
         metrics.update(trainer.evaluate())
