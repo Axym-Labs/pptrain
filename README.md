@@ -69,7 +69,7 @@ For custom modules where embedding names do not follow the HF interface, `SkipPa
 
 ## Analytics
 
-Assess downstream transfer, compute-matched baseline comparisons, and basic interrpetability measures with an analytics suite that produces plots and markdown/CSV reports.
+Assess downstream transfer, compute-matched baseline comparisons, and basic representational measures (pairwise midlayer CYK, KL-divergence of predictions) with an analytics suite that produces plots and markdown/CSV reports.
 
 ```bash
 pptrain fit configs/nca_minimal.yaml --eval-config configs/eval_perplexity_smoke.yaml
