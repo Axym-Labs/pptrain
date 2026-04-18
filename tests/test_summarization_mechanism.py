@@ -1,11 +1,11 @@
 import numpy as np
 
-from pptrain.mechanisms import SummarizationConfig, SummarizationMechanism
-from pptrain.mechanisms.summarization.generator import copy_quoted_example, next_sentence_example
+from pptrain.tasks import SummarizationConfig, SummarizationTaskFamily
+from pptrain.tasks.summarization.generator import copy_quoted_example, next_sentence_example
 
 
 def test_summarization_mechanism_builds_sequences() -> None:
-    mechanism = SummarizationMechanism(
+    task = SummarizationTaskFamily(
         SummarizationConfig(
             tasks=("sentence_reordering", "next_sentence", "masked_document", "copy_keyword_multiple_sorted"),
             sequence_count=8,
@@ -18,7 +18,7 @@ def test_summarization_mechanism_builds_sequences() -> None:
             max_words_per_sentence=6,
         )
     )
-    bundle = mechanism.build_datasets(seed=13)
+    bundle = task.build_datasets(seed=13)
     assert len(bundle.train_dataset) == 8
     assert len(bundle.eval_dataset) == 3
     sample = bundle.train_dataset[0]

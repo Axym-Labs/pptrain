@@ -4,9 +4,9 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from pptrain.core.base import ExecutedSymbolicTask, SymbolicTask, SymbolicTaskMechanism, TokenizerSpec
-from pptrain.core.presets import MechanismPreset, sequence_preset
-from pptrain.core.registry import register_mechanism
+from pptrain.core.base import ExecutedSymbolicTask, SymbolicTask, SymbolicTaskFamily, TokenizerSpec
+from pptrain.core.presets import TaskPreset, sequence_preset
+from pptrain.core.registry import register_task
 
 
 @dataclass(slots=True)
@@ -21,7 +21,7 @@ class DyckConfig:
     max_length: int = 128
 
 
-def _paper_dyck_preset(bracket_types: int) -> MechanismPreset:
+def _paper_dyck_preset(bracket_types: int) -> TaskPreset:
     return sequence_preset(
         f"paper_k{bracket_types}",
         f"Procedural-pretraining Dyck preset with k={bracket_types}.",
@@ -37,7 +37,7 @@ def _paper_dyck_preset(bracket_types: int) -> MechanismPreset:
     )
 
 
-DYCK_PRESETS: tuple[MechanismPreset, ...] = (
+DYCK_PRESETS: tuple[TaskPreset, ...] = (
     sequence_preset(
         "smoke",
         "Tiny local Dyck smoke run.",
@@ -63,7 +63,7 @@ class DyckProgram:
     peak_depth: int
 
 
-class DyckMechanism(SymbolicTaskMechanism):
+class DyckTaskFamily(SymbolicTaskFamily):
     name = "dyck"
     description = "Balanced-bracket language generation with controllable depth and nesting."
     task_group_metadata_key = None
@@ -135,9 +135,12 @@ class DyckMechanism(SymbolicTaskMechanism):
         return DyckProgram(actions=actions, peak_depth=peak_depth)
 
 
-register_mechanism(
+register_task(
     "dyck",
-    lambda config: DyckMechanism(DyckConfig(**config)),
-    description=DyckMechanism.description,
+    lambda config: DyckTaskFamily(DyckConfig(**config)),
+    description=DyckTaskFamily.description,
     presets=DYCK_PRESETS,
 )
+
+
+DyckMechanism = DyckTaskFamily

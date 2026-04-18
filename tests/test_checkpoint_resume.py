@@ -88,8 +88,8 @@ def test_prepretrainer_resumes_from_latest_checkpoint(monkeypatch, tmp_path: Pat
             "metadata": {},
         },
     )()
-    mechanism = type(
-        "Mechanism",
+    task = type(
+        "Task",
         (),
         {
             "name": "dummy",
@@ -113,7 +113,7 @@ def test_prepretrainer_resumes_from_latest_checkpoint(monkeypatch, tmp_path: Pat
     monkeypatch.setattr(runner.TransferBundle, "save", lambda self: None)
 
     trainer = PrePreTrainer(
-        mechanism=mechanism,
+        task=task,
         model_adapter=model_adapter,
         run_config=RunConfig(output_dir=str(run_dir), max_steps=1),
     )

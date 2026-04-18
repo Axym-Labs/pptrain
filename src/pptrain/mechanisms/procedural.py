@@ -4,9 +4,9 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from pptrain.core.base import ExecutedSymbolicTask, SymbolicTask, SymbolicTaskMechanism, TokenizerSpec
-from pptrain.core.presets import MechanismPreset, sequence_preset
-from pptrain.core.registry import register_mechanism
+from pptrain.core.base import ExecutedSymbolicTask, SymbolicTask, SymbolicTaskFamily, TokenizerSpec
+from pptrain.core.presets import TaskPreset, sequence_preset
+from pptrain.core.registry import register_task
 from pptrain.mechanisms._shared import (
     TokenVocabulary,
     TokenVocabularyBuilder,
@@ -37,7 +37,7 @@ _PROCEDURAL_LENGTHS = (16, 32, 64)
 _PROCEDURAL_TASKS = ("identity", "reverse", "sort", "set", "union", "delete")
 
 
-def _paper_task_preset(task: str, *, max_length: int) -> MechanismPreset:
+def _paper_task_preset(task: str, *, max_length: int) -> TaskPreset:
     return sequence_preset(
         f"paper_{task}_len{max_length}",
         f"Procedural-pretraining {task} preset at sequence length {max_length}.",
@@ -51,7 +51,7 @@ def _paper_task_preset(task: str, *, max_length: int) -> MechanismPreset:
     )
 
 
-def _paper_task_presets() -> tuple[MechanismPreset, ...]:
+def _paper_task_presets() -> tuple[TaskPreset, ...]:
     return tuple(
         _paper_task_preset(task, max_length=max_length)
         for max_length in _PROCEDURAL_LENGTHS
@@ -59,7 +59,7 @@ def _paper_task_presets() -> tuple[MechanismPreset, ...]:
     )
 
 
-PROCEDURAL_PRESETS: tuple[MechanismPreset, ...] = (
+PROCEDURAL_PRESETS: tuple[TaskPreset, ...] = (
     sequence_preset(
         "smoke",
         "Tiny procedural smoke run.",
@@ -81,7 +81,7 @@ class ProceduralProgram:
     right: str | int | None = None
 
 
-class ProceduralMechanism(SymbolicTaskMechanism):
+class ProceduralTaskFamily(SymbolicTaskFamily):
     name = "procedural"
     description = "Short procedural text tasks such as copy, reverse, sort, and addition."
 
@@ -125,10 +125,15 @@ class ProceduralMechanism(SymbolicTaskMechanism):
             left = int(rng.integers(0, self.config.max_number + 1))
             right = int(rng.integers(0, self.config.max_number + 1))
             return ProceduralProgram(left=left, right=right)
-        if task == "union" or task == "delete":
+        if task == "union":
             return ProceduralProgram(
                 left=self._sample_symbol_string(rng),
                 right=self._sample_symbol_string(rng),
+            )
+        if task == "delete":
+            return ProceduralProgram(
+                left=self._sample_symbol_string(rng),
+                right=str(rng.choice(list(self.config.alphabet))),
             )
         return ProceduralProgram(left=self._sample_symbol_string(rng))
 
@@ -152,7 +157,7 @@ class ProceduralMechanism(SymbolicTaskMechanism):
         if task == "delete":
             source = str(program.left)
             query = str(program.right)
-            filtered = "".join(char for char in source if char not in set(query))
+            filtered = _remove_first_occurrence(source, query)
             return f"delete:{source}|{query}=>{filtered}"
         if task == "addition":
             left = int(program.left)
@@ -177,9 +182,21 @@ def _stable_unique_string(text: str) -> str:
     return "".join(dict.fromkeys(text))
 
 
-register_mechanism(
+def _remove_first_occurrence(source: str, query: str) -> str:
+    if not query:
+        return source
+    index = source.find(query[0])
+    if index < 0:
+        return source
+    return source[:index] + source[index + 1 :]
+
+
+register_task(
     "procedural",
-    lambda config: ProceduralMechanism(ProceduralConfig(**config)),
-    description=ProceduralMechanism.description,
+    lambda config: ProceduralTaskFamily(ProceduralConfig(**config)),
+    description=ProceduralTaskFamily.description,
     presets=PROCEDURAL_PRESETS,
 )
+
+
+ProceduralMechanism = ProceduralTaskFamily

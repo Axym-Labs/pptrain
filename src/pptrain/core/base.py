@@ -51,7 +51,7 @@ class ExecutedSymbolicTask:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-class Mechanism(ABC):
+class Task(ABC):
     name: ClassVar[str]
 
     def __init__(self, config: Any) -> None:
@@ -90,7 +90,7 @@ class Mechanism(ABC):
         return {"value": self.config}
 
 
-class TokenSequenceMechanism(Mechanism):
+class TokenSequenceTask(Task):
     max_sampling_attempts: ClassVar[int] = 1
 
     def build_datasets(self, seed: int | None = None) -> DatasetBundle:
@@ -161,7 +161,7 @@ class TokenSequenceMechanism(Mechanism):
         return {}
 
 
-class SymbolicTaskMechanism(TokenSequenceMechanism):
+class SymbolicTaskFamily(TokenSequenceTask):
     task_group_metadata_key: ClassVar[str | None] = "task"
 
     def sample_example(
@@ -209,3 +209,9 @@ class SymbolicTaskMechanism(TokenSequenceMechanism):
             if values:
                 summary[f"{split}_avg_{field_name}"] = float(np.mean(values))
         return summary
+
+
+# Backward-compatible aliases during the terminology transition.
+Mechanism = Task
+TokenSequenceMechanism = TokenSequenceTask
+SymbolicTaskMechanism = SymbolicTaskFamily

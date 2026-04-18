@@ -4,7 +4,7 @@ from pptrain.replication.specs import build_replication_profile
 
 def test_smoke_replication_profile_contains_all_mechanisms(tmp_path) -> None:
     profile = build_replication_profile("smoke", output_dir=str(tmp_path), test_mode=True)
-    names = [study.mechanism_name for study in profile.studies]
+    names = [study.task_name for study in profile.studies]
     assert names == ["nca", "lime", "simpler_tasks", "procedural", "dyck", "summarization"]
     assert profile.context_length == 128
     assert profile.seed_values == (41, 43, 47)
@@ -29,7 +29,7 @@ def test_full_replication_profile_defaults_to_2048_context(tmp_path) -> None:
     assert profile.natural_warmup_run_config.learning_rate == 1e-6
     assert profile.natural_warmup_run_config.save_steps == 221
     assert profile.natural_warmup_run_config.warmup_steps == 44
-    simpler_tasks = next(study for study in profile.studies if study.mechanism_name == "simpler_tasks")
+    simpler_tasks = next(study for study in profile.studies if study.task_name == "simpler_tasks")
     assert simpler_tasks.synthetic_run_config_overrides["learning_rate"] == 1e-6
     assert simpler_tasks.synthetic_run_config_overrides["max_steps"] == 288
     assert simpler_tasks.synthetic_run_config_overrides["warmup_steps"] == 14
@@ -42,11 +42,11 @@ def test_full_replication_profile_defaults_to_2048_context(tmp_path) -> None:
     assert profile.datasets["general_text"].dataset_name == "HuggingFaceFW/fineweb-edu"
     assert profile.datasets["math_text"].dataset_name == "HuggingFaceTB/finemath"
     assert profile.datasets["summary_text"].dataset_name == "vblagoje/cc_news"
-    nca = next(study for study in profile.studies if study.mechanism_name == "nca")
+    nca = next(study for study in profile.studies if study.task_name == "nca")
     assert nca.synthetic_run_config_overrides["max_steps"] == 72
-    lime = next(study for study in profile.studies if study.mechanism_name == "lime")
+    lime = next(study for study in profile.studies if study.task_name == "lime")
     assert lime.synthetic_run_config_overrides["max_steps"] == 288
-    summarization = next(study for study in profile.studies if study.mechanism_name == "summarization")
+    summarization = next(study for study in profile.studies if study.task_name == "summarization")
     assert summarization.synthetic_run_config_overrides["max_steps"] == 288
 
 

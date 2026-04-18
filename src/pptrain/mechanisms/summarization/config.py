@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from pptrain.core.presets import MechanismPreset, sequence_preset
+from pptrain.core.presets import TaskPreset, sequence_preset
 
 
 @dataclass(slots=True)
@@ -51,7 +51,7 @@ _STEP_REFERENCE = "Nath et al. 2021"
 _NONSENSE_REFERENCE = "Krishna et al. 2021"
 
 
-def _paper_step_preset(name: str, description: str, tasks: tuple[str, ...]) -> MechanismPreset:
+def _paper_step_preset(name: str, description: str, tasks: tuple[str, ...]) -> TaskPreset:
     return sequence_preset(
         name,
         description,
@@ -71,7 +71,7 @@ def _paper_step_preset(name: str, description: str, tasks: tuple[str, ...]) -> M
     )
 
 
-def _paper_nonsense_preset(name: str, description: str, tasks: tuple[str, ...]) -> MechanismPreset:
+def _paper_nonsense_preset(name: str, description: str, tasks: tuple[str, ...]) -> TaskPreset:
     return sequence_preset(
         name,
         description,
@@ -95,7 +95,7 @@ def _single_task_presets(
     *,
     prefix: str,
     reference_label: str,
-) -> tuple[MechanismPreset, ...]:
+) -> tuple[TaskPreset, ...]:
     return tuple(
         _paper_nonsense_preset(
             f"{prefix}_{task}_100k",
@@ -106,7 +106,7 @@ def _single_task_presets(
     )
 
 
-SUMMARIZATION_PRESETS: tuple[MechanismPreset, ...] = (
+SUMMARIZATION_PRESETS: tuple[TaskPreset, ...] = (
     sequence_preset(
         "smoke",
         "Tiny summarization smoke run.",

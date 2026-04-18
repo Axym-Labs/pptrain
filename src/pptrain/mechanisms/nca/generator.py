@@ -216,16 +216,12 @@ def create_training_example(
     min_frames: int,
 ) -> tuple[list[int], list[int]]:
     masked_targets = list(tokens)
-    for idx, token in enumerate(masked_targets):
-        position_in_frame = idx % frame_token_length
-        if position_in_frame in (0, frame_token_length - 1):
-            masked_targets[idx] = -100
     prefix = min(min_frames * frame_token_length, len(masked_targets))
     for idx in range(prefix):
         masked_targets[idx] = -100
 
     input_ids = tokens[:-1][:max_length]
-    labels = masked_targets[:-1][:max_length]
+    labels = masked_targets[1:][:max_length]
     return input_ids, labels
 
 

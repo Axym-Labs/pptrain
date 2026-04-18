@@ -28,10 +28,10 @@ Each family ships with paper-backed presets and can also serve as a template for
 ## Quick Start
 
 ```python
-from pptrain import PrePreTrainer, RunConfig, create_mechanism
+from pptrain import PrePreTrainer, RunConfig, create_task
 from pptrain.integrations import HFCausalLMAdapter, HFModelConfig
 trainer = PrePreTrainer(
-    mechanism=create_mechanism("simpler_tasks", {"preset": "paper_binary_1m", "sequence_count": 256, "eval_sequence_count": 64, "max_length": 128}),
+    task=create_task("simpler_tasks", {"preset": "paper_binary_1m", "sequence_count": 256, "eval_sequence_count": 64, "max_length": 128}),
     model_adapter=HFCausalLMAdapter(HFModelConfig(model_name_or_path="sshleifer/tiny-gpt2", config_overrides={"n_positions": 128})),
     run_config=RunConfig(output_dir="runs/smoke", max_steps=20, per_device_train_batch_size=8, per_device_eval_batch_size=8, logging_steps=5, save_steps=20, eval_steps=20),
 )
@@ -50,7 +50,7 @@ For a full runnable version of this example, go to [docs/quickstart.md](https://
 
 To add a custom task family, define how tasks are sampled, executed, and serialized, then register presets around that family. `pptrain` handles the trainer path, tokenizer-spec plumbing, transfer-bundle export, and Hugging Face integration.
 
-Most symbolic or transduction-style additions can start from `SymbolicTaskMechanism`; lower-level simulators can implement `Mechanism` directly. For non-Hugging-Face architectures, use `CallableCausalLMAdapter` when you want full control over model construction, or `VocabSizeCausalLMAdapter` when the upstream model only depends on the synthetic tokenizer vocab size. See [docs/extending.md](https://github.com/Axym-Labs/pptrain/blob/main/docs/extending.md) and [examples/custom_adapter.py](https://github.com/Axym-Labs/pptrain/blob/main/examples/custom_adapter.py).
+Most symbolic or transduction-style additions can start from `SymbolicTaskFamily`; lower-level simulators can implement `Task` directly. For non-Hugging-Face architectures, use `CallableCausalLMAdapter` when you want full control over model construction, or `VocabSizeCausalLMAdapter` when the upstream model only depends on the synthetic tokenizer vocab size. See [docs/extending.md](https://github.com/Axym-Labs/pptrain/blob/main/docs/extending.md) and [examples/custom_adapter.py](https://github.com/Axym-Labs/pptrain/blob/main/examples/custom_adapter.py).
 
 ## Transfer
 

@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import numpy as np
 
-from pptrain.core.base import ExecutedSymbolicTask, SymbolicTask, SymbolicTaskMechanism, TokenizerSpec
-from pptrain.core.registry import register_mechanism
+from pptrain.core.base import ExecutedSymbolicTask, SymbolicTask, SymbolicTaskFamily, TokenizerSpec
+from pptrain.core.registry import register_task
 from pptrain.mechanisms._shared import (
     TokenVocabulary,
     TokenVocabularyBuilder,
@@ -45,7 +45,7 @@ SUPPORTED_SUMMARIZATION_TASKS = {
 }
 
 
-class SummarizationMechanism(SymbolicTaskMechanism):
+class SummarizationTaskFamily(SymbolicTaskFamily):
     name = "summarization"
     description = "Synthetic document transduction tasks spanning STEP-style and nonsense-style summarization pre-pre-training."
     max_sampling_attempts = 32
@@ -256,9 +256,12 @@ class SummarizationMechanism(SymbolicTaskMechanism):
         return f"task:{task}"
 
 
-register_mechanism(
+register_task(
     "summarization",
-    lambda config: SummarizationMechanism(SummarizationConfig(**config)),
-    description=SummarizationMechanism.description,
+    lambda config: SummarizationTaskFamily(SummarizationConfig(**config)),
+    description=SummarizationTaskFamily.description,
     presets=SUMMARIZATION_PRESETS,
 )
+
+
+SummarizationMechanism = SummarizationTaskFamily

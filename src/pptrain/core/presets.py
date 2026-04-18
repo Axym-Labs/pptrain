@@ -5,7 +5,7 @@ from typing import Any, Mapping
 
 
 @dataclass(frozen=True, slots=True)
-class MechanismPreset:
+class TaskPreset:
     name: str
     description: str
     config: dict[str, Any]
@@ -20,11 +20,11 @@ def sequence_preset(
     eval_sequence_count: int,
     reference: str = "",
     **config: Any,
-) -> MechanismPreset:
+) -> TaskPreset:
     payload = dict(config)
     payload["sequence_count"] = sequence_count
     payload["eval_sequence_count"] = eval_sequence_count
-    return MechanismPreset(
+    return TaskPreset(
         name=name,
         description=description,
         config=payload,
@@ -33,9 +33,13 @@ def sequence_preset(
 
 
 def merge_preset_config(
-    preset: MechanismPreset,
+    preset: TaskPreset,
     overrides: Mapping[str, Any],
 ) -> dict[str, Any]:
     resolved = dict(preset.config)
     resolved.update(overrides)
     return resolved
+
+
+# Backward-compatible alias during the terminology transition.
+MechanismPreset = TaskPreset

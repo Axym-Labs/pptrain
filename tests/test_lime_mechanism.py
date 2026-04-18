@@ -1,9 +1,9 @@
-from pptrain.mechanisms import LIMEConfig, LIMEMechanism
-from pptrain.mechanisms.lime import apply_substitutions
+from pptrain.tasks import LIMEConfig, LIMETaskFamily
+from pptrain.tasks.lime import apply_substitutions
 
 
 def test_lime_mechanism_builds_sequences() -> None:
-    mechanism = LIMEMechanism(
+    task = LIMETaskFamily(
         LIMEConfig(
             modes=("induct", "deduct", "abduct"),
             sequence_count=8,
@@ -15,7 +15,7 @@ def test_lime_mechanism_builds_sequences() -> None:
             max_substitution_length=3,
         )
     )
-    bundle = mechanism.build_datasets(seed=5)
+    bundle = task.build_datasets(seed=5)
     assert len(bundle.train_dataset) == 8
     assert len(bundle.eval_dataset) == 3
     sample = bundle.train_dataset[0]

@@ -1,14 +1,14 @@
 # Extending `pptrain`
 
-Most additions should stay local to one mechanism family.
+Most additions should stay local to one task family.
 
-Use `SymbolicTaskMechanism` for symbolic families where you can:
+Use `SymbolicTaskFamily` for symbolic families where you can:
 
 - sample a bounded task or program
 - execute it into a target sequence
 - serialize the result into one causal-LM example
 
-Use `Mechanism` directly only when the family needs a different data or loss path, such as `nca`.
+Use `Task` directly only when the family needs a different data or loss path, such as `nca`.
 
 Minimal registry pattern:
 
@@ -19,11 +19,11 @@ import numpy as np
 
 from pptrain.core import (
     ExecutedSymbolicTask,
-    MechanismPreset,
+    TaskPreset,
     SymbolicTask,
-    SymbolicTaskMechanism,
+    SymbolicTaskFamily,
     TokenizerSpec,
-    register_mechanism,
+    register_task,
 )
 
 
@@ -36,7 +36,7 @@ class RepeatConfig:
 
 
 REPEAT_PRESETS = (
-    MechanismPreset(
+    TaskPreset(
         name="paper_small",
         description="Paper-backed starting point.",
         reference="Author et al. 20XX",
@@ -50,7 +50,7 @@ REPEAT_PRESETS = (
 )
 
 
-class RepeatMechanism(SymbolicTaskMechanism):
+class RepeatTask(SymbolicTaskFamily):
     name = "repeat"
     description = "Predict repeated symbol patterns."
 
@@ -82,10 +82,10 @@ class RepeatMechanism(SymbolicTaskMechanism):
         return ("repeat_count",)
 
 
-register_mechanism(
+register_task(
     "repeat",
-    lambda config: RepeatMechanism(RepeatConfig(**config)),
-    description=RepeatMechanism.description,
+    lambda config: RepeatTask(RepeatConfig(**config)),
+    description=RepeatTask.description,
     presets=REPEAT_PRESETS,
 )
 ```
@@ -94,5 +94,5 @@ Guidelines:
 
 - Add paper-backed presets first. Users should rarely need to start from raw knobs.
 - Keep configs bounded. Add options only when there is a real paper or usage case behind them.
-- Prefer widening an existing family over adding a new top-level mechanism when the sampling pattern is already the same.
+- Prefer widening an existing family over adding a new top-level task when the sampling pattern is already the same.
 - Avoid trainer changes unless the new family truly needs a different data or loss path.

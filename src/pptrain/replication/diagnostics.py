@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM
 
-from pptrain.core.base import DatasetBundle, Mechanism
+from pptrain.core.base import DatasetBundle, Task
 
 
 VARIANT_LABELS = {
@@ -91,9 +91,9 @@ def collect_representation_diagnostics(
     }
 
 
-def collect_cross_mechanism_representation_diagnostics(
+def collect_cross_task_representation_diagnostics(
     *,
-    variant_model_dirs_by_mechanism: dict[str, dict[str, str]],
+    variant_model_dirs_by_task: dict[str, dict[str, str]],
     downstream_bundle: DatasetBundle,
     trust_remote_code: bool,
     max_batches: int,
@@ -115,11 +115,11 @@ def collect_cross_mechanism_representation_diagnostics(
     features_by_variant: dict[str, dict[str, dict[str, np.ndarray]]] = {}
     for variant_name in include_variants:
         features_by_variant[variant_name] = {}
-        for mechanism_name, variant_dirs in variant_model_dirs_by_mechanism.items():
+        for task_name, variant_dirs in variant_model_dirs_by_task.items():
             model_dir = variant_dirs.get(variant_name)
             if model_dir is None:
                 continue
-            features_by_variant[variant_name][mechanism_name] = _extract_model_features(
+            features_by_variant[variant_name][task_name] = _extract_model_features(
                 model_dir=model_dir,
                 batches=batches,
                 trust_remote_code=trust_remote_code,
@@ -127,13 +127,13 @@ def collect_cross_mechanism_representation_diagnostics(
             )
 
     return {
-        "pairwise_logit_divergence_by_variant": _build_cross_mechanism_matrix_bundle(
+        "pairwise_logit_divergence_by_variant": _build_cross_task_matrix_bundle(
             features_by_variant,
             key="logits",
             metric=_jensen_shannon_divergence,
             diagonal_value=0.0,
         ),
-        "pairwise_activation_cka_by_variant": _build_cross_mechanism_matrix_bundle(
+        "pairwise_activation_cka_by_variant": _build_cross_task_matrix_bundle(
             features_by_variant,
             key="hidden",
             metric=_linear_cka,
@@ -142,14 +142,17 @@ def collect_cross_mechanism_representation_diagnostics(
     }
 
 
+collect_cross_mechanism_representation_diagnostics = collect_cross_task_representation_diagnostics
+
+
 def compute_nca_synthetic_token_accuracy(
     *,
-    mechanism: Mechanism,
+    task: Task,
     model_dir: str | Path,
     seed: int,
     max_batches: int = 4,
 ) -> float | None:
-    datasets = mechanism.build_datasets(seed=seed)
+    datasets = task.build_datasets(seed=seed)
     if datasets.eval_dataset is None or datasets.data_collator is None:
         return None
     dataloader = DataLoader(
@@ -354,7 +357,7 @@ def _pairwise_matrix(
     }
 
 
-def _build_cross_mechanism_matrix_bundle(
+def _build_cross_task_matrix_bundle(
     features_by_variant: dict[str, dict[str, dict[str, np.ndarray]]],
     *,
     key: str,
@@ -362,24 +365,24 @@ def _build_cross_mechanism_matrix_bundle(
     diagonal_value: float,
 ) -> dict[str, Any]:
     bundle: dict[str, Any] = {}
-    for variant_name, mechanism_features in features_by_variant.items():
-        mechanism_names = sorted(mechanism_features)
-        if len(mechanism_names) < 2:
+    for variant_name, task_features in features_by_variant.items():
+        task_names = sorted(task_features)
+        if len(task_names) < 2:
             continue
-        matrix = np.zeros((len(mechanism_names), len(mechanism_names)), dtype=np.float64)
-        for row_index, row_name in enumerate(mechanism_names):
-            for col_index, col_name in enumerate(mechanism_names):
+        matrix = np.zeros((len(task_names), len(task_names)), dtype=np.float64)
+        for row_index, row_name in enumerate(task_names):
+            for col_index, col_name in enumerate(task_names):
                 if row_index == col_index:
                     matrix[row_index, col_index] = diagonal_value
                 elif row_index < col_index:
                     matrix[row_index, col_index] = metric(
-                        mechanism_features[row_name][key],
-                        mechanism_features[col_name][key],
+                        task_features[row_name][key],
+                        task_features[col_name][key],
                     )
                     matrix[col_index, row_index] = matrix[row_index, col_index]
         bundle[variant_name] = {
-            "mechanisms": mechanism_names,
-            "labels": mechanism_names,
+            "tasks": task_names,
+            "labels": task_names,
             "matrix": matrix.tolist(),
         }
     return bundle

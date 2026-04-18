@@ -7,7 +7,7 @@ import pytest
 
 from pptrain.core.config import RunConfig
 from pptrain.replication import runner
-from pptrain.replication.specs import MechanismStudySpec, ReplicationProfile, build_replication_profile
+from pptrain.replication.specs import TaskStudySpec, ReplicationProfile, build_replication_profile
 
 
 def _dummy_profile(tmp_path: Path) -> ReplicationProfile:
@@ -23,8 +23,8 @@ def _dummy_profile(tmp_path: Path) -> ReplicationProfile:
         natural_warmup_run_config=RunConfig(output_dir=str(tmp_path / "warmup"), max_steps=1),
         datasets={},
         studies=(
-            MechanismStudySpec(
-                mechanism_name="nca",
+            TaskStudySpec(
+                task_name="nca",
                 primary_preset="smoke",
                 dataset_key="general_text",
                 claim_categories=(),
@@ -77,7 +77,7 @@ def test_replication_campaign_can_resume_after_partial_failure(monkeypatch, tmp_
     snapshot_path = tmp_path / "replication" / "replication_results.json"
     assert snapshot_path.exists()
     partial_payload = json.loads(snapshot_path.read_text(encoding="utf-8"))
-    partial_seed_runs = partial_payload["mechanisms"]["nca"]["seed_runs"]
+    partial_seed_runs = partial_payload["tasks"]["nca"]["seed_runs"]
     assert [item["seed"] for item in partial_seed_runs] == [11]
     assert partial_payload["status"] == "in_progress"
     assert call_order == [11, 23]
@@ -99,7 +99,7 @@ def test_replication_campaign_can_resume_after_partial_failure(monkeypatch, tmp_
 
     assert resumed_calls == [23]
     assert payload["status"] == "completed"
-    assert [item["seed"] for item in payload["mechanisms"]["nca"]["seed_runs"]] == [11, 23]
+    assert [item["seed"] for item in payload["tasks"]["nca"]["seed_runs"]] == [11, 23]
 
 
 def test_replication_resume_rejects_mismatched_profile(monkeypatch, tmp_path: Path) -> None:
@@ -113,7 +113,7 @@ def test_replication_resume_rejects_mismatched_profile(monkeypatch, tmp_path: Pa
             "test_mode": False,
             "seed_values": [1, 2, 3],
         },
-        "mechanisms": {},
+        "tasks": {},
     }
     output_dir = tmp_path / "replication"
     output_dir.mkdir(parents=True)

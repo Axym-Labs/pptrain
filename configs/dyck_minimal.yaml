@@ -1,4 +1,4 @@
-mechanism:
+task:
   name: dyck
   config:
     preset: smoke

@@ -1,9 +1,9 @@
-from pptrain.mechanisms import SimplerTasksConfig, SimplerTasksMechanism
-from pptrain.mechanisms.simpler_tasks.tasks import apply_binary_task, apply_unary_task
+from pptrain.tasks import SimplerTasksConfig, SimplerTasksTaskFamily
+from pptrain.tasks.simpler_tasks.tasks import apply_binary_task, apply_unary_task
 
 
 def test_simpler_tasks_builds_sequences() -> None:
-    mechanism = SimplerTasksMechanism(
+    task = SimplerTasksTaskFamily(
         SimplerTasksConfig(
             tasks=("set", "length", "search", "union"),
             sequence_count=8,
@@ -12,7 +12,7 @@ def test_simpler_tasks_builds_sequences() -> None:
             max_symbols=10,
         )
     )
-    bundle = mechanism.build_datasets(seed=7)
+    bundle = task.build_datasets(seed=7)
     assert len(bundle.train_dataset) == 8
     assert len(bundle.eval_dataset) == 3
     sample = bundle.train_dataset[0]

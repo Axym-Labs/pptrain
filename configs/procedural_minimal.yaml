@@ -1,4 +1,4 @@
-mechanism:
+task:
   name: procedural
   config:
     preset: smoke

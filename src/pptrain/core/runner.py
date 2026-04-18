@@ -7,7 +7,7 @@ from typing import Any
 
 from transformers import Trainer, TrainerCallback
 
-from pptrain.core.base import Mechanism
+from pptrain.core.base import Task
 from pptrain.core.checkpoints import find_latest_checkpoint
 from pptrain.core.config import RunConfig
 from pptrain.core.plotting import save_training_summary_plot
@@ -30,11 +30,11 @@ class EpochTrainDatasetRefreshCallback(TrainerCallback):
     def __init__(
         self,
         *,
-        mechanism: Mechanism,
+        task: Task,
         train_dataset: Any,
         seed: int | None,
     ) -> None:
-        self.mechanism = mechanism
+        self.task = task
         self.train_dataset = train_dataset
         self.seed = seed
         self.history: list[dict[str, Any]] = []
@@ -43,7 +43,7 @@ class EpochTrainDatasetRefreshCallback(TrainerCallback):
         epoch_index = int(state.epoch or 0)
         if epoch_index <= 0:
             return control
-        metadata = self.mechanism.refresh_train_dataset(
+        metadata = self.task.refresh_train_dataset(
             self.train_dataset,
             seed=self.seed,
             epoch_index=epoch_index,
@@ -56,25 +56,30 @@ class EpochTrainDatasetRefreshCallback(TrainerCallback):
 class PrePreTrainer:
     def __init__(
         self,
-        mechanism: Mechanism,
         model_adapter: CausalLMAdapter,
         run_config: RunConfig,
+        task: Task | None = None,
+        mechanism: Task | None = None,
     ) -> None:
-        self.mechanism = mechanism
+        resolved_task = task if task is not None else mechanism
+        if resolved_task is None:
+            raise ValueError("Either task or mechanism must be provided.")
+        self.task = resolved_task
+        self.mechanism = resolved_task
         self.model_adapter = model_adapter
         self.run_config = run_config
 
     def fit(self) -> PrePreTrainingRun:
-        datasets = self.mechanism.build_datasets(seed=self.run_config.seed)
-        tokenizer_spec = self.mechanism.tokenizer_spec()
+        datasets = self.task.build_datasets(seed=self.run_config.seed)
+        tokenizer_spec = self.task.tokenizer_spec()
         model = self.model_adapter.create_prepretrain_model(tokenizer_spec)
         if self.run_config.gradient_checkpointing and getattr(model, "config", None) is not None:
             if hasattr(model.config, "use_cache"):
                 model.config.use_cache = False
         refresh_callback = None
-        if self.mechanism.uses_epoch_train_dataset_refresh():
+        if self.task.uses_epoch_train_dataset_refresh():
             refresh_callback = EpochTrainDatasetRefreshCallback(
-                mechanism=self.mechanism,
+                task=self.task,
                 train_dataset=datasets.train_dataset,
                 seed=self.run_config.seed,
             )
@@ -115,9 +120,9 @@ class PrePreTrainer:
             run_dir=run_dir,
             model_dir=model_dir,
             tokenizer_spec=tokenizer_spec.to_dict(),
-            mechanism_name=self.mechanism.name,
-            mechanism_config=self.mechanism.export_config(),
-            transfer_policy_name=self.mechanism.default_transfer_policy_name(),
+            task_name=self.task.name,
+            task_config=self.task.export_config(),
+            transfer_policy_name=self.task.default_transfer_policy_name(),
         )
         bundle.save()
         return PrePreTrainingRun(
@@ -135,9 +140,9 @@ class PrePreTrainer:
         metrics: dict[str, Any],
     ) -> None:
         payload = {
-            "mechanism": {
-                "name": self.mechanism.name,
-                "config": self.mechanism.export_config(),
+            "task": {
+                "name": self.task.name,
+                "config": self.task.export_config(),
             },
             "model": self.model_adapter.config.to_dict(),
             "run": asdict(self.run_config),

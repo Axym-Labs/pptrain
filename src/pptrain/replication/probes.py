@@ -8,8 +8,7 @@ import torch.nn.functional as F
 from transformers import PreTrainedModel, PreTrainedTokenizerBase
 
 from pptrain.eval.base import EvalResult
-from pptrain.eval.generation import generate_text
-from pptrain.eval.tasks.gsm8k import GSM8KTask, extract_final_number
+from pptrain.eval.tasks.gsm8k import GSM8KTask
 from pptrain.replication.specs import ArithmeticProbeConfig, GSM8KEvalConfig, NeedleProbeConfig
 
 

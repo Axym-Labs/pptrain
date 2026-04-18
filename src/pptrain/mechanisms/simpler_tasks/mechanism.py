@@ -4,8 +4,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from pptrain.core.base import ExecutedSymbolicTask, SymbolicTask, SymbolicTaskMechanism, TokenizerSpec
-from pptrain.core.registry import register_mechanism
+from pptrain.core.base import ExecutedSymbolicTask, SymbolicTask, SymbolicTaskFamily, TokenizerSpec
+from pptrain.core.registry import register_task
 from pptrain.mechanisms._shared import (
     TokenVocabulary,
     TokenVocabularyBuilder,
@@ -40,7 +40,7 @@ class SimplerTaskProgram:
     right: list[str] | None = None
 
 
-class SimplerTasksMechanism(SymbolicTaskMechanism):
+class SimplerTasksTaskFamily(SymbolicTaskFamily):
     name = "simpler_tasks"
     description = "Synthetic set/copy/query tasks derived from the simpler synthetic pretraining line."
     max_sampling_attempts = 32
@@ -186,9 +186,12 @@ class SimplerTasksMechanism(SymbolicTaskMechanism):
         return f"task:{task}"
 
 
-register_mechanism(
+register_task(
     "simpler_tasks",
-    lambda config: SimplerTasksMechanism(SimplerTasksConfig(**config)),
-    description=SimplerTasksMechanism.description,
+    lambda config: SimplerTasksTaskFamily(SimplerTasksConfig(**config)),
+    description=SimplerTasksTaskFamily.description,
     presets=SIMPLER_TASKS_PRESETS,
 )
+
+
+SimplerTasksMechanism = SimplerTasksTaskFamily

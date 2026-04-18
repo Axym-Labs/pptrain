@@ -13,13 +13,13 @@ import torch
 from transformers import set_seed as hf_set_seed
 
 from pptrain.core.config import RunConfig
-from pptrain.core.registry import create_mechanism
+from pptrain.core.registry import create_task
 from pptrain.core.runner import PrePreTrainer
 from pptrain.integrations.hf import HFCausalLMAdapter, HFModelConfig
 from pptrain.replication.data import build_text_sequence_bundle, build_text_train_eval_bundle
 from pptrain.replication.diagnostics import (
     VARIANT_LABELS,
-    collect_cross_mechanism_representation_diagnostics,
+    collect_cross_task_representation_diagnostics,
     collect_representation_diagnostics,
     compute_nca_synthetic_token_accuracy,
 )
@@ -34,7 +34,7 @@ from pptrain.replication.specs import (
     CLAIM_REASONING_TRANSFER,
     CLAIM_SYNTHETIC_ORDERING,
     CLAIM_TRANSFER_SIGNAL,
-    MechanismStudySpec,
+    TaskStudySpec,
     ReplicationProfile,
     build_replication_profile,
 )
@@ -46,11 +46,82 @@ from pptrain.replication.training import (
 )
 
 
+def _run_config_signature(run_config: RunConfig) -> dict[str, Any]:
+    payload = asdict(run_config)
+    payload.pop("output_dir", None)
+    payload.pop("seed", None)
+    return payload
+
+
+def _study_axis_signature(*, study: TaskStudySpec, profile: ReplicationProfile) -> dict[str, Any]:
+    downstream_run_config = _apply_run_config_overrides(profile.downstream_run_config, study.downstream_run_config_overrides)
+    natural_warmup_run_config = _apply_run_config_overrides(
+        profile.natural_warmup_run_config,
+        study.natural_warmup_run_config_overrides,
+    )
+    return {
+        "dataset_key": study.dataset_key,
+        "context_length": profile.context_length,
+        "downstream_run_config": _run_config_signature(downstream_run_config),
+        "compare_against_natural_warmup": study.compare_against_natural_warmup,
+        "natural_warmup_run_config": (
+            _run_config_signature(natural_warmup_run_config)
+            if study.compare_against_natural_warmup
+            else None
+        ),
+    }
+
+
+def _axis_cache_key(*, study: TaskStudySpec, profile: ReplicationProfile) -> str:
+    return json.dumps(_study_axis_signature(study=study, profile=profile), sort_keys=True)
+
+
+def _collect_axis_specs(
+    *,
+    studies: list[TaskStudySpec],
+    profile: ReplicationProfile,
+) -> dict[str, dict[str, Any]]:
+    axis_specs: dict[str, dict[str, Any]] = {}
+    dataset_counts: dict[str, int] = {}
+    for study in studies:
+        axis_key = _axis_cache_key(study=study, profile=profile)
+        downstream_run_config = _apply_run_config_overrides(profile.downstream_run_config, study.downstream_run_config_overrides)
+        natural_warmup_run_config = _apply_run_config_overrides(
+            profile.natural_warmup_run_config,
+            study.natural_warmup_run_config_overrides,
+        )
+        if axis_key not in axis_specs:
+            dataset_count = dataset_counts.get(study.dataset_key, 0)
+            dataset_counts[study.dataset_key] = dataset_count + 1
+            axis_name = study.dataset_key if dataset_count == 0 else f"{study.dataset_key}_{dataset_count + 1}"
+            axis_specs[axis_key] = {
+                "axis_name": axis_name,
+                "dataset_key": study.dataset_key,
+                "downstream_run_config": downstream_run_config,
+                "natural_warmup_run_config": natural_warmup_run_config,
+                "compare_against_natural_warmup": bool(study.compare_against_natural_warmup),
+                "run_reasoning_probe": bool(study.run_reasoning_probe),
+                "run_algorithmic_probe": bool(study.run_algorithmic_probe),
+            }
+            continue
+        axis_specs[axis_key]["compare_against_natural_warmup"] = (
+            axis_specs[axis_key]["compare_against_natural_warmup"] or bool(study.compare_against_natural_warmup)
+        )
+        axis_specs[axis_key]["run_reasoning_probe"] = (
+            axis_specs[axis_key]["run_reasoning_probe"] or bool(study.run_reasoning_probe)
+        )
+        axis_specs[axis_key]["run_algorithmic_probe"] = (
+            axis_specs[axis_key]["run_algorithmic_probe"] or bool(study.run_algorithmic_probe)
+        )
+    return axis_specs
+
+
 def run_replication_campaign(
     *,
     profile_name: str,
     output_dir: str,
     test_mode: bool = False,
+    tasks: list[str] | None = None,
     mechanisms: list[str] | None = None,
     model_name_or_path: str | None = None,
     context_length: int | None = None,
@@ -59,6 +130,7 @@ def run_replication_campaign(
     resume: bool = False,
 ) -> dict[str, Any]:
     output_path = Path(output_dir)
+    selected_tasks = tasks if tasks is not None else mechanisms
     profile = build_replication_profile(
         profile_name,
         output_dir=str(output_path),
@@ -91,7 +163,7 @@ def run_replication_campaign(
     selected_studies = [
         study
         for study in profile.studies
-        if mechanisms is None or study.mechanism_name in set(mechanisms)
+        if selected_tasks is None or study.task_name in set(selected_tasks)
     ]
     payload: dict[str, Any] = existing_payload or {
         "profile": {
@@ -103,7 +175,7 @@ def run_replication_campaign(
             "seed_values": list(seed_values),
         },
         "environment": environment,
-        "mechanisms": {},
+        "tasks": {},
     }
     payload["environment"] = environment
     payload["status"] = "in_progress"
@@ -111,25 +183,25 @@ def run_replication_campaign(
     _write_replication_snapshot(payload, output_path)
 
     for study in selected_studies:
-        payload["mechanisms"][study.mechanism_name] = _run_study(
+        payload["tasks"][study.task_name] = _run_study(
             study=study,
             profile=profile,
             hf_config=hf_config,
             adapter=adapter,
             tokenizer=tokenizer,
-            output_dir=output_path / study.mechanism_name,
+            output_dir=output_path / study.task_name,
             seed_values=seed_values,
-            existing_result=payload["mechanisms"].get(study.mechanism_name),
-            progress_callback=lambda result, mechanism_name=study.mechanism_name: _persist_study_progress(
+            existing_result=payload["tasks"].get(study.task_name),
+            progress_callback=lambda result, task_name=study.task_name: _persist_study_progress(
                 payload=payload,
                 output_path=output_path,
-                mechanism_name=mechanism_name,
+                task_name=task_name,
                 study_result=result,
             ),
         )
         _write_replication_snapshot(payload, output_path)
 
-    payload["cross_mechanism_diagnostics"] = _collect_cross_mechanism_diagnostics(
+    payload["cross_task_diagnostics"] = _collect_cross_task_diagnostics(
         payload=payload,
         profile=profile,
         hf_config=hf_config,
@@ -146,7 +218,7 @@ def run_replication_campaign(
 
 def _run_study(
     *,
-    study: MechanismStudySpec,
+    study: TaskStudySpec,
     profile: ReplicationProfile,
     hf_config: HFModelConfig,
     adapter: HFCausalLMAdapter,
@@ -185,7 +257,7 @@ def _run_study(
 
 def _build_study_payload(
     *,
-    study: MechanismStudySpec,
+    study: TaskStudySpec,
     seed_values: tuple[int, ...],
     seed_runs: list[dict[str, Any]],
 ) -> dict[str, Any]:
@@ -203,7 +275,7 @@ def _build_study_payload(
 
 def _run_seeded_study(
     *,
-    study: MechanismStudySpec,
+    study: TaskStudySpec,
     profile: ReplicationProfile,
     hf_config: HFModelConfig,
     adapter: HFCausalLMAdapter,
@@ -243,7 +315,7 @@ def _run_seeded_study(
         datasets=downstream_bundle,
         run_config=_with_auto_precision(downstream_run_config, output_dir / "scratch", seed=seed),
         output_dir=output_dir / "scratch",
-        metadata={"variant": "scratch", "study": study.mechanism_name, "seed": seed},
+        metadata={"variant": "scratch", "study": study.task_name, "seed": seed},
     )
     variants["scratch"] = _serialize_variant_result(
         stage_result=scratch_result,
@@ -302,14 +374,14 @@ def _run_seeded_study(
                 datasets=warmup_bundle.dataset_bundle,
                 run_config=_with_auto_precision(natural_warmup_run_config, output_dir / "baseline_stage1", seed=seed),
                 output_dir=output_dir / "baseline_stage1",
-                metadata={"variant": "baseline_stage1", "study": study.mechanism_name, "seed": seed},
+                metadata={"variant": "baseline_stage1", "study": study.task_name, "seed": seed},
             )
             continuation_stage = train_downstream_stage(
                 model=warmup_model,
                 datasets=downstream_bundle,
                 run_config=_with_auto_precision(downstream_run_config, output_dir / "compute_matched_baseline", seed=seed),
                 output_dir=output_dir / "compute_matched_baseline",
-                metadata={"variant": "compute_matched_baseline", "study": study.mechanism_name, "seed": seed},
+                metadata={"variant": "compute_matched_baseline", "study": study.task_name, "seed": seed},
             )
             variants["compute_matched_baseline"] = _serialize_variant_result(
                 stage_result=continuation_stage,
@@ -341,7 +413,7 @@ def _run_transferred_variant(
     *,
     variant_name: str,
     preset_name: str,
-    study: MechanismStudySpec,
+    study: TaskStudySpec,
     profile: ReplicationProfile,
     hf_config: HFModelConfig,
     adapter: HFCausalLMAdapter,
@@ -352,8 +424,8 @@ def _run_transferred_variant(
 ) -> dict[str, Any]:
     synthetic_run_config = _apply_run_config_overrides(profile.synthetic_run_config, study.synthetic_run_config_overrides)
     downstream_run_config = _apply_run_config_overrides(profile.downstream_run_config, study.downstream_run_config_overrides)
-    mechanism = create_mechanism(
-        study.mechanism_name,
+    task = create_task(
+        study.task_name,
         {
             "preset": preset_name,
             "sequence_count": study.sequence_count_override,
@@ -365,7 +437,7 @@ def _run_transferred_variant(
     synthetic_run_config = _with_auto_precision(synthetic_run_config, output_dir / "synthetic", seed=seed)
     _set_global_seed(seed)
     trainer = PrePreTrainer(
-        mechanism=mechanism,
+        task=task,
         model_adapter=adapter,
         run_config=synthetic_run_config,
     )
@@ -384,7 +456,7 @@ def _run_transferred_variant(
         datasets=downstream_bundle,
         run_config=_with_auto_precision(downstream_run_config, output_dir / "downstream", seed=seed),
         output_dir=output_dir / "downstream",
-        metadata={"variant": variant_name, "study": study.mechanism_name, "preset": preset_name, "seed": seed},
+        metadata={"variant": variant_name, "study": study.task_name, "preset": preset_name, "seed": seed},
     )
     payload = _serialize_variant_result(
         stage_result=continuation_result,
@@ -397,11 +469,11 @@ def _run_transferred_variant(
         "plot_path": str(synthetic_run.plot_path) if synthetic_run.plot_path is not None else None,
     }
     payload["transfer_report"] = asdict(transfer_report)
-    if study.mechanism_name == "nca":
+    if study.task_name == "nca":
         payload.setdefault("synthetic_run", {})
         payload["synthetic_run"]["direct_metrics"] = {
             "heldout_synthetic_token_accuracy": compute_nca_synthetic_token_accuracy(
-                mechanism=mechanism,
+                task=task,
                 model_dir=synthetic_run.model_dir,
                 seed=seed,
                 max_batches=profile.diagnostic_max_batches,
@@ -412,7 +484,7 @@ def _run_transferred_variant(
     return payload
 
 
-def _run_probes(*, study: MechanismStudySpec, profile: ReplicationProfile, model, tokenizer) -> dict[str, Any]:
+def _run_probes(*, study: TaskStudySpec, profile: ReplicationProfile, model, tokenizer) -> dict[str, Any]:
     probes: dict[str, Any] = {}
     if study.run_reasoning_probe:
         if profile.arithmetic_probe is not None:
@@ -461,7 +533,7 @@ def _serialize_variant_result(
     return payload
 
 
-def _evaluate_claims(*, study: MechanismStudySpec, variants: dict[str, Any]) -> dict[str, Any]:
+def _evaluate_claims(*, study: TaskStudySpec, variants: dict[str, Any]) -> dict[str, Any]:
     claims: dict[str, Any] = {}
     scratch = variants.get("scratch")
     transferred = variants.get("transferred")
@@ -755,7 +827,7 @@ def _aggregate_diagnostics(seed_runs: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def _collect_cross_mechanism_diagnostics(
+def _collect_cross_task_diagnostics(
     *,
     payload: dict[str, Any],
     profile: ReplicationProfile,
@@ -773,10 +845,10 @@ def _collect_cross_mechanism_diagnostics(
         eval_target_token_count=_diagnostic_token_budget(profile),
     )
     per_seed: list[dict[str, Any]] = []
-    mechanism_items = payload.get("mechanisms", {})
+    task_items = _payload_tasks(payload)
     for seed_index, _seed_value in enumerate(seed_values):
-        variant_dirs_by_mechanism: dict[str, dict[str, str]] = {}
-        for mechanism_name, result in mechanism_items.items():
+        variant_dirs_by_task: dict[str, dict[str, str]] = {}
+        for task_name, result in task_items.items():
             seed_runs = result.get("seed_runs", [])
             if seed_index >= len(seed_runs):
                 continue
@@ -786,12 +858,12 @@ def _collect_cross_mechanism_diagnostics(
                 if variant_payload.get("model_dir")
             }
             if variant_dirs:
-                variant_dirs_by_mechanism[mechanism_name] = variant_dirs
-        if not variant_dirs_by_mechanism:
+                variant_dirs_by_task[task_name] = variant_dirs
+        if not variant_dirs_by_task:
             continue
         per_seed.append(
-            collect_cross_mechanism_representation_diagnostics(
-                variant_model_dirs_by_mechanism=variant_dirs_by_mechanism,
+            collect_cross_task_representation_diagnostics(
+                variant_model_dirs_by_task=variant_dirs_by_task,
                 downstream_bundle=diagnostic_bundle,
                 trust_remote_code=hf_config.trust_remote_code,
                 max_batches=profile.diagnostic_max_batches,
@@ -873,7 +945,7 @@ def _aggregate_cross_variant_matrices(seed_payloads: list[dict[str, Any]], key: 
             continue
         matrices = np.asarray([entry["matrix"] for entry in per_seed_variant], dtype=np.float64)
         aggregated[variant_name] = {
-            "mechanisms": per_seed_variant[0]["mechanisms"],
+            "tasks": per_seed_variant[0]["tasks"],
             "labels": list(per_seed_variant[0]["labels"]),
             "mean": np.mean(matrices, axis=0).tolist(),
             "std": np.std(matrices, axis=0, ddof=1).tolist() if len(per_seed_variant) > 1 else np.zeros_like(matrices[0]).tolist(),
@@ -1061,10 +1133,10 @@ def _persist_study_progress(
     *,
     payload: dict[str, Any],
     output_path: Path,
-    mechanism_name: str,
+    task_name: str,
     study_result: dict[str, Any],
 ) -> None:
-    payload.setdefault("mechanisms", {})[mechanism_name] = study_result
+    _payload_tasks(payload)[task_name] = study_result
     payload["status"] = "in_progress"
     payload.pop("artifacts", None)
     _write_replication_snapshot(payload, output_path)
@@ -1081,6 +1153,10 @@ def _load_resume_payload(
     if not results_path.exists():
         return None
     payload = json.loads(results_path.read_text(encoding="utf-8"))
+    if "tasks" not in payload and "mechanisms" in payload:
+        payload["tasks"] = payload.pop("mechanisms")
+    if "cross_task_diagnostics" not in payload and "cross_mechanism_diagnostics" in payload:
+        payload["cross_task_diagnostics"] = payload.pop("cross_mechanism_diagnostics")
     profile_payload = payload.get("profile", {})
     expected = {
         "name": profile.name,
@@ -1102,6 +1178,21 @@ def _load_resume_payload(
             "with different profile settings."
         )
     return payload
+
+
+def _payload_tasks(payload: dict[str, Any]) -> dict[str, Any]:
+    tasks = payload.get("tasks")
+    if isinstance(tasks, dict):
+        return tasks
+    legacy = payload.get("mechanisms")
+    if isinstance(legacy, dict):
+        payload["tasks"] = legacy
+        return legacy
+    payload["tasks"] = {}
+    return payload["tasks"]
+
+
+_collect_cross_mechanism_diagnostics = _collect_cross_task_diagnostics
 
 
 def _set_global_seed(seed: int) -> None:

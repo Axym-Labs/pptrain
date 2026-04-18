@@ -4,9 +4,9 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from pptrain.core.base import ExecutedSymbolicTask, SymbolicTask, SymbolicTaskMechanism, TokenizerSpec
-from pptrain.core.presets import MechanismPreset, sequence_preset
-from pptrain.core.registry import register_mechanism
+from pptrain.core.base import ExecutedSymbolicTask, SymbolicTask, SymbolicTaskFamily, TokenizerSpec
+from pptrain.core.presets import TaskPreset, sequence_preset
+from pptrain.core.registry import register_task
 from pptrain.mechanisms._shared import (
     TokenVocabulary,
     TokenVocabularyBuilder,
@@ -41,7 +41,7 @@ def _benchmark_preset(
     sequence_count: int,
     modes: tuple[str, ...],
     reference: str,
-) -> MechanismPreset:
+) -> TaskPreset:
     return sequence_preset(
         name,
         description,
@@ -53,7 +53,7 @@ def _benchmark_preset(
     )
 
 
-def _single_mode_presets() -> tuple[MechanismPreset, ...]:
+def _single_mode_presets() -> tuple[TaskPreset, ...]:
     scales = (
         ("paper_individual_100k", 100_000),
         ("paper_individual_1m", 1_000_000),
@@ -63,7 +63,7 @@ def _single_mode_presets() -> tuple[MechanismPreset, ...]:
         "deduct": "Deduct-only LIME preset",
         "abduct": "Abduct-only LIME preset",
     }
-    result: list[MechanismPreset] = []
+    result: list[TaskPreset] = []
     for prefix, sequence_count in scales:
         for mode in ("induct", "deduct", "abduct"):
             result.append(
@@ -78,7 +78,7 @@ def _single_mode_presets() -> tuple[MechanismPreset, ...]:
     return tuple(result)
 
 
-LIME_PRESETS: tuple[MechanismPreset, ...] = (
+LIME_PRESETS: tuple[TaskPreset, ...] = (
     sequence_preset(
         "smoke",
         "Tiny LIME smoke run.",
@@ -217,7 +217,7 @@ def _sample_unique(rng: np.random.Generator, pool: str, count: int) -> list[str]
     return rng.choice(list(pool), size=count, replace=False).tolist()
 
 
-class LIMEMechanism(SymbolicTaskMechanism):
+class LIMETaskFamily(SymbolicTaskFamily):
     name = "lime"
     description = "LIME-style induction, deduction, and abduction substitution tasks."
     max_sampling_attempts = 32
@@ -381,9 +381,12 @@ class LIMEMechanism(SymbolicTaskMechanism):
         return f"mode:{mode}"
 
 
-register_mechanism(
+register_task(
     "lime",
-    lambda config: LIMEMechanism(LIMEConfig(**config)),
-    description=LIMEMechanism.description,
+    lambda config: LIMETaskFamily(LIMEConfig(**config)),
+    description=LIMETaskFamily.description,
     presets=LIME_PRESETS,
 )
+
+
+LIMEMechanism = LIMETaskFamily

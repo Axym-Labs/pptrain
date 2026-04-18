@@ -5,7 +5,7 @@ from pptrain.replication.reporting import save_replication_reports
 
 def test_replication_reporting_writes_matrix_and_plots(tmp_path: Path) -> None:
     payload = {
-        "mechanisms": {
+        "tasks": {
             "nca": {
                 "claims": {
                     "transfer_signal": {"replicated": True},
@@ -53,7 +53,7 @@ def test_replication_reporting_writes_matrix_and_plots(tmp_path: Path) -> None:
 
 def test_replication_reporting_skips_nonfinite_errorbar_metrics(tmp_path: Path) -> None:
     payload = {
-        "mechanisms": {
+        "tasks": {
             "nca": {
                 "claims": {},
                 "preset": "paper_web_text",

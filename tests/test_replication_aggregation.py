@@ -7,13 +7,13 @@ from pptrain.replication.specs import (
     CLAIM_COMPUTE_MATCHED_GAIN,
     CLAIM_NEAR_REAL_BASELINE,
     CLAIM_TRANSFER_SIGNAL,
-    MechanismStudySpec,
+    TaskStudySpec,
 )
 
 
 def test_evaluate_claims_uses_eval_loss_when_perplexity_overflows() -> None:
-    study = MechanismStudySpec(
-        mechanism_name="nca",
+    study = TaskStudySpec(
+        task_name="nca",
         primary_preset="paper_web_text",
         dataset_key="general_text",
         claim_categories=(CLAIM_TRANSFER_SIGNAL, CLAIM_COMPUTE_MATCHED_GAIN, CLAIM_NEAR_REAL_BASELINE),

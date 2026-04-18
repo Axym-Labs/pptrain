@@ -1,8 +1,8 @@
-from pptrain.mechanisms import DyckConfig, DyckMechanism
+from pptrain.tasks import DyckConfig, DyckTaskFamily
 
 
 def test_dyck_mechanism_builds_sequences() -> None:
-    mechanism = DyckMechanism(
+    task = DyckTaskFamily(
         DyckConfig(
             num_bracket_types=3,
             min_pairs=4,
@@ -13,7 +13,7 @@ def test_dyck_mechanism_builds_sequences() -> None:
             max_length=32,
         )
     )
-    bundle = mechanism.build_datasets(seed=3)
+    bundle = task.build_datasets(seed=3)
     assert len(bundle.train_dataset) == 6
     assert len(bundle.eval_dataset) == 2
     sample = bundle.train_dataset[0]

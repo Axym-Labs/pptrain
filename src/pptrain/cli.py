@@ -8,11 +8,12 @@ from typing import Any
 import yaml
 
 from pptrain.core.config import RunConfig
-from pptrain.core.registry import registered_mechanisms
+from pptrain.core.registry import registered_tasks
 from pptrain.core.runner import PrePreTrainer
-from pptrain.core.registry import create_mechanism
+from pptrain.core.registry import create_task
 from pptrain.eval.runner import run_transfer_evaluation
 from pptrain.integrations import HFCausalLMAdapter, HFModelConfig
+from pptrain.parity_cli import add_parity_subparser, run_parity_command
 from pptrain.replication import run_replication_campaign
 
 
@@ -22,15 +23,15 @@ def _load_yaml(path: Path) -> dict[str, Any]:
 
 
 def _build_trainer(config: dict[str, Any]) -> PrePreTrainer:
-    mechanism_block = config["mechanism"]
-    mechanism = create_mechanism(
-        mechanism_block["name"],
-        mechanism_block.get("config", {}),
+    task_block = config.get("task", config["mechanism"])
+    task = create_task(
+        task_block["name"],
+        task_block.get("config", {}),
     )
     model = HFCausalLMAdapter(HFModelConfig(**config["model"]))
     run_config = RunConfig(**config["run"])
     return PrePreTrainer(
-        mechanism=mechanism,
+        task=task,
         model_adapter=model,
         run_config=run_config,
     )
@@ -43,7 +44,7 @@ def _fit_summary(
     eval_path: Path | None = None,
 ) -> dict[str, Any]:
     return {
-        "task": trainer.mechanism.name,
+        "task": trainer.task.name,
         "run_dir": str(run.run_dir),
         "model_dir": str(run.model_dir),
         "plot_path": str(run.plot_path) if run.plot_path is not None else None,
@@ -70,8 +71,8 @@ def _print_fit_summary(summary: dict[str, Any], *, json_output: bool) -> None:
             print(f"  {name}: {value}")
 
 
-def _print_mechanisms(*, json_output: bool, mechanism_name: str | None = None) -> None:
-    mechanisms = [
+def _print_tasks(*, json_output: bool, task_name: str | None = None) -> None:
+    tasks = [
         {
             "name": item.name,
             "description": item.description,
@@ -84,17 +85,17 @@ def _print_mechanisms(*, json_output: bool, mechanism_name: str | None = None) -
                 for preset in item.presets
             ],
         }
-        for item in registered_mechanisms()
+        for item in registered_tasks()
     ]
-    if mechanism_name is not None:
-        mechanisms = [item for item in mechanisms if item["name"] == mechanism_name]
-        if not mechanisms:
-            raise KeyError(f"Unknown task '{mechanism_name}'.")
+    if task_name is not None:
+        tasks = [item for item in tasks if item["name"] == task_name]
+        if not tasks:
+            raise KeyError(f"Unknown task '{task_name}'.")
     if json_output:
-        print(json.dumps(mechanisms, indent=2))
+        print(json.dumps(tasks, indent=2))
         return
-    width = max((len(item["name"]) for item in mechanisms), default=0)
-    for item in mechanisms:
+    width = max((len(item["name"]) for item in tasks), default=0)
+    for item in tasks:
         print(f"{item['name']:<{width}}  {item['description']}")
         presets = item["presets"]
         if presets:
@@ -127,9 +128,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     fit_parser.add_argument("--json", action="store_true", help="Print run summary as JSON.")
 
+    tasks_parser = subparsers.add_parser(
+        "tasks",
+        help="List registered upstream tasks.",
+    )
+    tasks_parser.add_argument("name", nargs="?", help="Optional task name filter.")
+    tasks_parser.add_argument("--json", action="store_true", help="Print task info as JSON.")
     mechanisms_parser = subparsers.add_parser(
         "mechanisms",
-        help="List registered upstream tasks.",
+        help="Deprecated alias for `tasks`.",
     )
     mechanisms_parser.add_argument("name", nargs="?", help="Optional task name filter.")
     mechanisms_parser.add_argument("--json", action="store_true", help="Print task info as JSON.")
@@ -155,10 +162,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Run the very low-compute smoke validation profile.",
     )
     replicate_parser.add_argument(
+        "--task",
+        action="append",
+        dest="tasks",
+        help="Optional task name filter. Can be passed multiple times.",
+    )
+    replicate_parser.add_argument(
         "--mechanism",
         action="append",
-        dest="mechanisms",
-        help="Optional task name filter. Can be passed multiple times.",
+        dest="tasks",
+        help=argparse.SUPPRESS,
     )
     replicate_parser.add_argument(
         "--model-name-or-path",
@@ -186,6 +199,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     replicate_parser.set_defaults(remove_checkpoints=True)
     replicate_parser.add_argument("--json", action="store_true", help="Print the top-level campaign payload as JSON.")
+    add_parity_subparser(subparsers)
     return parser
 
 
@@ -197,8 +211,8 @@ def main(argv: list[str] | None = None) -> None:
         run = trainer.fit()
         eval_path = _maybe_run_eval(args, trainer, run)
         _print_fit_summary(_fit_summary(trainer, run, eval_path=eval_path), json_output=args.json)
-    elif args.command == "mechanisms":
-        _print_mechanisms(json_output=args.json, mechanism_name=args.name)
+    elif args.command in {"tasks", "mechanisms"}:
+        _print_tasks(json_output=args.json, task_name=args.name)
     elif args.command == "replicate":
         seed_values = None
         if args.seeds:
@@ -207,7 +221,7 @@ def main(argv: list[str] | None = None) -> None:
             profile_name=args.profile,
             output_dir=str(args.output_dir),
             test_mode=bool(args.test),
-            mechanisms=args.mechanisms,
+            tasks=args.tasks,
             model_name_or_path=args.model_name_or_path,
             context_length=args.context_length,
             seeds=seed_values,
@@ -222,6 +236,8 @@ def main(argv: list[str] | None = None) -> None:
             print("artifacts:")
             for name, path in sorted(payload.get("artifacts", {}).items()):
                 print(f"  {name}: {path}")
+    elif args.command == "parity":
+        run_parity_command(args)
 
 
 if __name__ == "__main__":

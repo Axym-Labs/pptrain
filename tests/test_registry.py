@@ -1,14 +1,14 @@
-from pptrain.core.registry import create_mechanism, registered_mechanisms, registered_presets
-from pptrain.mechanisms import NCAMechanism
+from pptrain.core.registry import create_task, registered_presets, registered_tasks
+from pptrain.tasks import NCATask
 
 
-def test_registry_builds_nca_mechanism() -> None:
-    mechanism = create_mechanism("nca", {"sequence_count": 4, "eval_sequence_count": 2})
-    assert isinstance(mechanism, NCAMechanism)
+def test_registry_builds_nca_task() -> None:
+    task = create_task("nca", {"sequence_count": 4, "eval_sequence_count": 2})
+    assert isinstance(task, NCATask)
 
 
-def test_registry_lists_registered_mechanisms() -> None:
-    names = [item.name for item in registered_mechanisms()]
+def test_registry_lists_registered_tasks() -> None:
+    names = [item.name for item in registered_tasks()]
     assert "dyck" in names
     assert "lime" in names
     assert "nca" in names
@@ -27,7 +27,7 @@ def test_registry_exposes_presets() -> None:
 
 
 def test_registry_merges_preset_config_with_overrides() -> None:
-    mechanism = create_mechanism(
+    task = create_task(
         "nca",
         {
             "preset": "smoke",
@@ -35,7 +35,7 @@ def test_registry_merges_preset_config_with_overrides() -> None:
             "eval_sequence_count": 2,
         },
     )
-    assert isinstance(mechanism, NCAMechanism)
-    assert mechanism.config.grid_size == 8
-    assert mechanism.config.sequence_count == 4
-    assert mechanism.config.eval_sequence_count == 2
+    assert isinstance(task, NCATask)
+    assert task.config.grid_size == 8
+    assert task.config.sequence_count == 4
+    assert task.config.eval_sequence_count == 2

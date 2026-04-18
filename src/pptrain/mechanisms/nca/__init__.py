@@ -1,5 +1,4 @@
 from pptrain.mechanisms.nca.config import NCAConfig
-from pptrain.mechanisms.nca.mechanism import NCAMechanism
+from pptrain.mechanisms.nca.mechanism import NCAMechanism, NCATask
 
-__all__ = ["NCAConfig", "NCAMechanism"]
-
+__all__ = ["NCAConfig", "NCATask", "NCAMechanism"]

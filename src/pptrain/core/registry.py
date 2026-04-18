@@ -3,80 +3,88 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable
 
-from pptrain.core.base import Mechanism
-from pptrain.core.presets import MechanismPreset, merge_preset_config
+from pptrain.core.base import Task
+from pptrain.core.presets import TaskPreset, merge_preset_config
 
-MechanismFactory = Callable[[dict[str, Any]], Mechanism]
+TaskFactory = Callable[[dict[str, Any]], Task]
 
 
 @dataclass(frozen=True, slots=True)
-class RegisteredMechanism:
+class RegisteredTask:
     name: str
     description: str
-    presets: tuple[MechanismPreset, ...] = ()
+    presets: tuple[TaskPreset, ...] = ()
 
 
 @dataclass(slots=True)
-class _MechanismEntry:
-    factory: MechanismFactory
+class _TaskEntry:
+    factory: TaskFactory
     description: str
-    presets: dict[str, MechanismPreset]
+    presets: dict[str, TaskPreset]
 
 
-_MECHANISMS: dict[str, _MechanismEntry] = {}
+_TASKS: dict[str, _TaskEntry] = {}
 
 
-def _ensure_mechanisms_loaded() -> None:
-    if not _MECHANISMS:
-        import pptrain.mechanisms  # noqa: F401
+def _ensure_tasks_loaded() -> None:
+    if not _TASKS:
+        import pptrain.tasks  # noqa: F401
 
 
-def register_mechanism(
+def register_task(
     name: str,
-    factory: MechanismFactory,
+    factory: TaskFactory,
     *,
     description: str = "",
-    presets: tuple[MechanismPreset, ...] = (),
+    presets: tuple[TaskPreset, ...] = (),
 ) -> None:
-    _MECHANISMS[name] = _MechanismEntry(
+    _TASKS[name] = _TaskEntry(
         factory=factory,
         description=description,
         presets={preset.name: preset for preset in presets},
     )
 
 
-def create_mechanism(name: str, config: dict[str, Any]) -> Mechanism:
-    _ensure_mechanisms_loaded()
-    if name not in _MECHANISMS:
-        raise KeyError(f"Unknown mechanism '{name}'. Registered: {sorted(_MECHANISMS)}")
-    entry = _MECHANISMS[name]
+def create_task(name: str, config: dict[str, Any]) -> Task:
+    _ensure_tasks_loaded()
+    if name not in _TASKS:
+        raise KeyError(f"Unknown task '{name}'. Registered: {sorted(_TASKS)}")
+    entry = _TASKS[name]
     resolved_config = dict(config)
     preset_name = resolved_config.pop("preset", None)
     if preset_name is not None:
         if preset_name not in entry.presets:
             raise KeyError(
-                f"Unknown preset '{preset_name}' for mechanism '{name}'. "
+                f"Unknown preset '{preset_name}' for task '{name}'. "
                 f"Registered: {sorted(entry.presets)}"
             )
         resolved_config = merge_preset_config(entry.presets[preset_name], resolved_config)
     return entry.factory(resolved_config)
 
 
-def registered_mechanisms() -> tuple[RegisteredMechanism, ...]:
-    _ensure_mechanisms_loaded()
+def registered_tasks() -> tuple[RegisteredTask, ...]:
+    _ensure_tasks_loaded()
     return tuple(
-        RegisteredMechanism(
+        RegisteredTask(
             name=name,
             description=entry.description,
             presets=tuple(entry.presets[preset_name] for preset_name in sorted(entry.presets)),
         )
-        for name, entry in sorted(_MECHANISMS.items())
+        for name, entry in sorted(_TASKS.items())
     )
 
 
-def registered_presets(name: str) -> tuple[MechanismPreset, ...]:
-    _ensure_mechanisms_loaded()
-    if name not in _MECHANISMS:
-        raise KeyError(f"Unknown mechanism '{name}'. Registered: {sorted(_MECHANISMS)}")
-    entry = _MECHANISMS[name]
+def registered_presets(name: str) -> tuple[TaskPreset, ...]:
+    _ensure_tasks_loaded()
+    if name not in _TASKS:
+        raise KeyError(f"Unknown task '{name}'. Registered: {sorted(_TASKS)}")
+    entry = _TASKS[name]
     return tuple(entry.presets[preset_name] for preset_name in sorted(entry.presets))
+
+
+# Backward-compatible aliases during the terminology transition.
+MechanismFactory = TaskFactory
+RegisteredMechanism = RegisteredTask
+register_mechanism = register_task
+create_mechanism = create_task
+registered_mechanisms = registered_tasks

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import string
 
-from pptrain.core.presets import MechanismPreset, sequence_preset
+from pptrain.core.presets import TaskPreset, sequence_preset
 from pptrain.mechanisms.simpler_tasks.tasks import SUPPORTED_SIMPLER_TASKS
 
 
@@ -35,7 +35,7 @@ class SimplerTasksConfig:
     max_length: int = 128
 
 
-def _single_task_preset(task: str, *, sequence_count: int, max_length: int, reference: str) -> MechanismPreset:
+def _single_task_preset(task: str, *, sequence_count: int, max_length: int, reference: str) -> TaskPreset:
     return sequence_preset(
         f"paper_{task}_{'1m' if sequence_count == 1_000_000 else '100k'}",
         f"Single-task {task} preset from the simpler synthetic pretraining benchmark.",
@@ -51,7 +51,7 @@ def _single_task_preset(task: str, *, sequence_count: int, max_length: int, refe
     )
 
 
-def _single_task_presets() -> tuple[MechanismPreset, ...]:
+def _single_task_presets() -> tuple[TaskPreset, ...]:
     reference = "Wu et al. 2022"
     base_lengths = {
         "count": 256,
@@ -67,7 +67,7 @@ def _single_task_presets() -> tuple[MechanismPreset, ...]:
         "set_1_minus_2": 320,
         "set_2_minus_1": 320,
     }
-    result: list[MechanismPreset] = []
+    result: list[TaskPreset] = []
     for task in SUPPORTED_SIMPLER_TASKS:
         if task in {"copy", "identity", "set"}:
             continue
@@ -82,7 +82,7 @@ def _single_task_presets() -> tuple[MechanismPreset, ...]:
     return tuple(result)
 
 
-SIMPLER_TASKS_PRESETS: tuple[MechanismPreset, ...] = (
+SIMPLER_TASKS_PRESETS: tuple[TaskPreset, ...] = (
     sequence_preset(
         "smoke",
         "Tiny simpler-tasks smoke run.",

@@ -63,7 +63,7 @@ CLAIM_LABELS = {
     "near_real_baseline": "Close to matched baseline",
 }
 
-MECHANISM_LABELS = {
+TASK_LABELS = {
     "nca": "NCA",
     "lime": "LIME",
     "simpler_tasks": "Simpler tasks",
@@ -95,6 +95,14 @@ def _claim_status(claim: dict[str, Any] | None) -> str:
     if replicated is False:
         return "contradicted"
     return "not_evaluated"
+
+
+def _payload_tasks(payload: dict[str, Any]) -> dict[str, Any]:
+    tasks = payload.get("tasks")
+    if isinstance(tasks, dict):
+        return tasks
+    legacy = payload.get("mechanisms")
+    return legacy if isinstance(legacy, dict) else {}
 
 
 def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) -> dict[str, Path]:
@@ -161,7 +169,7 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
         xlabel="Effective rank",
         zero_floor=True,
     )
-    pairwise_logit_plot_path = _save_cross_mechanism_matrix_grid(
+    pairwise_logit_plot_path = _save_cross_task_matrix_grid(
         payload,
         cross_key="pairwise_logit_divergence_by_variant",
         output_path=output / "pairwise_logit_divergence.png",
@@ -169,7 +177,7 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
         scale=1.0e4,
         top_label="Pairwise Jensen-Shannon divergence between task-pretrained models (x1e4 nats, lower is better)",
     )
-    pairwise_activation_plot_path = _save_cross_mechanism_matrix_grid(
+    pairwise_activation_plot_path = _save_cross_task_matrix_grid(
         payload,
         cross_key="pairwise_activation_cka_by_variant",
         output_path=output / "pairwise_activation_cka.png",
@@ -226,23 +234,23 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
 
 def _build_claim_dataframe(pd, payload: dict[str, Any]):
     rows: dict[str, dict[str, str]] = {}
-    for mechanism_name, result in payload["mechanisms"].items():
+    for task_name, result in _payload_tasks(payload).items():
         claims = result["claims"]
-        rows[mechanism_name] = {
+        rows[task_name] = {
             column: STATUS_TO_EMOJI[_claim_status(claims.get(column))]
             for column in CLAIM_COLUMNS
         }
     dataframe = pd.DataFrame.from_dict(rows, orient="index")
     dataframe.index.name = "task"
-    dataframe = dataframe.rename(index=MECHANISM_LABELS, columns=CLAIM_LABELS)
+    dataframe = dataframe.rename(index=TASK_LABELS, columns=CLAIM_LABELS)
     return dataframe
 
 
 def _dataframe_to_markdown(dataframe) -> str:
     columns = ["task", *list(dataframe.columns)]
     rows = ["| " + " | ".join(columns) + " |", "| " + " | ".join(["---"] * len(columns)) + " |"]
-    for mechanism_name, values in dataframe.iterrows():
-        row = [mechanism_name, *[str(value) for value in values.tolist()]]
+    for task_name, values in dataframe.iterrows():
+        row = [task_name, *[str(value) for value in values.tolist()]]
         rows.append("| " + " | ".join(row) + " |")
     return "\n".join(rows) + "\n"
 
@@ -379,13 +387,13 @@ def _build_report_markdown(
 
 
 def _save_claim_matrix_plot(payload: dict[str, Any], output_path: Path) -> Path:
-    mechanisms = list(payload["mechanisms"])
+    tasks = list(_payload_tasks(payload))
     matrix = [
-        [STATUS_TO_INDEX[_claim_status(payload["mechanisms"][name]["claims"].get(column))] for column in CLAIM_COLUMNS]
-        for name in mechanisms
+        [STATUS_TO_INDEX[_claim_status(_payload_tasks(payload)[name]["claims"].get(column))] for column in CLAIM_COLUMNS]
+        for name in tasks
     ]
     _set_plot_style()
-    figure, axis = plt.subplots(1, 1, figsize=(10, max(2.8, 0.5 * len(mechanisms))))
+    figure, axis = plt.subplots(1, 1, figsize=(10, max(2.8, 0.5 * len(tasks))))
     axis.imshow(
         matrix,
         cmap=ListedColormap(["#f4d9dd", "#eceef2", "#fff0bf", "#d8e7f4"]),
@@ -395,15 +403,15 @@ def _save_claim_matrix_plot(payload: dict[str, Any], output_path: Path) -> Path:
     )
     axis.set_xticks(range(len(CLAIM_COLUMNS)))
     axis.set_xticklabels([CLAIM_LABELS[column] for column in CLAIM_COLUMNS], rotation=25, ha="right")
-    axis.set_yticks(range(len(mechanisms)))
-    axis.set_yticklabels([MECHANISM_LABELS.get(name, name) for name in mechanisms])
+    axis.set_yticks(range(len(tasks)))
+    axis.set_yticklabels([TASK_LABELS.get(name, name) for name in tasks])
     axis.set_xticks([index - 0.5 for index in range(1, len(CLAIM_COLUMNS))], minor=True)
-    axis.set_yticks([index - 0.5 for index in range(1, len(mechanisms))], minor=True)
+    axis.set_yticks([index - 0.5 for index in range(1, len(tasks))], minor=True)
     axis.grid(which="minor", color="#ffffff", linewidth=1.0)
     axis.tick_params(which="minor", bottom=False, left=False)
-    for row_index, mechanism_name in enumerate(mechanisms):
+    for row_index, task_name in enumerate(tasks):
         for column_index, column_name in enumerate(CLAIM_COLUMNS):
-            status = _claim_status(payload["mechanisms"][mechanism_name]["claims"].get(column_name))
+            status = _claim_status(_payload_tasks(payload)[task_name]["claims"].get(column_name))
             axis.text(column_index, row_index, STATUS_TO_PLOT_TEXT[status], ha="center", va="center", fontsize=7)
     figure.tight_layout()
     figure.savefig(output_path, dpi=150, bbox_inches="tight")
@@ -422,7 +430,7 @@ def _save_errorbar_plot(
     xgrid_step: float | None = None,
 ) -> Path:
     items = []
-    for mechanism_name, result in payload["mechanisms"].items():
+    for task_name, result in _payload_tasks(payload).items():
         metric = result.get("metrics", {}).get(metric_key)
         if metric is None or metric.get("mean") is None:
             continue
@@ -430,7 +438,7 @@ def _save_errorbar_plot(
         std = float(metric.get("std") or 0.0)
         if not (np.isfinite(mean) and np.isfinite(std)):
             continue
-        items.append((MECHANISM_LABELS.get(mechanism_name, mechanism_name), mean, std))
+        items.append((TASK_LABELS.get(task_name, task_name), mean, std))
     _set_plot_style()
     figure, axis = plt.subplots(1, 1, figsize=(9, max(2.8, 0.45 * max(len(items), 1))))
     if items:
@@ -463,7 +471,7 @@ def _save_errorbar_plot(
 
 def _save_probe_gain_plot(payload: dict[str, Any], output_path: Path) -> Path | None:
     items = []
-    for mechanism_name, result in payload["mechanisms"].items():
+    for task_name, result in _payload_tasks(payload).items():
         metrics = result.get("metrics", {})
         reasoning = metrics.get("reasoning_accuracy_gain")
         algorithmic = metrics.get("algorithmic_accuracy_gain")
@@ -471,12 +479,12 @@ def _save_probe_gain_plot(payload: dict[str, Any], output_path: Path) -> Path | 
             mean = float(reasoning["mean"])
             std = float(reasoning.get("std") or 0.0)
             if _finite_mean_std(mean, std):
-                items.append((f"{MECHANISM_LABELS.get(mechanism_name, mechanism_name)} reasoning", mean, std))
+                items.append((f"{TASK_LABELS.get(task_name, task_name)} reasoning", mean, std))
         if algorithmic is not None and algorithmic.get("mean") is not None:
             mean = float(algorithmic["mean"])
             std = float(algorithmic.get("std") or 0.0)
             if _finite_mean_std(mean, std):
-                items.append((f"{MECHANISM_LABELS.get(mechanism_name, mechanism_name)} algorithmic", mean, std))
+                items.append((f"{TASK_LABELS.get(task_name, task_name)} algorithmic", mean, std))
     if not items:
         return None
     values = np.asarray([item[1] for item in items], dtype=float)
@@ -502,7 +510,7 @@ def _save_probe_gain_plot(payload: dict[str, Any], output_path: Path) -> Path | 
 
 
 def _save_loss_overlay_plot(payload: dict[str, Any], output_path: Path) -> Path:
-    items = list(payload["mechanisms"].items())
+    items = list(_payload_tasks(payload).items())
     _set_plot_style()
     ncols = min(3, max(1, len(items)))
     nrows = int(np.ceil(len(items) / ncols))
@@ -513,7 +521,7 @@ def _save_loss_overlay_plot(payload: dict[str, Any], output_path: Path) -> Path:
         "transferred": {"color": BRIGHT_BAR_EDGE, "linestyle": "-"},
         "compute_matched_baseline": {"color": WARM_BAR_EDGE, "linestyle": "--"},
     }
-    for axis, (mechanism_name, result) in zip(flat_axes, items):
+    for axis, (task_name, result) in zip(flat_axes, items):
         curves = _collect_loss_curves(result.get("seed_runs", []))
         for variant_name, curve in curves.items():
             steps = np.asarray(curve["steps"], dtype=float)
@@ -523,7 +531,7 @@ def _save_loss_overlay_plot(payload: dict[str, Any], output_path: Path) -> Path:
             axis.plot(steps, means, label=curve["label"], color=style["color"], linestyle=style["linestyle"], linewidth=1.4)
             if len(stds) == len(means):
                 axis.fill_between(steps, means - stds, means + stds, color=style["color"], alpha=0.14)
-        axis.set_title(MECHANISM_LABELS.get(mechanism_name, mechanism_name), fontsize=8)
+        axis.set_title(TASK_LABELS.get(task_name, task_name), fontsize=8)
         axis.set_xlabel("Step")
         axis.set_ylabel("Eval loss")
         axis.grid(alpha=0.15)
@@ -558,7 +566,7 @@ def _save_variant_category_plot(
     categories: list[tuple[str, list[tuple[str, float, float]]]] = []
     for variant_name in include_variants:
         rows = []
-        for mechanism_name, result in payload["mechanisms"].items():
+        for task_name, result in _payload_tasks(payload).items():
             summary = result.get("diagnostics", {}).get(diagnostic_key)
             if summary is None or variant_name not in summary:
                 continue
@@ -568,7 +576,7 @@ def _save_variant_category_plot(
             if _finite_mean_std(mean, std):
                 rows.append(
                     (
-                        MECHANISM_LABELS.get(mechanism_name, mechanism_name),
+                        TASK_LABELS.get(task_name, task_name),
                         mean,
                         std,
                     )
@@ -621,7 +629,7 @@ def _save_transferred_metric_plot(
     zero_floor: bool = False,
 ) -> Path:
     items = []
-    for mechanism_name, result in payload["mechanisms"].items():
+    for task_name, result in _payload_tasks(payload).items():
         diagnostics = result.get("diagnostics", {})
         summary = diagnostics.get("activation_effective_rank")
         if metric_key == "transferred_effective_rank" and summary and "transferred" in summary:
@@ -631,7 +639,7 @@ def _save_transferred_metric_plot(
             if _finite_mean_std(mean, std):
                 items.append(
                     (
-                        MECHANISM_LABELS.get(mechanism_name, mechanism_name),
+                        TASK_LABELS.get(task_name, task_name),
                         mean,
                         std,
                     )
@@ -660,7 +668,7 @@ def _save_transferred_metric_plot(
     return output_path
 
 
-def _save_cross_mechanism_matrix_grid(
+def _save_cross_task_matrix_grid(
     payload: dict[str, Any],
     *,
     cross_key: str,
@@ -670,7 +678,7 @@ def _save_cross_mechanism_matrix_grid(
     top_label: str,
     shared_scale: bool = True,
 ) -> Path:
-    diagnostics = payload.get("cross_mechanism_diagnostics", {}).get(cross_key, {})
+    diagnostics = payload.get("cross_task_diagnostics", payload.get("cross_mechanism_diagnostics", {})).get(cross_key, {})
     items = [(variant_name, diagnostic) for variant_name, diagnostic in diagnostics.items() if diagnostic]
     _set_plot_style()
     num_categories = max(len(items), 1)
@@ -705,7 +713,7 @@ def _save_cross_mechanism_matrix_grid(
             vmax = local_max if local_max > local_min else local_min + 1.0
         display_matrix = np.where(np.isfinite(matrix), matrix, vmin)
         axis.imshow(display_matrix, cmap=PASTEL_BLUE_MAP, aspect="auto", vmin=vmin, vmax=vmax)
-        labels = [MECHANISM_LABELS.get(name, name) for name in diagnostic["labels"]]
+        labels = [TASK_LABELS.get(name, name) for name in diagnostic["labels"]]
         axis.set_xticks(range(len(labels)))
         axis.set_yticks(range(len(labels)))
         axis.set_xticklabels(labels, rotation=25, ha="right")
@@ -744,7 +752,7 @@ def _save_effect_summary_plot(payload: dict[str, Any], output_path: Path) -> Pat
         ("reasoning_accuracy_gain", "Reasoning\n(points)"),
         ("algorithmic_accuracy_gain", "Algorithmic\n(points)"),
     )
-    for mechanism_name, result in payload["mechanisms"].items():
+    for task_name, result in _payload_tasks(payload).items():
         metrics = result.get("metrics", {})
         row = []
         std_row = []
@@ -754,7 +762,7 @@ def _save_effect_summary_plot(payload: dict[str, Any], output_path: Path) -> Pat
             std_row.append(float(summary.get("std") or 0.0) if summary and summary.get("mean") is not None else np.nan)
         rows.append(row)
         std_rows.append(std_row)
-        labels.append(MECHANISM_LABELS.get(mechanism_name, mechanism_name))
+        labels.append(TASK_LABELS.get(task_name, task_name))
     matrix = np.asarray(rows, dtype=float)
     std_matrix = np.asarray(std_rows, dtype=float)
     color_matrix = np.zeros_like(matrix)
@@ -813,10 +821,10 @@ def _build_metrics_table_markdown(payload: dict[str, Any]) -> str:
         "nca synth acc",
     ]
     rows = ["| " + " | ".join(columns) + " |", "| " + " | ".join(["---"] * len(columns)) + " |"]
-    for mechanism_name, result in payload["mechanisms"].items():
+    for task_name, result in _payload_tasks(payload).items():
         metrics = result.get("metrics", {})
         row = [
-            MECHANISM_LABELS.get(mechanism_name, mechanism_name),
+            TASK_LABELS.get(task_name, task_name),
             str(result.get("preset", "")),
             str(len(result.get("seed_values", []))),
             _format_summary(metrics.get("scratch_perplexity")),
@@ -860,7 +868,7 @@ def _format_diagnostic_summary(summary: dict[str, Any] | None, variant_name: str
 
 
 def _build_nca_note(payload: dict[str, Any]) -> str:
-    nca = payload["mechanisms"].get("nca")
+    nca = _payload_tasks(payload).get("nca")
     if not nca:
         return "No NCA-specific synthetic diagnostic was available for this run."
     summary = nca.get("metrics", {}).get("nca_synthetic_token_accuracy")
@@ -875,7 +883,7 @@ def _build_nca_note(payload: dict[str, Any]) -> str:
 
 def _build_probe_note(payload: dict[str, Any]) -> str:
     values = []
-    for result in payload["mechanisms"].values():
+    for result in _payload_tasks(payload).values():
         metrics = result.get("metrics", {})
         for metric_name in ("reasoning_accuracy_gain", "algorithmic_accuracy_gain"):
             summary = metrics.get(metric_name)

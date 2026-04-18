@@ -4,10 +4,10 @@ from dataclasses import asdict
 
 import numpy as np
 
-from pptrain.core.base import DatasetBundle, Mechanism, TokenizerSpec
+from pptrain.core.base import DatasetBundle, Task, TokenizerSpec
 from pptrain.core.collator import CausalLMCollator
 from pptrain.core.datasets import ListSequenceDataset, MutableListSequenceDataset
-from pptrain.core.registry import register_mechanism
+from pptrain.core.registry import register_task
 from pptrain.mechanisms.nca.config import NCAConfig, NCA_PRESETS
 from pptrain.mechanisms.nca.generator import (
     create_training_example,
@@ -18,7 +18,7 @@ from pptrain.mechanisms.nca.generator import (
 )
 
 
-class NCAMechanism(Mechanism):
+class NCATask(Task):
     name = "nca"
     description = "Neural cellular automata trajectories serialized into patch-token sequences."
 
@@ -225,9 +225,12 @@ class NCAMechanism(Mechanism):
         return int(sequence.generate_state(1, dtype=np.uint32)[0])
 
 
-register_mechanism(
+register_task(
     "nca",
-    lambda config: NCAMechanism(NCAConfig(**config)),
-    description=NCAMechanism.description,
+    lambda config: NCATask(NCAConfig(**config)),
+    description=NCATask.description,
     presets=NCA_PRESETS,
 )
+
+
+NCAMechanism = NCATask

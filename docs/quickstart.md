@@ -3,10 +3,10 @@
 This example uses a paper-backed preset, trains a small upstream model, and exports a transfer bundle for downstream pretraining.
 
 ```python
-from pptrain import PrePreTrainer, RunConfig, create_mechanism
+from pptrain import PrePreTrainer, RunConfig, create_task
 from pptrain.integrations import HFCausalLMAdapter, HFModelConfig
 
-mechanism = create_mechanism(
+task = create_task(
     "simpler_tasks",
     {
         "preset": "paper_binary_1m",
@@ -17,7 +17,7 @@ mechanism = create_mechanism(
 )
 
 trainer = PrePreTrainer(
-    mechanism=mechanism,
+    task=task,
     model_adapter=HFCausalLMAdapter(
         HFModelConfig(
             model_name_or_path="sshleifer/tiny-gpt2",

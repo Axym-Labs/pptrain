@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from pptrain.core.presets import MechanismPreset, sequence_preset
+from pptrain.core.presets import TaskPreset, sequence_preset
 
 
 @dataclass(slots=True)
@@ -29,7 +29,7 @@ class NCAConfig:
     regenerate_train_each_epoch: bool = True
 
 
-NCA_PRESETS: tuple[MechanismPreset, ...] = (
+NCA_PRESETS: tuple[TaskPreset, ...] = (
     sequence_preset(
         "smoke",
         "Tiny local NCA smoke run for API and transfer validation.",

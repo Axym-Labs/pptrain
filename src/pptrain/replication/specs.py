@@ -69,8 +69,8 @@ class GSM8KEvalConfig:
 
 
 @dataclass(frozen=True, slots=True)
-class MechanismStudySpec:
-    mechanism_name: str
+class TaskStudySpec:
+    task_name: str
     primary_preset: str
     dataset_key: str
     claim_categories: tuple[str, ...]
@@ -88,6 +88,10 @@ class MechanismStudySpec:
     run_reasoning_probe: bool = False
     run_algorithmic_probe: bool = False
 
+    @property
+    def mechanism_name(self) -> str:
+        return self.task_name
+
 
 @dataclass(frozen=True, slots=True)
 class ReplicationProfile:
@@ -101,12 +105,15 @@ class ReplicationProfile:
     downstream_run_config: RunConfig
     natural_warmup_run_config: RunConfig
     datasets: dict[str, TextDatasetSpec]
-    studies: tuple[MechanismStudySpec, ...]
+    studies: tuple[TaskStudySpec, ...]
     diagnostic_max_batches: int = 4
     diagnostic_max_positions_per_batch: int = 64
     needle_probe: NeedleProbeConfig | None = None
     arithmetic_probe: ArithmeticProbeConfig | None = None
     gsm8k_eval: GSM8KEvalConfig | None = None
+
+
+MechanismStudySpec = TaskStudySpec
 
 
 def build_replication_profile(
@@ -173,8 +180,8 @@ def _build_smoke_profile(
         ),
     }
     studies = (
-        MechanismStudySpec(
-            mechanism_name="nca",
+        TaskStudySpec(
+            task_name="nca",
             primary_preset="smoke",
             dataset_key="general_text",
             claim_categories=(
@@ -192,8 +199,8 @@ def _build_smoke_profile(
             compare_against_natural_warmup=True,
             run_reasoning_probe=True,
         ),
-        MechanismStudySpec(
-            mechanism_name="lime",
+        TaskStudySpec(
+            task_name="lime",
             primary_preset="smoke",
             dataset_key="math_text",
             claim_categories=(
@@ -210,8 +217,8 @@ def _build_smoke_profile(
             compare_against_natural_warmup=True,
             run_reasoning_probe=True,
         ),
-        MechanismStudySpec(
-            mechanism_name="simpler_tasks",
+        TaskStudySpec(
+            task_name="simpler_tasks",
             primary_preset="smoke",
             dataset_key="general_text",
             claim_categories=(
@@ -226,8 +233,8 @@ def _build_smoke_profile(
             max_length_override=96,
             compare_against_natural_warmup=True,
         ),
-        MechanismStudySpec(
-            mechanism_name="procedural",
+        TaskStudySpec(
+            task_name="procedural",
             primary_preset="smoke",
             dataset_key="general_text",
             claim_categories=(
@@ -244,8 +251,8 @@ def _build_smoke_profile(
             compare_against_natural_warmup=True,
             run_algorithmic_probe=True,
         ),
-        MechanismStudySpec(
-            mechanism_name="dyck",
+        TaskStudySpec(
+            task_name="dyck",
             primary_preset="smoke",
             dataset_key="general_text",
             claim_categories=(
@@ -262,8 +269,8 @@ def _build_smoke_profile(
             compare_against_natural_warmup=True,
             run_algorithmic_probe=True,
         ),
-        MechanismStudySpec(
-            mechanism_name="summarization",
+        TaskStudySpec(
+            task_name="summarization",
             primary_preset="smoke",
             dataset_key="summary_text",
             claim_categories=(
@@ -376,8 +383,8 @@ def _build_paper_proxy_profile(
         ),
     }
     studies = (
-        MechanismStudySpec(
-            mechanism_name="nca",
+        TaskStudySpec(
+            task_name="nca",
             primary_preset="paper_web_text",
             dataset_key="general_text",
             claim_categories=(
@@ -401,8 +408,8 @@ def _build_paper_proxy_profile(
             compare_against_natural_warmup=True,
             run_reasoning_probe=True,
         ),
-        MechanismStudySpec(
-            mechanism_name="lime",
+        TaskStudySpec(
+            task_name="lime",
             primary_preset="paper_benchmark_100k",
             dataset_key="math_text",
             claim_categories=(
@@ -425,8 +432,8 @@ def _build_paper_proxy_profile(
             compare_against_natural_warmup=True,
             run_reasoning_probe=True,
         ),
-        MechanismStudySpec(
-            mechanism_name="simpler_tasks",
+        TaskStudySpec(
+            task_name="simpler_tasks",
             primary_preset="paper_unary_core_100k",
             dataset_key="general_text",
             claim_categories=(
@@ -449,8 +456,8 @@ def _build_paper_proxy_profile(
             downstream_run_config_overrides={"learning_rate": 1e-6},
             compare_against_natural_warmup=True,
         ),
-        MechanismStudySpec(
-            mechanism_name="procedural",
+        TaskStudySpec(
+            task_name="procedural",
             primary_preset="paper_set_len64",
             dataset_key="general_text",
             claim_categories=(
@@ -473,8 +480,8 @@ def _build_paper_proxy_profile(
             compare_against_natural_warmup=True,
             run_algorithmic_probe=True,
         ),
-        MechanismStudySpec(
-            mechanism_name="dyck",
+        TaskStudySpec(
+            task_name="dyck",
             primary_preset="paper_k64",
             dataset_key="general_text",
             claim_categories=(
@@ -497,8 +504,8 @@ def _build_paper_proxy_profile(
             compare_against_natural_warmup=True,
             run_algorithmic_probe=True,
         ),
-        MechanismStudySpec(
-            mechanism_name="summarization",
+        TaskStudySpec(
+            task_name="summarization",
             primary_preset="paper_ourtasks_subset_100k",
             dataset_key="summary_text",
             claim_categories=(
