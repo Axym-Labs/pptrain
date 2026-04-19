@@ -21,8 +21,8 @@ from typing import Any, Callable, Sequence
 import numpy as np
 
 from pptrain.core.base import ExecutedSymbolicTask, SymbolicTask, SymbolicTaskFamily, Task
-from pptrain.mechanisms.lime import LIMEExample
-from pptrain.mechanisms.summarization.generator import DocumentExample
+from pptrain.tasks.lime import LIMEExample
+from pptrain.tasks.summarization.generator import DocumentExample
 from pptrain.reference_nca_repo import load_nca_reference_export_from_repo
 
 

@@ -4,7 +4,7 @@ from pptrain.tasks import SummarizationConfig, SummarizationTaskFamily
 from pptrain.tasks.summarization.generator import copy_quoted_example, next_sentence_example
 
 
-def test_summarization_mechanism_builds_sequences() -> None:
+def test_summarization_task_builds_sequences() -> None:
     task = SummarizationTaskFamily(
         SummarizationConfig(
             tasks=("sentence_reordering", "next_sentence", "masked_document", "copy_keyword_multiple_sorted"),

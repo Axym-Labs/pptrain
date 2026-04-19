@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 import string
 
 from pptrain.core.presets import TaskPreset, sequence_preset
-from pptrain.mechanisms.simpler_tasks.tasks import SUPPORTED_SIMPLER_TASKS
+from pptrain.tasks.simpler_tasks.tasks import SUPPORTED_SIMPLER_TASKS
 
 
 @dataclass(slots=True)

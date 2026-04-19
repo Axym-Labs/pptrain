@@ -58,14 +58,9 @@ class PrePreTrainer:
         self,
         model_adapter: CausalLMAdapter,
         run_config: RunConfig,
-        task: Task | None = None,
-        mechanism: Task | None = None,
+        task: Task,
     ) -> None:
-        resolved_task = task if task is not None else mechanism
-        if resolved_task is None:
-            raise ValueError("Either task or mechanism must be provided.")
-        self.task = resolved_task
-        self.mechanism = resolved_task
+        self.task = task
         self.model_adapter = model_adapter
         self.run_config = run_config
 

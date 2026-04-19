@@ -26,14 +26,6 @@ class TransferBundle:
     task_config: dict[str, Any]
     transfer_policy_name: str
 
-    @property
-    def mechanism_name(self) -> str:
-        return self.task_name
-
-    @property
-    def mechanism_config(self) -> dict[str, Any]:
-        return self.task_config
-
     def save(self) -> Path:
         path = self.run_dir / "transfer_bundle.json"
         payload = {
@@ -55,8 +47,8 @@ class TransferBundle:
             run_dir=Path(payload["run_dir"]),
             model_dir=Path(payload["model_dir"]),
             tokenizer_spec=payload["tokenizer_spec"],
-            task_name=payload.get("task_name", payload["mechanism_name"]),
-            task_config=payload.get("task_config", payload["mechanism_config"]),
+            task_name=payload["task_name"],
+            task_config=payload["task_config"],
             transfer_policy_name=payload["transfer_policy_name"],
         )
 

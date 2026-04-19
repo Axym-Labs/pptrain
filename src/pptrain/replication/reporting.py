@@ -21,7 +21,9 @@ def _require_pandas():
     try:
         import pandas as pd
     except ImportError as exc:  # pragma: no cover
-        raise RuntimeError("Install pptrain with the 'eval' extra to write replication dataframes.") from exc
+        raise RuntimeError(
+            "The replication CLI requires the 'pandas' package. Reinstall pptrain with full dependencies."
+        ) from exc
     return pd
 
 
@@ -101,8 +103,7 @@ def _payload_tasks(payload: dict[str, Any]) -> dict[str, Any]:
     tasks = payload.get("tasks")
     if isinstance(tasks, dict):
         return tasks
-    legacy = payload.get("mechanisms")
-    return legacy if isinstance(legacy, dict) else {}
+    return {}
 
 
 def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) -> dict[str, Path]:
@@ -678,7 +679,7 @@ def _save_cross_task_matrix_grid(
     top_label: str,
     shared_scale: bool = True,
 ) -> Path:
-    diagnostics = payload.get("cross_task_diagnostics", payload.get("cross_mechanism_diagnostics", {})).get(cross_key, {})
+    diagnostics = payload.get("cross_task_diagnostics", {}).get(cross_key, {})
     items = [(variant_name, diagnostic) for variant_name, diagnostic in diagnostics.items() if diagnostic]
     _set_plot_style()
     num_categories = max(len(items), 1)

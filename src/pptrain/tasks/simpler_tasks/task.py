@@ -6,7 +6,7 @@ import numpy as np
 
 from pptrain.core.base import ExecutedSymbolicTask, SymbolicTask, SymbolicTaskFamily, TokenizerSpec
 from pptrain.core.registry import register_task
-from pptrain.mechanisms._shared import (
+from pptrain.tasks._shared import (
     TokenVocabulary,
     TokenVocabularyBuilder,
     require_non_empty,
@@ -15,8 +15,8 @@ from pptrain.mechanisms._shared import (
     require_supported,
     require_unique_characters,
 )
-from pptrain.mechanisms.simpler_tasks.config import SIMPLER_TASKS_PRESETS, SimplerTasksConfig
-from pptrain.mechanisms.simpler_tasks.tasks import (
+from pptrain.tasks.simpler_tasks.config import SIMPLER_TASKS_PRESETS, SimplerTasksConfig
+from pptrain.tasks.simpler_tasks.tasks import (
     BINARY_SET_TASKS,
     ORDER_QUERY_TASKS,
     REPLACEMENT_TASKS,
@@ -192,6 +192,3 @@ register_task(
     description=SimplerTasksTaskFamily.description,
     presets=SIMPLER_TASKS_PRESETS,
 )
-
-
-SimplerTasksMechanism = SimplerTasksTaskFamily

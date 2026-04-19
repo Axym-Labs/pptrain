@@ -1,8 +1,8 @@
-from pptrain.mechanisms.nca.generator import create_training_example
+from pptrain.tasks.nca.generator import create_training_example
 from pptrain.tasks import NCAConfig, NCATask
 
 
-def test_nca_mechanism_builds_sequences() -> None:
+def test_nca_task_builds_sequences() -> None:
     task = NCATask(
         NCAConfig(
             grid_size=6,

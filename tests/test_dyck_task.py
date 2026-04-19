@@ -1,7 +1,7 @@
 from pptrain.tasks import DyckConfig, DyckTaskFamily
 
 
-def test_dyck_mechanism_builds_sequences() -> None:
+def test_dyck_task_builds_sequences() -> None:
     task = DyckTaskFamily(
         DyckConfig(
             num_bracket_types=3,

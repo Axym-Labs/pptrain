@@ -8,8 +8,8 @@ from pptrain.core.base import DatasetBundle, Task, TokenizerSpec
 from pptrain.core.collator import CausalLMCollator
 from pptrain.core.datasets import ListSequenceDataset, MutableListSequenceDataset
 from pptrain.core.registry import register_task
-from pptrain.mechanisms.nca.config import NCAConfig, NCA_PRESETS
-from pptrain.mechanisms.nca.generator import (
+from pptrain.tasks.nca.config import NCAConfig, NCA_PRESETS
+from pptrain.tasks.nca.generator import (
     create_training_example,
     generate_rule_pool,
     patchify_trajectory,
@@ -231,6 +231,3 @@ register_task(
     description=NCATask.description,
     presets=NCA_PRESETS,
 )
-
-
-NCAMechanism = NCATask

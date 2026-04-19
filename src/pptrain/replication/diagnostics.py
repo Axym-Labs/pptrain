@@ -142,7 +142,7 @@ def collect_cross_task_representation_diagnostics(
     }
 
 
-collect_cross_mechanism_representation_diagnostics = collect_cross_task_representation_diagnostics
+collect_cross_task_representation_diagnostics = collect_cross_task_representation_diagnostics
 
 
 def compute_nca_synthetic_token_accuracy(

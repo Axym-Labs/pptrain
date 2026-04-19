@@ -1,7 +1,15 @@
+import json
+from pathlib import Path
+
+import pytest
 import torch
 from transformers import GPT2Config, GPT2LMHeadModel
 
-from pptrain.core.transfer import ReinitializeEmbeddingTransferPolicy, SkipParametersTransferPolicy
+from pptrain.core.transfer import (
+    ReinitializeEmbeddingTransferPolicy,
+    SkipParametersTransferPolicy,
+    TransferBundle,
+)
 from pptrain.integrations import CallableCausalLMAdapter
 
 
@@ -54,3 +62,51 @@ def test_callable_adapter_wraps_custom_construction() -> None:
     assert prepretrain_model.config.vocab_size == 32
     assert downstream_model.config.vocab_size == 16
     assert adapter.config.to_dict()["name"] == "custom-gpt2"
+
+
+def test_transfer_bundle_loads_current_task_keys(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run"
+    model_dir = run_dir / "prepretrained_model"
+    model_dir.mkdir(parents=True)
+    (run_dir / "transfer_bundle.json").write_text(
+        json.dumps(
+            {
+                "run_dir": str(run_dir),
+                "model_dir": str(model_dir),
+                "tokenizer_spec": {"vocab_size": 32},
+                "task_name": "nca",
+                "task_config": {"preset": "smoke"},
+                "transfer_policy_name": "reinit_embeddings",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    bundle = TransferBundle.load(run_dir)
+
+    assert bundle.task_name == "nca"
+    assert bundle.task_config == {"preset": "smoke"}
+
+
+def test_transfer_bundle_rejects_legacy_task_keys(tmp_path: Path) -> None:
+    run_dir = tmp_path / "run"
+    model_dir = run_dir / "prepretrained_model"
+    model_dir.mkdir(parents=True)
+    legacy_name_key = "mecha" + "nism_name"
+    legacy_config_key = "mecha" + "nism_config"
+    (run_dir / "transfer_bundle.json").write_text(
+        json.dumps(
+            {
+                "run_dir": str(run_dir),
+                "model_dir": str(model_dir),
+                "tokenizer_spec": {"vocab_size": 32},
+                legacy_name_key: "nca",
+                legacy_config_key: {"preset": "smoke"},
+                "transfer_policy_name": "reinit_embeddings",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(KeyError, match="task_name"):
+        TransferBundle.load(run_dir)

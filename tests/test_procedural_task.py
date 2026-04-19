@@ -1,11 +1,11 @@
 import numpy as np
 
 from pptrain.core.base import SymbolicTask
-from pptrain.mechanisms.procedural import ProceduralProgram
+from pptrain.tasks.procedural import ProceduralProgram
 from pptrain.tasks import ProceduralConfig, ProceduralTaskFamily
 
 
-def test_procedural_mechanism_builds_sequences() -> None:
+def test_procedural_task_builds_sequences() -> None:
     task = ProceduralTaskFamily(
         ProceduralConfig(
             tasks=("identity", "reverse", "sort", "set", "union", "delete", "addition"),

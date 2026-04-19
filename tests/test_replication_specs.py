@@ -2,7 +2,7 @@ from pptrain.replication.runner import _perplexity_from_metrics
 from pptrain.replication.specs import build_replication_profile
 
 
-def test_smoke_replication_profile_contains_all_mechanisms(tmp_path) -> None:
+def test_smoke_replication_profile_contains_all_tasks(tmp_path) -> None:
     profile = build_replication_profile("smoke", output_dir=str(tmp_path), test_mode=True)
     names = [study.task_name for study in profile.studies]
     assert names == ["nca", "lime", "simpler_tasks", "procedural", "dyck", "summarization"]

@@ -53,7 +53,7 @@ def test_replication_campaign_can_resume_after_partial_failure(monkeypatch, tmp_
     monkeypatch.setattr(runner, "HFCausalLMAdapter", lambda config: object())
     monkeypatch.setattr(runner, "load_tokenizer", lambda config: object())
     monkeypatch.setattr(runner, "_collect_environment_info", lambda: {"cuda_available": False})
-    monkeypatch.setattr(runner, "_collect_cross_mechanism_diagnostics", lambda **kwargs: {})
+    monkeypatch.setattr(runner, "_collect_cross_task_diagnostics", lambda **kwargs: {})
     monkeypatch.setattr(runner, "save_replication_reports", lambda payload, output_dir: {})
 
     call_order: list[int] = []

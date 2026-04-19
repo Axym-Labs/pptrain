@@ -23,7 +23,7 @@ def _load_yaml(path: Path) -> dict[str, Any]:
 
 
 def _build_trainer(config: dict[str, Any]) -> PrePreTrainer:
-    task_block = config.get("task", config["mechanism"])
+    task_block = config["task"]
     task = create_task(
         task_block["name"],
         task_block.get("config", {}),
@@ -134,12 +134,6 @@ def build_parser() -> argparse.ArgumentParser:
     )
     tasks_parser.add_argument("name", nargs="?", help="Optional task name filter.")
     tasks_parser.add_argument("--json", action="store_true", help="Print task info as JSON.")
-    mechanisms_parser = subparsers.add_parser(
-        "mechanisms",
-        help="Deprecated alias for `tasks`.",
-    )
-    mechanisms_parser.add_argument("name", nargs="?", help="Optional task name filter.")
-    mechanisms_parser.add_argument("--json", action="store_true", help="Print task info as JSON.")
 
     replicate_parser = subparsers.add_parser(
         "replicate",
@@ -166,12 +160,6 @@ def build_parser() -> argparse.ArgumentParser:
         action="append",
         dest="tasks",
         help="Optional task name filter. Can be passed multiple times.",
-    )
-    replicate_parser.add_argument(
-        "--mechanism",
-        action="append",
-        dest="tasks",
-        help=argparse.SUPPRESS,
     )
     replicate_parser.add_argument(
         "--model-name-or-path",
@@ -211,7 +199,7 @@ def main(argv: list[str] | None = None) -> None:
         run = trainer.fit()
         eval_path = _maybe_run_eval(args, trainer, run)
         _print_fit_summary(_fit_summary(trainer, run, eval_path=eval_path), json_output=args.json)
-    elif args.command in {"tasks", "mechanisms"}:
+    elif args.command == "tasks":
         _print_tasks(json_output=args.json, task_name=args.name)
     elif args.command == "replicate":
         seed_values = None

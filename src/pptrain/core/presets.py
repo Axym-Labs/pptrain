@@ -39,7 +39,3 @@ def merge_preset_config(
     resolved = dict(preset.config)
     resolved.update(overrides)
     return resolved
-
-
-# Backward-compatible alias during the terminology transition.
-MechanismPreset = TaskPreset

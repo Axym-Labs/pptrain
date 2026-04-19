@@ -4,15 +4,15 @@ import numpy as np
 
 from pptrain.core.base import ExecutedSymbolicTask, SymbolicTask, SymbolicTaskFamily, TokenizerSpec
 from pptrain.core.registry import register_task
-from pptrain.mechanisms._shared import (
+from pptrain.tasks._shared import (
     TokenVocabulary,
     TokenVocabularyBuilder,
     require_non_empty,
     require_positive_range,
     require_supported,
 )
-from pptrain.mechanisms.summarization.config import SUMMARIZATION_PRESETS, SummarizationConfig
-from pptrain.mechanisms.summarization.generator import (
+from pptrain.tasks.summarization.config import SUMMARIZATION_PRESETS, SummarizationConfig
+from pptrain.tasks.summarization.generator import (
     DocumentExample,
     copy_bulleted_example,
     copy_first_sentence_example,
@@ -262,6 +262,3 @@ register_task(
     description=SummarizationTaskFamily.description,
     presets=SUMMARIZATION_PRESETS,
 )
-
-
-SummarizationMechanism = SummarizationTaskFamily

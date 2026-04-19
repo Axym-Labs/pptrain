@@ -7,7 +7,7 @@ import numpy as np
 from pptrain.core.base import ExecutedSymbolicTask, SymbolicTask, SymbolicTaskFamily, TokenizerSpec
 from pptrain.core.presets import TaskPreset, sequence_preset
 from pptrain.core.registry import register_task
-from pptrain.mechanisms._shared import (
+from pptrain.tasks._shared import (
     TokenVocabulary,
     TokenVocabularyBuilder,
     require_non_empty,
@@ -197,6 +197,3 @@ register_task(
     description=ProceduralTaskFamily.description,
     presets=PROCEDURAL_PRESETS,
 )
-
-
-ProceduralMechanism = ProceduralTaskFamily

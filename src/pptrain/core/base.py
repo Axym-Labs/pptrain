@@ -209,9 +209,3 @@ class SymbolicTaskFamily(TokenSequenceTask):
             if values:
                 summary[f"{split}_avg_{field_name}"] = float(np.mean(values))
         return summary
-
-
-# Backward-compatible aliases during the terminology transition.
-Mechanism = Task
-TokenSequenceMechanism = TokenSequenceTask
-SymbolicTaskMechanism = SymbolicTaskFamily

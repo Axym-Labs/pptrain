@@ -17,7 +17,9 @@ def _require_datasets() -> Any:
     try:
         from datasets import load_dataset
     except ImportError as exc:  # pragma: no cover
-        raise RuntimeError("Install pptrain with the 'eval' extra to use replication datasets.") from exc
+        raise RuntimeError(
+            "The replication CLI requires the 'datasets' package. Reinstall pptrain with full dependencies."
+        ) from exc
     return load_dataset
 
 

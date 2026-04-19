@@ -2,7 +2,7 @@ from pptrain.tasks import LIMEConfig, LIMETaskFamily
 from pptrain.tasks.lime import apply_substitutions
 
 
-def test_lime_mechanism_builds_sequences() -> None:
+def test_lime_task_builds_sequences() -> None:
     task = LIMETaskFamily(
         LIMEConfig(
             modes=("induct", "deduct", "abduct"),

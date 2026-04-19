@@ -122,7 +122,6 @@ def run_replication_campaign(
     output_dir: str,
     test_mode: bool = False,
     tasks: list[str] | None = None,
-    mechanisms: list[str] | None = None,
     model_name_or_path: str | None = None,
     context_length: int | None = None,
     seeds: tuple[int, ...] | None = None,
@@ -130,7 +129,6 @@ def run_replication_campaign(
     resume: bool = False,
 ) -> dict[str, Any]:
     output_path = Path(output_dir)
-    selected_tasks = tasks if tasks is not None else mechanisms
     profile = build_replication_profile(
         profile_name,
         output_dir=str(output_path),
@@ -163,7 +161,7 @@ def run_replication_campaign(
     selected_studies = [
         study
         for study in profile.studies
-        if selected_tasks is None or study.task_name in set(selected_tasks)
+        if tasks is None or study.task_name in set(tasks)
     ]
     payload: dict[str, Any] = existing_payload or {
         "profile": {
@@ -1153,10 +1151,6 @@ def _load_resume_payload(
     if not results_path.exists():
         return None
     payload = json.loads(results_path.read_text(encoding="utf-8"))
-    if "tasks" not in payload and "mechanisms" in payload:
-        payload["tasks"] = payload.pop("mechanisms")
-    if "cross_task_diagnostics" not in payload and "cross_mechanism_diagnostics" in payload:
-        payload["cross_task_diagnostics"] = payload.pop("cross_mechanism_diagnostics")
     profile_payload = payload.get("profile", {})
     expected = {
         "name": profile.name,
@@ -1184,15 +1178,8 @@ def _payload_tasks(payload: dict[str, Any]) -> dict[str, Any]:
     tasks = payload.get("tasks")
     if isinstance(tasks, dict):
         return tasks
-    legacy = payload.get("mechanisms")
-    if isinstance(legacy, dict):
-        payload["tasks"] = legacy
-        return legacy
     payload["tasks"] = {}
     return payload["tasks"]
-
-
-_collect_cross_mechanism_diagnostics = _collect_cross_task_diagnostics
 
 
 def _set_global_seed(seed: int) -> None:

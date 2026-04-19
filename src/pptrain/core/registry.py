@@ -80,11 +80,3 @@ def registered_presets(name: str) -> tuple[TaskPreset, ...]:
         raise KeyError(f"Unknown task '{name}'. Registered: {sorted(_TASKS)}")
     entry = _TASKS[name]
     return tuple(entry.presets[preset_name] for preset_name in sorted(entry.presets))
-
-
-# Backward-compatible aliases during the terminology transition.
-MechanismFactory = TaskFactory
-RegisteredMechanism = RegisteredTask
-register_mechanism = register_task
-create_mechanism = create_task
-registered_mechanisms = registered_tasks

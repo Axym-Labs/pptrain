@@ -14,7 +14,7 @@ from pptrain.reference_parity import ReferenceExporterSpec, REFERENCE_EXPORTER_S
 from pptrain.reference_parity_exporters import build_normalized_task_examples
 
 
-def test_cli_lists_mechanisms(capsys) -> None:
+def test_cli_lists_tasks(capsys) -> None:
     cli.main(["tasks"])
     output = capsys.readouterr().out
     assert "nca" in output
@@ -26,7 +26,7 @@ def test_cli_lists_mechanisms(capsys) -> None:
     assert "summarization" in output
 
 
-def test_cli_filters_mechanisms(capsys) -> None:
+def test_cli_filters_tasks(capsys) -> None:
     cli.main(["tasks", "summarization"])
     output = capsys.readouterr().out
     first_line = output.splitlines()[0]
@@ -35,7 +35,7 @@ def test_cli_filters_mechanisms(capsys) -> None:
     assert "\nnca " not in output
 
 
-def test_cli_lists_mechanisms_as_json(capsys) -> None:
+def test_cli_lists_tasks_as_json(capsys) -> None:
     cli.main(["tasks", "--json"])
     payload = json.loads(capsys.readouterr().out)
     names = [item["name"] for item in payload]

@@ -88,10 +88,6 @@ class TaskStudySpec:
     run_reasoning_probe: bool = False
     run_algorithmic_probe: bool = False
 
-    @property
-    def mechanism_name(self) -> str:
-        return self.task_name
-
 
 @dataclass(frozen=True, slots=True)
 class ReplicationProfile:
@@ -111,9 +107,6 @@ class ReplicationProfile:
     needle_probe: NeedleProbeConfig | None = None
     arithmetic_probe: ArithmeticProbeConfig | None = None
     gsm8k_eval: GSM8KEvalConfig | None = None
-
-
-MechanismStudySpec = TaskStudySpec
 
 
 def build_replication_profile(

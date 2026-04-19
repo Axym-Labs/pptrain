@@ -10,10 +10,6 @@ Use a paper-backed preset as the starting point, then override only the few valu
 pip install pptrain
 ```
 
-```bash
-pip install "pptrain[eval]"
-```
-
 ## Built-in Task Families
 
 - `nca`: Synthetic cellular-automata rollouts. The built-in presets follow the paper's `12x12`, `10`-state, `2x2`-patch setup and separate web-text versus code complexity bands [1].

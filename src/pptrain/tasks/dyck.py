@@ -141,6 +141,3 @@ register_task(
     description=DyckTaskFamily.description,
     presets=DYCK_PRESETS,
 )
-
-
-DyckMechanism = DyckTaskFamily
