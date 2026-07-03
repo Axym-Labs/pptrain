@@ -5,6 +5,7 @@ from typing import Any
 
 import numpy as np
 import torch
+from torch import nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM
@@ -241,31 +242,147 @@ def _extract_model_features(
         model_dir,
         trust_remote_code=trust_remote_code,
     )
-    if device.type == "cuda":
-        # Diagnostic forwards prioritize numerical stability over throughput.
-        model = model.to(device=device, dtype=torch.float32)
-    else:
-        model = model.to(device)
+    dtype = _diagnostic_model_dtype(device)
+    model = model.to(device=device, dtype=dtype) if dtype is not None else model.to(device)
+    _disable_model_cache(model)
     model.eval()
     logits_chunks: list[np.ndarray] = []
     hidden_chunks: list[np.ndarray] = []
-    with torch.no_grad():
+    with torch.inference_mode():
         for batch in batches:
-            outputs = model(
-                input_ids=batch["input_ids"],
-                attention_mask=batch["attention_mask"],
-                output_hidden_states=True,
-            )
-            midpoint_index = len(outputs.hidden_states) // 2
-            hidden = outputs.hidden_states[midpoint_index]
-            logits_chunks.append(_gather_positions(outputs.logits, batch["positions"]).float().cpu().numpy())
-            hidden_chunks.append(_gather_positions(hidden, batch["positions"]).float().cpu().numpy())
+            logits, hidden = _forward_diagnostic_batch(model=model, batch=batch)
+            logits_chunks.append(logits.float().cpu().numpy())
+            hidden_chunks.append(hidden.float().cpu().numpy())
     del model
     _maybe_clear_cuda()
     return {
         "logits": np.concatenate(logits_chunks, axis=0) if logits_chunks else np.zeros((0, 1), dtype=np.float32),
         "hidden": np.concatenate(hidden_chunks, axis=0) if hidden_chunks else np.zeros((0, 1), dtype=np.float32),
     }
+
+
+def _diagnostic_model_dtype(device: torch.device) -> torch.dtype | None:
+    if device.type != "cuda":
+        return None
+    if getattr(torch.cuda, "is_bf16_supported", lambda: False)():
+        return torch.bfloat16
+    return torch.float16
+
+
+def _disable_model_cache(model: nn.Module) -> None:
+    config = getattr(model, "config", None)
+    if config is not None and hasattr(config, "use_cache"):
+        config.use_cache = False
+
+
+def _forward_diagnostic_batch(
+    *,
+    model: nn.Module,
+    batch: dict[str, torch.Tensor],
+) -> tuple[torch.Tensor, torch.Tensor]:
+    efficient = _try_forward_selected_logits_and_hidden(model=model, batch=batch)
+    if efficient is not None:
+        return efficient
+    outputs = model(
+        input_ids=batch["input_ids"],
+        attention_mask=batch["attention_mask"],
+        output_hidden_states=True,
+        use_cache=False,
+    )
+    midpoint_index = len(outputs.hidden_states) // 2
+    hidden = outputs.hidden_states[midpoint_index]
+    return _gather_positions(outputs.logits, batch["positions"]), _gather_positions(hidden, batch["positions"])
+
+
+def _try_forward_selected_logits_and_hidden(
+    *,
+    model: nn.Module,
+    batch: dict[str, torch.Tensor],
+) -> tuple[torch.Tensor, torch.Tensor] | None:
+    base_model, lm_head = _find_backbone_and_lm_head(model)
+    if base_model is None or lm_head is None:
+        return None
+    midpoint_layer = _find_midpoint_layer(base_model)
+    if midpoint_layer is None:
+        return None
+
+    captured_hidden: dict[str, torch.Tensor] = {}
+
+    def capture_hidden(_module, _inputs, output):  # type: ignore[no-untyped-def]
+        hidden = _first_tensor(output)
+        if hidden is not None:
+            captured_hidden["hidden"] = _gather_positions(hidden.detach(), batch["positions"]).float().cpu()
+
+    handle = midpoint_layer.register_forward_hook(capture_hidden)
+    try:
+        outputs = base_model(
+            input_ids=batch["input_ids"],
+            attention_mask=batch["attention_mask"],
+            output_hidden_states=False,
+            use_cache=False,
+            return_dict=True,
+        )
+    except TypeError:
+        return None
+    finally:
+        handle.remove()
+
+    if "hidden" not in captured_hidden:
+        return None
+    last_hidden = getattr(outputs, "last_hidden_state", None)
+    if last_hidden is None:
+        last_hidden = outputs[0] if isinstance(outputs, tuple) and outputs else None
+    if last_hidden is None:
+        return None
+    logits = lm_head(_gather_positions(last_hidden, batch["positions"]))
+    return logits, captured_hidden["hidden"]
+
+
+def _find_backbone_and_lm_head(model: nn.Module) -> tuple[nn.Module | None, nn.Module | None]:
+    for backbone_name, head_name in (
+        ("gpt_neox", "embed_out"),
+        ("transformer", "lm_head"),
+        ("model", "lm_head"),
+    ):
+        backbone = getattr(model, backbone_name, None)
+        lm_head = getattr(model, head_name, None)
+        if isinstance(backbone, nn.Module) and isinstance(lm_head, nn.Module):
+            return backbone, lm_head
+    return None, None
+
+
+def _find_midpoint_layer(backbone: nn.Module) -> nn.Module | None:
+    for path in ("layers", "h", "block", "blocks", "decoder.layers"):
+        layers = _resolve_module_path(backbone, path)
+        if isinstance(layers, (nn.ModuleList, list, tuple)) and layers:
+            layer = layers[len(layers) // 2]
+            return layer if isinstance(layer, nn.Module) else None
+    return None
+
+
+def _resolve_module_path(module: nn.Module, path: str) -> Any:
+    current: Any = module
+    for part in path.split("."):
+        current = getattr(current, part, None)
+        if current is None:
+            return None
+    return current
+
+
+def _first_tensor(value: Any) -> torch.Tensor | None:
+    if isinstance(value, torch.Tensor):
+        return value
+    if isinstance(value, (tuple, list)):
+        for item in value:
+            tensor = _first_tensor(item)
+            if tensor is not None:
+                return tensor
+    if isinstance(value, dict):
+        for item in value.values():
+            tensor = _first_tensor(item)
+            if tensor is not None:
+                return tensor
+    return None
 
 
 def _reference_kl_divergence(reference_logits: np.ndarray, other_logits: np.ndarray) -> float:
