@@ -1,6 +1,7 @@
 from pptrain.tasks.dyck import DyckConfig, DyckTaskFamily
 from pptrain.tasks.lime import LIMEConfig, LIMETaskFamily
 from pptrain.tasks.nca import NCAConfig, NCATask
+from pptrain.tasks.nlp_prepretraining import NLPPrepretrainingConfig, NLPPrepretrainingTask
 from pptrain.tasks.procedural import ProceduralConfig, ProceduralTaskFamily
 from pptrain.tasks.simpler_tasks import SimplerTasksConfig, SimplerTasksTaskFamily
 from pptrain.tasks.summarization import SummarizationConfig, SummarizationTaskFamily
@@ -12,6 +13,8 @@ __all__ = [
     "LIMETaskFamily",
     "NCAConfig",
     "NCATask",
+    "NLPPrepretrainingConfig",
+    "NLPPrepretrainingTask",
     "ProceduralConfig",
     "ProceduralTaskFamily",
     "SimplerTasksConfig",

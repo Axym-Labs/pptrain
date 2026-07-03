@@ -26,7 +26,7 @@ def test_evaluate_claims_uses_eval_loss_when_perplexity_overflows() -> None:
     variants = {
         "scratch": {"metrics": {"eval_loss": 2000.0}},
         "transferred": {"metrics": {"eval_loss": 1500.0}},
-        "compute_matched_baseline": {"metrics": {"eval_loss": 1600.0}},
+        "nlp_prepretraining": {"metrics": {"eval_loss": 1600.0}},
     }
 
     claims = runner._evaluate_claims(study=study, variants=variants)

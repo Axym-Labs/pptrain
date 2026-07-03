@@ -13,12 +13,12 @@ from pptrain.core.base import DatasetBundle, Task
 
 
 VARIANT_LABELS = {
-    "scratch": "Baseline",
+    "scratch": "No pre-pretraining",
     "transferred": "Transferred",
-    "compute_matched_baseline": "Compute-matched natural baseline",
+    "nlp_prepretraining": "NLP pre-pretraining",
     "step": "Comparison preset",
 }
-DIAGNOSTIC_VARIANTS = ("scratch", "transferred", "compute_matched_baseline", "step")
+DIAGNOSTIC_VARIANTS = ("scratch", "transferred", "nlp_prepretraining", "step")
 
 
 def collect_representation_diagnostics(
@@ -51,17 +51,17 @@ def collect_representation_diagnostics(
             device=device,
         )
 
-    if "compute_matched_baseline" not in features:
+    if "nlp_prepretraining" not in features:
         return {}
-    baseline_logits = features["compute_matched_baseline"]["logits"]
-    baseline_hidden = features["compute_matched_baseline"]["hidden"]
+    baseline_logits = features["nlp_prepretraining"]["logits"]
+    baseline_hidden = features["nlp_prepretraining"]["hidden"]
 
     logit_to_baseline = {
-        variant_name: (0.0 if variant_name == "compute_matched_baseline" else _reference_kl_divergence(baseline_logits, values["logits"]))
+        variant_name: (0.0 if variant_name == "nlp_prepretraining" else _reference_kl_divergence(baseline_logits, values["logits"]))
         for variant_name, values in features.items()
     }
     activation_to_baseline = {
-        variant_name: (1.0 if variant_name == "compute_matched_baseline" else _linear_cka(baseline_hidden, values["hidden"]))
+        variant_name: (1.0 if variant_name == "nlp_prepretraining" else _linear_cka(baseline_hidden, values["hidden"]))
         for variant_name, values in features.items()
     }
     activation_effective_rank = {

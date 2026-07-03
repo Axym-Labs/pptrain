@@ -50,5 +50,20 @@ def test_full_replication_profile_defaults_to_2048_context(tmp_path) -> None:
     assert summarization.synthetic_run_config_overrides["max_steps"] == 288
 
 
+def test_wikitext_proxy_profile_uses_downloadable_hf_slices(tmp_path) -> None:
+    profile = build_replication_profile("wikitext_proxy", output_dir=str(tmp_path), test_mode=False)
+
+    assert profile.context_length == 512
+    assert profile.model_name_or_path == "EleutherAI/pythia-70m-deduped"
+    assert profile.datasets["general_text"].dataset_name == "Salesforce/wikitext"
+    assert profile.datasets["general_text"].dataset_config_name == "wikitext-2-raw-v1"
+    assert profile.datasets["general_text"].streaming is False
+    assert profile.datasets["general_text"].warmup_split == "train[:512]"
+    assert profile.datasets["general_text"].train_split == "train[512:2048]"
+    assert profile.natural_warmup_run_config.max_steps == 128
+    assert profile.downstream_run_config.max_steps == 256
+    assert all(study.compare_against_natural_warmup for study in profile.studies)
+
+
 def test_perplexity_from_metrics_saturates_on_large_eval_loss() -> None:
     assert _perplexity_from_metrics({"eval_loss": 1_000.0}) == float("inf")

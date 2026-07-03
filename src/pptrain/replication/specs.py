@@ -119,6 +119,12 @@ def build_replication_profile(
 ) -> ReplicationProfile:
     if test_mode or profile_name == "smoke":
         return _build_smoke_profile(output_dir=output_dir, model_name_or_path=model_name_or_path)
+    if profile_name == "wikitext_proxy":
+        return _build_wikitext_proxy_profile(
+            output_dir=output_dir,
+            model_name_or_path=model_name_or_path,
+            context_length=context_length,
+        )
     if profile_name != "paper_proxy_2048":
         raise KeyError(f"Unknown replication profile '{profile_name}'.")
     return _build_paper_proxy_profile(
@@ -184,7 +190,7 @@ def _build_smoke_profile(
                 CLAIM_REASONING_TRANSFER,
             ),
             paper_source="Lee et al. 2026",
-            paper_note="Proxy for downstream LM gain, convergence, compute-matched NL baseline, and reasoning transfer.",
+            paper_note="Proxy for downstream LM gain, convergence, NLP pre-pretraining comparison, and reasoning transfer.",
             sequence_count_override=8,
             eval_sequence_count_override=8,
             max_length_override=128,
@@ -325,6 +331,192 @@ def _build_smoke_profile(
     )
 
 
+def _build_wikitext_proxy_profile(
+    *,
+    output_dir: str,
+    model_name_or_path: str | None,
+    context_length: int | None,
+) -> ReplicationProfile:
+    resolved_context = context_length or 512
+    wikitext_dataset = TextDatasetSpec(
+        source="hf",
+        formatter="plain_text",
+        dataset_name="Salesforce/wikitext",
+        dataset_config_name="wikitext-2-raw-v1",
+        warmup_split="train[:512]",
+        train_split="train[512:2048]",
+        eval_split="validation[:512]",
+        streaming=False,
+    )
+    datasets = {
+        "general_text": wikitext_dataset,
+        "math_text": wikitext_dataset,
+        "summary_text": wikitext_dataset,
+    }
+    studies = (
+        TaskStudySpec(
+            task_name="nca",
+            primary_preset="paper_web_text",
+            dataset_key="general_text",
+            claim_categories=(
+                CLAIM_TRANSFER_SIGNAL,
+                CLAIM_CONVERGENCE_GAIN,
+                CLAIM_COMPUTE_MATCHED_GAIN,
+                CLAIM_REASONING_TRANSFER,
+            ),
+            paper_source="Lee et al. 2026",
+            paper_note="Proxy for LM gain, faster convergence, NLP pre-pretraining comparison, and arithmetic transfer.",
+            sequence_count_override=128,
+            eval_sequence_count_override=32,
+            max_length_override=resolved_context,
+            config_overrides={"rule_count": 128, "eval_rule_count": 32},
+            compare_against_natural_warmup=True,
+            run_reasoning_probe=True,
+        ),
+        TaskStudySpec(
+            task_name="lime",
+            primary_preset="paper_benchmark_100k",
+            dataset_key="math_text",
+            claim_categories=(
+                CLAIM_TRANSFER_SIGNAL,
+                CLAIM_CONVERGENCE_GAIN,
+                CLAIM_COMPUTE_MATCHED_GAIN,
+                CLAIM_REASONING_TRANSFER,
+            ),
+            paper_source="Wu et al. 2021",
+            paper_note="Proxy for mathematical reasoning transfer.",
+            sequence_count_override=256,
+            eval_sequence_count_override=32,
+            max_length_override=min(resolved_context, 512),
+            compare_against_natural_warmup=True,
+            run_reasoning_probe=True,
+        ),
+        TaskStudySpec(
+            task_name="simpler_tasks",
+            primary_preset="paper_unary_core_100k",
+            dataset_key="general_text",
+            claim_categories=(
+                CLAIM_TRANSFER_SIGNAL,
+                CLAIM_CONVERGENCE_GAIN,
+                CLAIM_COMPUTE_MATCHED_GAIN,
+            ),
+            paper_source="Wu et al. 2022",
+            paper_note="Proxy for transfer signal under simpler synthetic warm-up.",
+            sequence_count_override=256,
+            eval_sequence_count_override=32,
+            max_length_override=min(resolved_context, 512),
+            synthetic_run_config_overrides={"learning_rate": 1e-6},
+            downstream_run_config_overrides={"learning_rate": 1e-6},
+            compare_against_natural_warmup=True,
+        ),
+        TaskStudySpec(
+            task_name="procedural",
+            primary_preset="paper_set_len64",
+            dataset_key="general_text",
+            claim_categories=(
+                CLAIM_TRANSFER_SIGNAL,
+                CLAIM_CONVERGENCE_GAIN,
+                CLAIM_COMPUTE_MATCHED_GAIN,
+                CLAIM_ALGORITHMIC_TRANSFER,
+            ),
+            paper_source="Jiang et al. 2026",
+            paper_note="Proxy for semantic transfer and long-context algorithmic transfer.",
+            sequence_count_override=256,
+            eval_sequence_count_override=32,
+            max_length_override=min(resolved_context, 512),
+            compare_against_natural_warmup=True,
+            run_algorithmic_probe=True,
+        ),
+        TaskStudySpec(
+            task_name="dyck",
+            primary_preset="paper_k64",
+            dataset_key="general_text",
+            claim_categories=(
+                CLAIM_TRANSFER_SIGNAL,
+                CLAIM_CONVERGENCE_GAIN,
+                CLAIM_COMPUTE_MATCHED_GAIN,
+                CLAIM_ALGORITHMIC_TRANSFER,
+            ),
+            paper_source="Jiang et al. 2026",
+            paper_note="Proxy for Dyck-to-Needle long-context transfer.",
+            sequence_count_override=256,
+            eval_sequence_count_override=32,
+            max_length_override=resolved_context,
+            compare_against_natural_warmup=True,
+            run_algorithmic_probe=True,
+        ),
+        TaskStudySpec(
+            task_name="summarization",
+            primary_preset="paper_ourtasks_subset_100k",
+            dataset_key="summary_text",
+            claim_categories=(
+                CLAIM_TRANSFER_SIGNAL,
+                CLAIM_CONVERGENCE_GAIN,
+                CLAIM_COMPUTE_MATCHED_GAIN,
+                CLAIM_SYNTHETIC_ORDERING,
+                CLAIM_NEAR_REAL_BASELINE,
+            ),
+            paper_source="Krishna et al. 2021 / Nath et al. 2021",
+            paper_note="Proxy for OurTasks vs STEP ordering and closeness to NLP pre-pretraining.",
+            sequence_count_override=256,
+            eval_sequence_count_override=32,
+            max_length_override=min(resolved_context, 512),
+            comparison_presets={"step": "paper_step_tasks_100k"},
+            compare_against_natural_warmup=True,
+        ),
+    )
+    return ReplicationProfile(
+        name="wikitext_proxy",
+        description="Downloadable Wikitext-2 proxy campaign with random-init baseline and NLP pre-pretraining method.",
+        model_name_or_path=model_name_or_path or "EleutherAI/pythia-70m-deduped",
+        context_length=resolved_context,
+        seed_values=(11, 23, 37),
+        config_overrides={"max_position_embeddings": resolved_context},
+        synthetic_run_config=RunConfig(
+            output_dir=f"{output_dir}/synthetic",
+            max_steps=48,
+            per_device_train_batch_size=2,
+            per_device_eval_batch_size=2,
+            learning_rate=1e-5,
+            logging_steps=8,
+            save_steps=24,
+            eval_steps=24,
+            warmup_steps=4,
+            gradient_accumulation_steps=2,
+        ),
+        downstream_run_config=RunConfig(
+            output_dir=f"{output_dir}/downstream",
+            max_steps=256,
+            per_device_train_batch_size=2,
+            per_device_eval_batch_size=2,
+            learning_rate=1e-6,
+            logging_steps=16,
+            save_steps=64,
+            eval_steps=64,
+            warmup_steps=16,
+            gradient_accumulation_steps=2,
+        ),
+        natural_warmup_run_config=RunConfig(
+            output_dir=f"{output_dir}/warmup",
+            max_steps=128,
+            per_device_train_batch_size=2,
+            per_device_eval_batch_size=2,
+            learning_rate=1e-6,
+            logging_steps=16,
+            save_steps=64,
+            eval_steps=64,
+            warmup_steps=8,
+            gradient_accumulation_steps=2,
+        ),
+        datasets=datasets,
+        studies=studies,
+        diagnostic_max_batches=3,
+        diagnostic_max_positions_per_batch=48,
+        needle_probe=NeedleProbeConfig(num_examples=16, haystack_size=64, max_new_tokens=8),
+        arithmetic_probe=ArithmeticProbeConfig(num_examples=16, max_addend=19, max_new_tokens=8),
+    )
+
+
 def _build_paper_proxy_profile(
     *,
     output_dir: str,
@@ -387,7 +579,7 @@ def _build_paper_proxy_profile(
                 CLAIM_REASONING_TRANSFER,
             ),
             paper_source="Lee et al. 2026",
-            paper_note="Proxy for LM gain, faster convergence, compute-matched natural baseline, and GSM8K transfer.",
+            paper_note="Proxy for LM gain, faster convergence, NLP pre-pretraining comparison, and GSM8K transfer.",
             sequence_count_override=128,
             eval_sequence_count_override=32,
             max_length_override=resolved_context,

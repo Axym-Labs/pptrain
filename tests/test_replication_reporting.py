@@ -45,7 +45,7 @@ def test_replication_reporting_writes_matrix_and_plots(tmp_path: Path) -> None:
     report_text = paths["markdown"].read_text(encoding="utf-8")
     assert "### Key Results" in report_text
     assert "![Claim matrix](claim_matrix.png)" in report_text
-    assert "![Compute-matched baseline gap](compute_matched_baseline_gap.png)" in report_text
+    assert "![NLP pre-pretraining gap](compute_matched_nlp_prepretraining_gap.png)" in report_text
     assert "### Run Metrics" in report_text
     assert "### Run Metrics" in report_text
     assert "➖" in report_text

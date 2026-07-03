@@ -64,7 +64,7 @@ For custom modules where embedding names do not follow the HF interface, `SkipPa
 
 ## Analytics
 
-Assess downstream transfer, compute-matched baseline comparisons, and basic representational measures (pairwise midlayer CKA, KL-divergence of predictions) with an analytics suite that produces plots and markdown/CSV reports for the built-in synthetic tasks.
+Assess downstream transfer, no-prepretraining baselines, NLP pre-pretraining comparisons, and basic representational measures (pairwise midlayer CKA, KL-divergence of predictions) with an analytics suite that produces plots and markdown/CSV reports for the built-in synthetic tasks.
 
 ```bash
 # These example config files live in the repository checkout.

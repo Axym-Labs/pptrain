@@ -169,10 +169,10 @@ def test_prune_seed_artifacts_keeps_transferred_model(tmp_path: Path) -> None:
     synthetic_model.mkdir(parents=True)
     (synthetic_model / "weights.bin").write_text("x", encoding="utf-8")
 
-    baseline_run = tmp_path / "baseline"
-    baseline_model = baseline_run / "model"
-    baseline_model.mkdir(parents=True)
-    (baseline_model / "weights.bin").write_text("x", encoding="utf-8")
+    nlp_run = tmp_path / "nlp_prepretraining"
+    nlp_model = nlp_run / "model"
+    nlp_model.mkdir(parents=True)
+    (nlp_model / "weights.bin").write_text("x", encoding="utf-8")
 
     seed_result = {
         "variants": {
@@ -182,7 +182,7 @@ def test_prune_seed_artifacts_keeps_transferred_model(tmp_path: Path) -> None:
                 "model_dir": str(transferred_model),
                 "synthetic_run": {"run_dir": str(synthetic_run), "model_dir": str(synthetic_model)},
             },
-            "compute_matched_baseline": {"run_dir": str(baseline_run), "model_dir": str(baseline_model)},
+            "nlp_prepretraining": {"run_dir": str(nlp_run), "model_dir": str(nlp_model)},
         }
     }
 
@@ -191,4 +191,4 @@ def test_prune_seed_artifacts_keeps_transferred_model(tmp_path: Path) -> None:
     assert transferred_model.exists()
     assert scratch_run.exists() is False
     assert synthetic_run.exists() is False
-    assert baseline_run.exists() is False
+    assert nlp_run.exists() is False

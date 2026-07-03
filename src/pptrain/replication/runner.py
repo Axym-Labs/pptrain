@@ -16,7 +16,7 @@ from pptrain.core.config import RunConfig
 from pptrain.core.registry import create_task
 from pptrain.core.runner import PrePreTrainer
 from pptrain.integrations.hf import HFCausalLMAdapter, HFModelConfig
-from pptrain.replication.data import build_text_sequence_bundle, build_text_train_eval_bundle
+from pptrain.replication.data import build_text_train_eval_bundle
 from pptrain.replication.diagnostics import (
     VARIANT_LABELS,
     collect_cross_task_representation_diagnostics,
@@ -44,6 +44,9 @@ from pptrain.replication.training import (
     load_tokenizer,
     train_downstream_stage,
 )
+
+
+NLP_PREPRETRAINING_VARIANT = "nlp_prepretraining"
 
 
 def _run_config_signature(run_config: RunConfig) -> dict[str, Any]:
@@ -283,10 +286,6 @@ def _run_seeded_study(
 ) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     downstream_run_config = _apply_run_config_overrides(profile.downstream_run_config, study.downstream_run_config_overrides)
-    natural_warmup_run_config = _apply_run_config_overrides(
-        profile.natural_warmup_run_config,
-        study.natural_warmup_run_config_overrides,
-    )
     downstream_bundle = build_text_train_eval_bundle(
         tokenizer=tokenizer,
         dataset_spec=profile.datasets[study.dataset_key],
@@ -350,44 +349,18 @@ def _run_seeded_study(
         )
 
     if study.compare_against_natural_warmup:
-        warmup_bundle = build_text_sequence_bundle(
+        nlp_variant = _run_nlp_prepretraining_variant(
+            study=study,
+            profile=profile,
+            hf_config=hf_config,
+            adapter=adapter,
             tokenizer=tokenizer,
-            dataset_spec=profile.datasets[study.dataset_key],
-            block_size=profile.context_length,
-            split="warmup",
-            target_token_count=_training_token_budget(
-                run_config=natural_warmup_run_config,
-                block_size=profile.context_length,
-            ),
+            downstream_bundle=downstream_bundle,
+            output_dir=output_dir / NLP_PREPRETRAINING_VARIANT,
+            seed=seed,
         )
-        if len(warmup_bundle.dataset_bundle.train_dataset) > 0:
-            _set_global_seed(seed)
-            warmup_model = build_random_init_downstream_model(
-                model_config=hf_config,
-                tokenizer=tokenizer,
-                context_length=profile.context_length,
-            )
-            warmup_stage = train_downstream_stage(
-                model=warmup_model,
-                datasets=warmup_bundle.dataset_bundle,
-                run_config=_with_auto_precision(natural_warmup_run_config, output_dir / "baseline_stage1", seed=seed),
-                output_dir=output_dir / "baseline_stage1",
-                metadata={"variant": "baseline_stage1", "study": study.task_name, "seed": seed},
-            )
-            continuation_stage = train_downstream_stage(
-                model=warmup_model,
-                datasets=downstream_bundle,
-                run_config=_with_auto_precision(downstream_run_config, output_dir / "compute_matched_baseline", seed=seed),
-                output_dir=output_dir / "compute_matched_baseline",
-                metadata={"variant": "compute_matched_baseline", "study": study.task_name, "seed": seed},
-            )
-            variants["compute_matched_baseline"] = _serialize_variant_result(
-                stage_result=continuation_stage,
-                probes=_run_probes(study=study, profile=profile, model=warmup_model, tokenizer=tokenizer),
-                warmup_stage=warmup_stage,
-            )
-            del warmup_model
-            _maybe_clear_cuda()
+        if nlp_variant is not None:
+            variants[NLP_PREPRETRAINING_VARIANT] = nlp_variant
 
     diagnostics = collect_representation_diagnostics(
         variant_model_dirs={name: payload["model_dir"] for name, payload in variants.items()},
@@ -482,6 +455,107 @@ def _run_transferred_variant(
     return payload
 
 
+def _run_nlp_prepretraining_variant(
+    *,
+    study: TaskStudySpec,
+    profile: ReplicationProfile,
+    hf_config: HFModelConfig,
+    adapter: HFCausalLMAdapter,
+    tokenizer,
+    downstream_bundle,
+    output_dir: Path,
+    seed: int,
+) -> dict[str, Any] | None:
+    natural_warmup_run_config = _apply_run_config_overrides(
+        profile.natural_warmup_run_config,
+        study.natural_warmup_run_config_overrides,
+    )
+    downstream_run_config = _apply_run_config_overrides(profile.downstream_run_config, study.downstream_run_config_overrides)
+    task = create_task(
+        "nlp_prepretraining",
+        _nlp_prepretraining_task_config(
+            study=study,
+            profile=profile,
+            hf_config=hf_config,
+            run_config=natural_warmup_run_config,
+        ),
+    )
+
+    natural_warmup_run_config = _with_auto_precision(natural_warmup_run_config, output_dir / "prepretraining", seed=seed)
+    _set_global_seed(seed)
+    trainer = PrePreTrainer(
+        task=task,
+        model_adapter=adapter,
+        run_config=natural_warmup_run_config,
+    )
+    nlp_run = trainer.fit()
+    bundle = nlp_run.load_transfer_bundle()
+
+    _set_global_seed(seed)
+    model = build_random_init_downstream_model(
+        model_config=hf_config,
+        tokenizer=tokenizer,
+        context_length=profile.context_length,
+    )
+    transfer_report = apply_transfer_bundle(bundle=bundle, target_model=model)
+    continuation_stage = train_downstream_stage(
+        model=model,
+        datasets=downstream_bundle,
+        run_config=_with_auto_precision(downstream_run_config, output_dir / "downstream", seed=seed),
+        output_dir=output_dir / "downstream",
+        metadata={"variant": NLP_PREPRETRAINING_VARIANT, "study": study.task_name, "seed": seed},
+    )
+    payload = _serialize_variant_result(
+        stage_result=continuation_stage,
+        probes=_run_probes(study=study, profile=profile, model=model, tokenizer=tokenizer),
+    )
+    payload["prepretraining_run"] = {
+        "run_dir": str(nlp_run.run_dir),
+        "model_dir": str(nlp_run.model_dir),
+        "metrics": dict(nlp_run.metrics),
+        "plot_path": str(nlp_run.plot_path) if nlp_run.plot_path is not None else None,
+    }
+    payload["transfer_report"] = asdict(transfer_report)
+    del model
+    _maybe_clear_cuda()
+    return payload
+
+
+def _nlp_prepretraining_task_config(
+    *,
+    study: TaskStudySpec,
+    profile: ReplicationProfile,
+    hf_config: HFModelConfig,
+    run_config: RunConfig,
+) -> dict[str, Any]:
+    dataset_spec = profile.datasets[study.dataset_key]
+    return {
+        "tokenizer_name_or_path": profile.model_name_or_path,
+        "trust_remote_code": hf_config.trust_remote_code,
+        "source": dataset_spec.source,
+        "formatter": dataset_spec.formatter,
+        "dataset_name": dataset_spec.dataset_name,
+        "dataset_config_name": dataset_spec.dataset_config_name,
+        "subset": dataset_spec.subset,
+        "train_split": dataset_spec.warmup_split,
+        "eval_split": None,
+        "text_field": dataset_spec.text_field,
+        "streaming": dataset_spec.streaming,
+        "shuffle_buffer_size": dataset_spec.shuffle_buffer_size,
+        "shuffle_seed": dataset_spec.shuffle_seed,
+        "train_skip_records": dataset_spec.warmup_skip_records,
+        "eval_skip_records": 0,
+        "inline_train_texts": dataset_spec.inline_warmup_texts,
+        "inline_eval_texts": (),
+        "max_length": profile.context_length,
+        "train_target_token_count": _training_token_budget(
+            run_config=run_config,
+            block_size=profile.context_length,
+        ),
+        "eval_target_token_count": None,
+    }
+
+
 def _run_probes(*, study: TaskStudySpec, profile: ReplicationProfile, model, tokenizer) -> dict[str, Any]:
     probes: dict[str, Any] = {}
     if study.run_reasoning_probe:
@@ -535,7 +609,7 @@ def _evaluate_claims(*, study: TaskStudySpec, variants: dict[str, Any]) -> dict[
     claims: dict[str, Any] = {}
     scratch = variants.get("scratch")
     transferred = variants.get("transferred")
-    baseline = variants.get("compute_matched_baseline")
+    baseline = variants.get(NLP_PREPRETRAINING_VARIANT)
     step_variant = variants.get("step")
 
     if CLAIM_TRANSFER_SIGNAL in study.claim_categories:
@@ -1103,6 +1177,10 @@ def _prune_seed_artifacts(seed_result: dict[str, Any]) -> None:
         if isinstance(synthetic_run, dict):
             _remove_path_if_exists(synthetic_run.get("model_dir"))
             _remove_path_if_exists(synthetic_run.get("run_dir"))
+        prepretraining_run = variant_payload.get("prepretraining_run")
+        if isinstance(prepretraining_run, dict):
+            _remove_path_if_exists(prepretraining_run.get("model_dir"))
+            _remove_path_if_exists(prepretraining_run.get("run_dir"))
 
 
 def _remove_path_if_exists(path_value: Any) -> None:

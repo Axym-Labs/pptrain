@@ -56,13 +56,13 @@ STATUS_TO_PLOT_TEXT = {
 }
 
 CLAIM_LABELS = {
-    "transfer_signal": "Transfer beats baseline",
+    "transfer_signal": "Beats no-prepretraining",
     "convergence_gain": "Converges faster",
-    "compute_matched_gain": "Beats compute-matched baseline",
+    "compute_matched_gain": "Beats NLP pre-pretraining",
     "reasoning_transfer": "Reasoning transfer",
     "algorithmic_transfer": "Algorithmic transfer",
     "synthetic_ordering": "Preferred synthetic preset",
-    "near_real_baseline": "Close to matched baseline",
+    "near_real_baseline": "Close to NLP pre-pretraining",
 }
 
 TASK_LABELS = {
@@ -126,8 +126,8 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
     compute_plot_path = _save_errorbar_plot(
         payload,
         metric_key="compute_matched_gap_percent",
-        output_path=output / "compute_matched_baseline_gap.png",
-        xlabel="Eval-loss improvement vs compute-matched baseline (%)",
+        output_path=output / "compute_matched_nlp_prepretraining_gap.png",
+        xlabel="Eval-loss improvement vs NLP pre-pretraining (%)",
     )
     scratch_plot_path = _save_errorbar_plot(
         payload,
@@ -150,7 +150,7 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
         payload,
         diagnostic_key="logit_divergence_to_baseline",
         output_path=output / "logit_divergence_to_baseline.png",
-        top_label="Reference KL divergence to compute-matched baseline (x1e4 nats, lower is better)",
+        top_label="Reference KL divergence to NLP pre-pretraining (x1e4 nats, lower is better)",
         scale=1.0e4,
         include_variants=("transferred",),
     )
@@ -158,7 +158,7 @@ def save_replication_reports(payload: dict[str, Any], output_dir: str | Path) ->
         payload,
         diagnostic_key="activation_cka_to_baseline",
         output_path=output / "activation_cka_to_baseline.png",
-        top_label="Mid-layer linear CKA to compute-matched baseline (higher is better)",
+        top_label="Mid-layer linear CKA to NLP pre-pretraining (higher is better)",
         zero_floor=True,
         include_variants=("transferred",),
     )
@@ -282,7 +282,7 @@ def _build_report_markdown(
         "",
         "This report summarizes a bounded multi-seed proxy study across the current synthetic pre-pretraining tasks.",
         "The goal is not exact paper reproduction, but a consistent check of whether each synthetic task transfers in the expected direction under one shared setup.",
-        "All tasks are additionally evaluated against a compute-matched natural baseline built from natural-text warm-up on the same downstream text family.",
+        "All tasks are additionally evaluated against an NLP pre-pretraining method built from natural-text warm-up on the same downstream text family.",
         "Aggregated claim outcomes use a simple three-seed rule rather than a hypothesis test.",
         "In the table, `✅` means the three runs had a better average in the target direction and at least 2 of the 3 seeds moved in that direction, `❌` means the opposite pattern held, `❔` means the result was inconclusive, and `➖` means the claim was not evaluated for that task in this profile.",
         "",
@@ -296,15 +296,15 @@ def _build_report_markdown(
         "",
         "This matrix shows the aggregated claim outcomes. Rows are synthetic tasks, columns are natural-language claim categories, and each cell reports whether the corresponding proxy claim was supported, contradicted, or left inconclusive after aggregating across seeds.",
         "",
-        "### Compute-Matched Baseline Gap",
+        "### NLP Pre-Pretraining Gap",
         "",
-        f"![Compute-matched baseline gap]({compute_plot_path.name})",
+        f"![NLP pre-pretraining gap]({compute_plot_path.name})",
         "",
-        "This plot shows the mean percentage evaluation-loss improvement of each task-pretrained run over its compute-matched natural baseline, with standard deviation across seeds. Positive values mean the task-pretrained path finished with lower evaluation loss than the matched natural-text baseline.",
+        "This plot shows the mean percentage evaluation-loss improvement of each task-pretrained run over the compute-matched NLP pre-pretraining method, with standard deviation across seeds. Positive values mean the task-pretrained path finished with lower evaluation loss than NLP pre-pretraining.",
         "",
-        "### Eval-Loss Difference Compared To Baseline",
+        "### Eval-Loss Difference Compared To No Pre-Pretraining",
         "",
-        f"![Transfer gap versus baseline]({scratch_plot_path.name})",
+        f"![Transfer gap versus no pre-pretraining]({scratch_plot_path.name})",
         "",
         "This plot shows the mean percentage evaluation-loss improvement of the task-pretrained run over the baseline run with no pre-pre-training after the same downstream training budget, with standard deviation across seeds. Positive values mean the task-pretrained model finished with lower loss than the baseline.",
         "",
@@ -318,7 +318,7 @@ def _build_report_markdown(
         "",
         f"![Loss overlays]({loss_overlay_path.name})",
         "",
-        "This figure overlays the downstream evaluation-loss curves for the baseline, task-pretrained, and compute-matched natural baseline runs for each task. Study-specific synthetic comparison presets are intentionally excluded so the overlay stays focused on the main proxy comparison. Solid lines are means across seeds and shaded bands show one standard deviation.",
+        "This figure overlays the downstream evaluation-loss curves for no pre-pretraining, task-pretraining, and NLP pre-pretraining runs for each task. Study-specific synthetic comparison presets are intentionally excluded so the overlay stays focused on the main proxy comparison. Solid lines are means across seeds and shaded bands show one standard deviation.",
         "",
     ]
     if probe_plot_path is not None:
@@ -335,18 +335,18 @@ def _build_report_markdown(
         )
     sections.extend(
         [
-            "### Logit Divergence To Baseline",
+            "### Logit Divergence To NLP Pre-Pretraining",
             "",
-            f"![Logit divergence to baseline]({logit_baseline_plot_path.name})",
+            f"![Logit divergence to NLP pre-pretraining]({logit_baseline_plot_path.name})",
             "",
-            "This plot compares each task's task-pretrained model against its own compute-matched natural baseline using reference KL divergence over held-out downstream tokens. Values are plotted in x1e4 nats for readability. Lower values mean the task-pretrained predictive distribution is closer to the matched compute baseline.",
+            "This plot compares each task's task-pretrained model against its own NLP pre-pretraining method using reference KL divergence over held-out downstream tokens. Values are plotted in x1e4 nats for readability. Lower values mean the task-pretrained predictive distribution is closer to NLP pre-pretraining.",
             "LIME and Summarization use different downstream text families from the other tasks, so their KL and CKA values are partly affected by that dataset difference and should not be over-read as if every task used the same held-out distribution.",
             "",
-            "### Activation CKA To Baseline",
+            "### Activation CKA To NLP Pre-Pretraining",
             "",
-            f"![Activation CKA to baseline]({activation_cka_plot_path.name})",
+            f"![Activation CKA to NLP pre-pretraining]({activation_cka_plot_path.name})",
             "",
-            "This plot compares each task's task-pretrained model against its own compute-matched natural baseline using midpoint linear CKA on held-out downstream tokens. Higher values mean the internal representation geometry is more similar despite different parameter initializations. This is a descriptive representation-level diagnostic rather than a direct measure of successful transfer.",
+            "This plot compares each task's task-pretrained model against its own NLP pre-pretraining method using midpoint linear CKA on held-out downstream tokens. Higher values mean the internal representation geometry is more similar despite different parameter initializations. This is a descriptive representation-level diagnostic rather than a direct measure of successful transfer.",
             "",
             "### Activation Effective Rank",
             "",
@@ -520,7 +520,7 @@ def _save_loss_overlay_plot(payload: dict[str, Any], output_path: Path) -> Path:
     variant_styles = {
         "scratch": {"color": "#b88ef0", "linestyle": "-"},
         "transferred": {"color": BRIGHT_BAR_EDGE, "linestyle": "-"},
-        "compute_matched_baseline": {"color": WARM_BAR_EDGE, "linestyle": "--"},
+        "nlp_prepretraining": {"color": WARM_BAR_EDGE, "linestyle": "--"},
     }
     for axis, (task_name, result) in zip(flat_axes, items):
         curves = _collect_loss_curves(result.get("seed_runs", []))
@@ -561,7 +561,7 @@ def _save_variant_category_plot(
     color_map = {
         "scratch": "#b88ef0",
         "transferred": BRIGHT_BAR,
-        "compute_matched_baseline": WARM_BAR,
+        "nlp_prepretraining": WARM_BAR,
         "step": "#ffd36b",
     }
     categories: list[tuple[str, list[tuple[str, float, float]]]] = []
@@ -748,7 +748,7 @@ def _save_effect_summary_plot(payload: dict[str, Any], output_path: Path) -> Pat
     labels = []
     metric_specs = (
         ("transfer_gap_percent", "Transfer gap\n(%)"),
-        ("compute_matched_gap_percent", "Compute-matched gap\n(%)"),
+        ("compute_matched_gap_percent", "NLP method gap\n(%)"),
         ("convergence_step_delta", "Convergence\n(steps)"),
         ("reasoning_accuracy_gain", "Reasoning\n(points)"),
         ("algorithmic_accuracy_gain", "Algorithmic\n(points)"),
@@ -808,11 +808,11 @@ def _build_metrics_table_markdown(payload: dict[str, Any]) -> str:
         "task",
         "preset",
         "seeds",
-        "baseline loss",
+        "no-prepretraining loss",
         "task-pretrained loss",
-        "natural baseline loss",
+        "NLP pre-pretraining loss",
         "task-pretrained gap %",
-        "baseline gap %",
+        "NLP method gap %",
         "convergence delta",
         "reasoning gain",
         "algorithmic gain",
@@ -928,7 +928,7 @@ def _annotate_horizontal_values(
 
 
 def _collect_loss_curves(seed_runs: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
-    variants = ("scratch", "transferred", "compute_matched_baseline")
+    variants = ("scratch", "transferred", "nlp_prepretraining")
     curves: dict[str, dict[str, Any]] = {}
     for variant_name in variants:
         per_seed = []

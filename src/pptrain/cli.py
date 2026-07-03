@@ -142,7 +142,7 @@ def build_parser() -> argparse.ArgumentParser:
     replicate_parser.add_argument(
         "--profile",
         default="paper_proxy_2048",
-        help="Proxy-study profile name. Use 'smoke' or 'paper_proxy_2048'.",
+        help="Proxy-study profile name. Use 'smoke', 'wikitext_proxy', or 'paper_proxy_2048'.",
     )
     replicate_parser.add_argument(
         "--output-dir",
