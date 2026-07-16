@@ -58,10 +58,9 @@ def save_eval_summary(
         axis.set_xlabel("Metric Value")
         axis.grid(alpha=0.2, axis="x")
         figure.tight_layout()
-        figure.savefig(plot_path, dpi=150, bbox_inches="tight")
+        figure.savefig(plot_path, dpi=150, bbox_inches="tight", transparent=True)
         plt.close(figure)
     else:
         plot_path.write_bytes(b"")
 
     return json_path, plot_path
-

@@ -93,6 +93,6 @@ def save_training_summary_plot(
         grad_ax.legend(frameon=False, loc="best")
 
     figure.tight_layout()
-    figure.savefig(output, dpi=150, bbox_inches="tight")
+    figure.savefig(output, dpi=150, bbox_inches="tight", transparent=True)
     plt.close(figure)
     return output

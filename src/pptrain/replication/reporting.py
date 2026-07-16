@@ -415,7 +415,7 @@ def _save_claim_matrix_plot(payload: dict[str, Any], output_path: Path) -> Path:
             status = _claim_status(_payload_tasks(payload)[task_name]["claims"].get(column_name))
             axis.text(column_index, row_index, STATUS_TO_PLOT_TEXT[status], ha="center", va="center", fontsize=7)
     figure.tight_layout()
-    figure.savefig(output_path, dpi=150, bbox_inches="tight")
+    figure.savefig(output_path, dpi=150, bbox_inches="tight", transparent=True)
     plt.close(figure)
     return output_path
 
@@ -465,7 +465,7 @@ def _save_errorbar_plot(
                 axis.xaxis.set_major_locator(MultipleLocator(xgrid_step))
             axis.grid(axis="x", color="#94a3b8", alpha=0.18, linewidth=0.7)
     figure.tight_layout()
-    figure.savefig(output_path, dpi=150, bbox_inches="tight")
+    figure.savefig(output_path, dpi=150, bbox_inches="tight", transparent=True)
     plt.close(figure)
     return output_path
 
@@ -505,7 +505,7 @@ def _save_probe_gain_plot(payload: dict[str, Any], output_path: Path) -> Path | 
     limit = max(np.max(np.abs(values) + errors), 0.1)
     axis.set_xlim(-1.15 * limit, 1.15 * limit)
     figure.tight_layout()
-    figure.savefig(output_path, dpi=150, bbox_inches="tight")
+    figure.savefig(output_path, dpi=150, bbox_inches="tight", transparent=True)
     plt.close(figure)
     return output_path
 
@@ -543,7 +543,7 @@ def _save_loss_overlay_plot(payload: dict[str, Any], output_path: Path) -> Path:
     if handles:
         figure.legend(handles, labels, loc="upper center", ncol=min(4, len(handles)), frameon=False, fontsize=7)
     figure.tight_layout(rect=(0, 0, 1, 0.95))
-    figure.savefig(output_path, dpi=150, bbox_inches="tight")
+    figure.savefig(output_path, dpi=150, bbox_inches="tight", transparent=True)
     plt.close(figure)
     return output_path
 
@@ -615,7 +615,7 @@ def _save_variant_category_plot(
         axis.axis("off")
     figure.suptitle(top_label, fontsize=8, y=0.98)
     figure.tight_layout(rect=(0.0, 0.0, 1.0, 0.95))
-    figure.savefig(output_path, dpi=150, bbox_inches="tight")
+    figure.savefig(output_path, dpi=150, bbox_inches="tight", transparent=True)
     plt.close(figure)
     return output_path
 
@@ -664,7 +664,7 @@ def _save_transferred_metric_plot(
             axis.set_xlim(0.0, upper * 1.12)
     figure.suptitle(top_label, fontsize=8, y=0.98)
     figure.tight_layout(rect=(0.0, 0.0, 1.0, 0.95))
-    figure.savefig(output_path, dpi=150, bbox_inches="tight")
+    figure.savefig(output_path, dpi=150, bbox_inches="tight", transparent=True)
     plt.close(figure)
     return output_path
 
@@ -737,7 +737,7 @@ def _save_cross_task_matrix_grid(
         axis.axis("off")
     figure.suptitle(top_label, fontsize=8, y=0.98)
     figure.tight_layout(rect=(0.0, 0.0, 1.0, 0.95))
-    figure.savefig(output_path, dpi=150, bbox_inches="tight")
+    figure.savefig(output_path, dpi=150, bbox_inches="tight", transparent=True)
     plt.close(figure)
     return output_path
 
@@ -798,7 +798,7 @@ def _save_effect_summary_plot(payload: dict[str, Any], output_path: Path) -> Pat
             text_color = "#ffffff" if color_value >= 0.5 else "#0f172a"
             axis.text(column_index, row_index, label, ha="center", va="center", fontsize=6.0, color=text_color)
     figure.tight_layout()
-    figure.savefig(output_path, dpi=150, bbox_inches="tight")
+    figure.savefig(output_path, dpi=150, bbox_inches="tight", transparent=True)
     plt.close(figure)
     return output_path
 
