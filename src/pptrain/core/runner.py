@@ -9,7 +9,7 @@ from transformers import Trainer, TrainerCallback
 
 from pptrain.core.base import Task
 from pptrain.core.checkpoints import find_latest_checkpoint
-from pptrain.core.config import RunConfig
+from pptrain.core.config import RunConfig, require_float32_trainable_parameters
 from pptrain.core.plotting import save_training_summary_plot
 from pptrain.core.transfer import TransferBundle
 from pptrain.integrations.base import CausalLMAdapter
@@ -68,6 +68,7 @@ class PrePreTrainer:
         datasets = self.task.build_datasets(seed=self.run_config.seed)
         tokenizer_spec = self.task.tokenizer_spec()
         model = self.model_adapter.create_prepretrain_model(tokenizer_spec)
+        require_float32_trainable_parameters(model)
         if self.run_config.gradient_checkpointing and getattr(model, "config", None) is not None:
             if hasattr(model.config, "use_cache"):
                 model.config.use_cache = False

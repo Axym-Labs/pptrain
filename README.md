@@ -72,6 +72,15 @@ pptrain fit configs/nca_minimal.yaml --eval-config configs/eval_perplexity_smoke
 pptrain replicate --test
 ```
 
+## Changelog
+
+### 0.3.2
+
+Two training bugs are fixed. Results from earlier versions that are affected should be rerun.
+
+- **Low-precision training without mixed precision.** Models built from a Hugging Face config whose `torch_dtype` is `float16` or `bfloat16` (e.g. Pythia) were created in that dtype by recent `transformers` versions (verified on 4.57.6). The Trainer then kept parameters and AdamW state in low precision, with no float32 master weights and AdamW `eps=1e-8` rounding to 0 in float16. `HFCausalLMAdapter` and the replication runner now build and load models in float32; `RunConfig(bf16=True)` / `RunConfig(fp16=True)` add mixed precision on top. `PrePreTrainer` and the replication runner raise an error if a model reaches training with non-float32 trainable parameters, including models from custom adapters.
+- **NCA labels shifted twice.** The `nca` task returned labels already shifted to the next token, and the Hugging Face causal-LM loss shifts them again, so NCA models learned to predict two tokens ahead. Labels are now position-aligned like those of every other task. The NCA held-out token accuracy diagnostic was updated to match.
+
 ## Citations
 
 - [1] Lee et al. 2026. [*Training Language Models via Neural Cellular Automata*](https://arxiv.org/abs/2603.10055).

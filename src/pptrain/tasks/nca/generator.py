@@ -215,13 +215,20 @@ def create_training_example(
     frame_token_length: int,
     min_frames: int,
 ) -> tuple[list[int], list[int]]:
+    """Return HF-style causal-LM inputs and position-aligned labels.
+
+    Labels are not shifted: HF causal-LM losses shift them internally, so position
+    ``i`` is trained to predict ``labels[i + 1]``. Targets inside the first
+    ``min_frames`` frames are masked, as in the reference implementation (whose own
+    training loop does not shift and therefore stores ``masked_targets[1:]``).
+    """
     masked_targets = list(tokens)
     prefix = min(min_frames * frame_token_length, len(masked_targets))
     for idx in range(prefix):
         masked_targets[idx] = -100
 
     input_ids = tokens[:-1][:max_length]
-    labels = masked_targets[1:][:max_length]
+    labels = masked_targets[:-1][:max_length]
     return input_ids, labels
 
 

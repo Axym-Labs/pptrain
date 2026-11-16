@@ -95,7 +95,7 @@ def _materialize_split(rows, *, max_length: int, min_frames: int, frame_token_le
         for index in range(prefix):
             masked[index] = -100
         sequences.append(list(row[:-1][:max_length]))
-        labels.append(list(masked[1:][:max_length]))
+        labels.append(list(masked[:-1][:max_length]))
     return {"sequences": sequences, "labels": labels}
 
 

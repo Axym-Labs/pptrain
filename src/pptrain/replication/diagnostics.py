@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader
 from transformers import AutoModelForCausalLM
 
 from pptrain.core.base import DatasetBundle, Task
+from pptrain.integrations.hf import float32_dtype_kwargs
 
 
 VARIANT_LABELS = {
@@ -163,7 +164,8 @@ def compute_nca_synthetic_token_accuracy(
         collate_fn=datasets.data_collator,
     )
     device = _resolve_device()
-    model = AutoModelForCausalLM.from_pretrained(str(model_dir)).to(device)
+    model = AutoModelForCausalLM.from_pretrained(str(model_dir), **float32_dtype_kwargs())
+    model = model.to(device)
     model.eval()
     correct = 0
     total = 0
@@ -175,9 +177,11 @@ def compute_nca_synthetic_token_accuracy(
             attention_mask = batch["attention_mask"].to(device)
             labels = batch["labels"].to(device)
             logits = model(input_ids=input_ids, attention_mask=attention_mask).logits
-            predictions = logits.argmax(dim=-1)
-            mask = labels != -100
-            correct += int((predictions[mask] == labels[mask]).sum().item())
+            # Labels are position-aligned (HF convention): position i predicts labels[i + 1].
+            predictions = logits[:, :-1].argmax(dim=-1)
+            targets = labels[:, 1:]
+            mask = targets != -100
+            correct += int((predictions[mask] == targets[mask]).sum().item())
             total += int(mask.sum().item())
     del model
     _maybe_clear_cuda()

@@ -3,7 +3,31 @@ from __future__ import annotations
 import inspect
 from dataclasses import dataclass, field
 
+import torch
+from torch import nn
 from transformers import TrainingArguments
+
+
+def require_float32_trainable_parameters(model: nn.Module) -> None:
+    """Fail if any trainable parameter is not float32.
+
+    The HF Trainer keeps AdamW state in the parameter dtype and only applies loss
+    scaling or autocast on top of float32 master weights (``fp16``/``bf16``
+    TrainingArguments). Low-precision parameters would therefore train with
+    low-precision optimizer state (AdamW ``eps=1e-8`` underflows to 0 in float16).
+    """
+    if not isinstance(model, nn.Module):
+        return
+    low_precision = sorted(
+        {str(parameter.dtype) for parameter in model.parameters() if parameter.requires_grad}
+        - {str(torch.float32)}
+    )
+    if low_precision:
+        raise ValueError(
+            "pptrain trains float32 master weights; got trainable parameters in "
+            f"{', '.join(low_precision)}. Build the model with dtype=torch.float32 and use "
+            "RunConfig(bf16=True) or RunConfig(fp16=True) for mixed precision."
+        )
 
 
 @dataclass(slots=True)

@@ -458,8 +458,6 @@ def _build_fake_nca_reference_repo(repo_root: Path, bundle) -> Path:
 
 
 def _recover_raw_nca_sequence(input_ids: list[int], labels: list[int]) -> list[int]:
-    if labels and int(labels[-1]) != -100:
-        tail_token = int(labels[-1])
-    else:
-        tail_token = int(input_ids[-1])
-    return [*map(int, input_ids), tail_token]
+    # Aligned labels never contain the final raw token, so any tail token round-trips.
+    del labels
+    return [*map(int, input_ids), 0]

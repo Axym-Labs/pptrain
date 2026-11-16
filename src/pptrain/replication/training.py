@@ -6,14 +6,14 @@ from pathlib import Path
 from typing import Any
 
 import torch
-from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, Trainer
+from transformers import AutoConfig, AutoTokenizer, Trainer
 
 from pptrain.core.base import DatasetBundle
 from pptrain.core.checkpoints import find_latest_checkpoint
-from pptrain.core.config import RunConfig
+from pptrain.core.config import RunConfig, require_float32_trainable_parameters
 from pptrain.core.plotting import save_training_summary_plot
 from pptrain.core.transfer import ReinitializeEmbeddingTransferPolicy, TransferBundle, TransferReport
-from pptrain.integrations.hf import HFModelConfig
+from pptrain.integrations.hf import HFModelConfig, causal_lm_from_config
 
 
 @dataclass(slots=True)
@@ -54,7 +54,7 @@ def build_random_init_downstream_model(
     _apply_context_length(config, context_length)
     for key, value in model_config.config_overrides.items():
         setattr(config, key, value)
-    return AutoModelForCausalLM.from_config(config, trust_remote_code=model_config.trust_remote_code)
+    return causal_lm_from_config(config, trust_remote_code=model_config.trust_remote_code)
 
 
 def train_downstream_stage(
@@ -65,6 +65,7 @@ def train_downstream_stage(
     output_dir: Path,
     metadata: dict[str, Any],
 ) -> DownstreamStageResult:
+    require_float32_trainable_parameters(model)
     output_dir.mkdir(parents=True, exist_ok=True)
     stage_run_config = RunConfig(**{**asdict(run_config), "output_dir": str(output_dir)})
     if stage_run_config.gradient_checkpointing and getattr(model, "config", None) is not None:

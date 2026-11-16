@@ -47,13 +47,19 @@ def test_nca_epoch_refresh_rebuilds_training_sequences() -> None:
     assert bundle.train_dataset.sequences != original_sequences
 
 
-def test_nca_training_example_matches_reference_target_shift() -> None:
+def test_nca_training_example_labels_are_aligned_for_hf_shift() -> None:
+    tokens = [36, 1, 2, 37, 36, 3, 4, 37]
     inputs, labels = create_training_example(
-        [36, 1, 2, 37, 36, 3, 4, 37],
+        tokens,
         max_length=16,
         frame_token_length=4,
         min_frames=1,
     )
 
+    # Unshifted labels: HF causal-LM losses shift them, so position i predicts labels[i + 1].
     assert inputs == [36, 1, 2, 37, 36, 3, 4]
-    assert labels == [-100, -100, -100, 36, 3, 4, 37]
+    assert labels == [-100, -100, -100, -100, 36, 3, 4]
+    # After the HF shift the targets equal the reference repo's pre-shifted targets
+    # (masked_targets[1:]), minus the final token that no input position can see.
+    reference_targets = [-100, -100, -100, 36, 3, 4, 37]
+    assert labels[1:] == reference_targets[: len(inputs) - 1]
