@@ -83,6 +83,8 @@ class TaskStudySpec:
     comparison_presets: dict[str, str] = field(default_factory=dict)
     synthetic_run_config_overrides: dict[str, Any] = field(default_factory=dict)
     downstream_run_config_overrides: dict[str, Any] = field(default_factory=dict)
+    # Applied on top of the study's synthetic run config, which the NLP pre-pretraining
+    # arm reuses so that both upstream arms get the same steps, batch, and token budget.
     natural_warmup_run_config_overrides: dict[str, Any] = field(default_factory=dict)
     compare_against_natural_warmup: bool = False
     run_reasoning_probe: bool = False
@@ -99,7 +101,6 @@ class ReplicationProfile:
     config_overrides: dict[str, Any]
     synthetic_run_config: RunConfig
     downstream_run_config: RunConfig
-    natural_warmup_run_config: RunConfig
     datasets: dict[str, TextDatasetSpec]
     studies: tuple[TaskStudySpec, ...]
     diagnostic_max_batches: int = 4
@@ -313,15 +314,6 @@ def _build_smoke_profile(
             save_steps=4,
             eval_steps=2,
         ),
-        natural_warmup_run_config=RunConfig(
-            output_dir=f"{output_dir}/warmup",
-            max_steps=2,
-            per_device_train_batch_size=2,
-            per_device_eval_batch_size=2,
-            logging_steps=1,
-            save_steps=2,
-            eval_steps=2,
-        ),
         datasets=datasets,
         studies=studies,
         diagnostic_max_batches=2,
@@ -494,18 +486,6 @@ def _build_wikitext_proxy_profile(
             save_steps=64,
             eval_steps=64,
             warmup_steps=16,
-            gradient_accumulation_steps=2,
-        ),
-        natural_warmup_run_config=RunConfig(
-            output_dir=f"{output_dir}/warmup",
-            max_steps=128,
-            per_device_train_batch_size=2,
-            per_device_eval_batch_size=2,
-            learning_rate=1e-6,
-            logging_steps=16,
-            save_steps=64,
-            eval_steps=64,
-            warmup_steps=8,
             gradient_accumulation_steps=2,
         ),
         datasets=datasets,
@@ -744,18 +724,6 @@ def _build_paper_proxy_profile(
             save_steps=441,
             eval_steps=441,
             warmup_steps=88,
-            gradient_accumulation_steps=4,
-        ),
-        natural_warmup_run_config=RunConfig(
-            output_dir=f"{output_dir}/warmup",
-            max_steps=882,
-            per_device_train_batch_size=2,
-            per_device_eval_batch_size=2,
-            learning_rate=1e-6,
-            logging_steps=10,
-            save_steps=221,
-            eval_steps=221,
-            warmup_steps=44,
             gradient_accumulation_steps=4,
         ),
         datasets=datasets,

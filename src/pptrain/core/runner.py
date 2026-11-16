@@ -93,6 +93,11 @@ class PrePreTrainer:
 
         train_result = trainer.train(resume_from_checkpoint=find_latest_checkpoint(run_dir))
         metrics = dict(train_result.metrics)
+        train_sequences = getattr(datasets.train_dataset, "sequences", None)
+        if train_sequences:
+            metrics["train_mean_sequence_tokens"] = sum(len(item) for item in train_sequences) / len(
+                train_sequences
+            )
         if datasets.eval_dataset is not None:
             metrics.update(trainer.evaluate())
         if refresh_callback is not None and refresh_callback.history:

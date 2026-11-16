@@ -20,7 +20,6 @@ def _dummy_profile(tmp_path: Path) -> ReplicationProfile:
         config_overrides={},
         synthetic_run_config=RunConfig(output_dir=str(tmp_path / "synthetic"), max_steps=1),
         downstream_run_config=RunConfig(output_dir=str(tmp_path / "downstream"), max_steps=1),
-        natural_warmup_run_config=RunConfig(output_dir=str(tmp_path / "warmup"), max_steps=1),
         datasets={},
         studies=(
             TaskStudySpec(
@@ -139,7 +138,6 @@ def test_paper_proxy_hardware_optimization_uses_gradient_checkpointing_and_h200_
     )
     assert optimized.synthetic_run_config.gradient_checkpointing is True
     assert optimized.downstream_run_config.gradient_checkpointing is True
-    assert optimized.natural_warmup_run_config.gradient_checkpointing is True
     assert optimized.synthetic_run_config.per_device_train_batch_size == 4
     assert optimized.synthetic_run_config.per_device_eval_batch_size == 4
     assert optimized.synthetic_run_config.gradient_accumulation_steps == 2
@@ -150,7 +148,6 @@ def test_checkpoint_removal_override_applies_to_all_stages(tmp_path: Path) -> No
     overridden = runner._override_checkpoint_removal(profile=profile, remove_checkpoints=False)
     assert overridden.synthetic_run_config.remove_checkpoints is False
     assert overridden.downstream_run_config.remove_checkpoints is False
-    assert overridden.natural_warmup_run_config.remove_checkpoints is False
 
 
 def test_prune_seed_artifacts_keeps_transferred_model(tmp_path: Path) -> None:

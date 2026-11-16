@@ -56,12 +56,15 @@ def _run_config_signature(run_config: RunConfig) -> dict[str, Any]:
     return payload
 
 
+def _natural_warmup_run_config(*, study: TaskStudySpec, profile: ReplicationProfile) -> RunConfig:
+    """The NLP pre-pretraining arm reuses the study's synthetic upstream recipe."""
+    synthetic_run_config = _apply_run_config_overrides(profile.synthetic_run_config, study.synthetic_run_config_overrides)
+    return _apply_run_config_overrides(synthetic_run_config, study.natural_warmup_run_config_overrides)
+
+
 def _study_axis_signature(*, study: TaskStudySpec, profile: ReplicationProfile) -> dict[str, Any]:
     downstream_run_config = _apply_run_config_overrides(profile.downstream_run_config, study.downstream_run_config_overrides)
-    natural_warmup_run_config = _apply_run_config_overrides(
-        profile.natural_warmup_run_config,
-        study.natural_warmup_run_config_overrides,
-    )
+    natural_warmup_run_config = _natural_warmup_run_config(study=study, profile=profile)
     return {
         "dataset_key": study.dataset_key,
         "context_length": profile.context_length,
@@ -89,10 +92,7 @@ def _collect_axis_specs(
     for study in studies:
         axis_key = _axis_cache_key(study=study, profile=profile)
         downstream_run_config = _apply_run_config_overrides(profile.downstream_run_config, study.downstream_run_config_overrides)
-        natural_warmup_run_config = _apply_run_config_overrides(
-            profile.natural_warmup_run_config,
-            study.natural_warmup_run_config_overrides,
-        )
+        natural_warmup_run_config = _natural_warmup_run_config(study=study, profile=profile)
         if axis_key not in axis_specs:
             dataset_count = dataset_counts.get(study.dataset_key, 0)
             dataset_counts[study.dataset_key] = dataset_count + 1
@@ -350,6 +350,9 @@ def _run_seeded_study(
 
     if study.compare_against_natural_warmup:
         nlp_variant = _run_nlp_prepretraining_variant(
+            synthetic_mean_sequence_tokens=float(
+                variants["transferred"]["synthetic_run"]["metrics"]["train_mean_sequence_tokens"]
+            ),
             study=study,
             profile=profile,
             hf_config=hf_config,
@@ -457,6 +460,7 @@ def _run_transferred_variant(
 
 def _run_nlp_prepretraining_variant(
     *,
+    synthetic_mean_sequence_tokens: float,
     study: TaskStudySpec,
     profile: ReplicationProfile,
     hf_config: HFModelConfig,
@@ -466,11 +470,14 @@ def _run_nlp_prepretraining_variant(
     output_dir: Path,
     seed: int,
 ) -> dict[str, Any] | None:
-    natural_warmup_run_config = _apply_run_config_overrides(
-        profile.natural_warmup_run_config,
-        study.natural_warmup_run_config_overrides,
-    )
+    natural_warmup_run_config = _natural_warmup_run_config(study=study, profile=profile)
     downstream_run_config = _apply_run_config_overrides(profile.downstream_run_config, study.downstream_run_config_overrides)
+    # Same steps and batch as the synthetic arm; text blocks as long as the mean synthetic
+    # sequence, so both arms train on the same number of (non-pad) upstream tokens.
+    block_size = matched_natural_block_size(
+        synthetic_mean_sequence_tokens=synthetic_mean_sequence_tokens,
+        context_length=profile.context_length,
+    )
     task = create_task(
         "nlp_prepretraining",
         _nlp_prepretraining_task_config(
@@ -478,6 +485,7 @@ def _run_nlp_prepretraining_variant(
             profile=profile,
             hf_config=hf_config,
             run_config=natural_warmup_run_config,
+            block_size=block_size,
         ),
     )
 
@@ -509,7 +517,18 @@ def _run_nlp_prepretraining_variant(
         stage_result=continuation_stage,
         probes=_run_probes(study=study, profile=profile, model=model, tokenizer=tokenizer),
     )
+    effective_batch = natural_warmup_run_config.per_device_train_batch_size * (
+        natural_warmup_run_config.gradient_accumulation_steps
+    )
     payload["prepretraining_run"] = {
+        "upstream_budget": {
+            "max_steps": natural_warmup_run_config.max_steps,
+            "effective_batch_sequences": effective_batch,
+            "block_size": block_size,
+            "synthetic_mean_sequence_tokens": synthetic_mean_sequence_tokens,
+            "natural_tokens": natural_warmup_run_config.max_steps * effective_batch * block_size,
+            "synthetic_tokens": natural_warmup_run_config.max_steps * effective_batch * synthetic_mean_sequence_tokens,
+        },
         "run_dir": str(nlp_run.run_dir),
         "model_dir": str(nlp_run.model_dir),
         "metrics": dict(nlp_run.metrics),
@@ -521,12 +540,17 @@ def _run_nlp_prepretraining_variant(
     return payload
 
 
+def matched_natural_block_size(*, synthetic_mean_sequence_tokens: float, context_length: int) -> int:
+    return max(2, min(int(context_length), int(round(synthetic_mean_sequence_tokens))))
+
+
 def _nlp_prepretraining_task_config(
     *,
     study: TaskStudySpec,
     profile: ReplicationProfile,
     hf_config: HFModelConfig,
     run_config: RunConfig,
+    block_size: int,
 ) -> dict[str, Any]:
     dataset_spec = profile.datasets[study.dataset_key]
     return {
@@ -547,10 +571,10 @@ def _nlp_prepretraining_task_config(
         "eval_skip_records": 0,
         "inline_train_texts": dataset_spec.inline_warmup_texts,
         "inline_eval_texts": (),
-        "max_length": profile.context_length,
+        "max_length": block_size,
         "train_target_token_count": _training_token_budget(
             run_config=run_config,
-            block_size=profile.context_length,
+            block_size=block_size,
         ),
         "eval_target_token_count": None,
     }
@@ -1110,7 +1134,6 @@ def _optimize_profile_for_hardware(
         profile,
         synthetic_run_config=_with_gradient_checkpointing(profile.synthetic_run_config),
         downstream_run_config=_with_gradient_checkpointing(profile.downstream_run_config),
-        natural_warmup_run_config=_with_gradient_checkpointing(profile.natural_warmup_run_config),
     )
     max_memory_gb = max(
         (
@@ -1125,7 +1148,6 @@ def _optimize_profile_for_hardware(
             optimized,
             synthetic_run_config=_scale_run_config_for_headroom(optimized.synthetic_run_config),
             downstream_run_config=_scale_run_config_for_headroom(optimized.downstream_run_config),
-            natural_warmup_run_config=_scale_run_config_for_headroom(optimized.natural_warmup_run_config),
         )
     return optimized
 
@@ -1157,7 +1179,6 @@ def _override_checkpoint_removal(
         profile,
         synthetic_run_config=replace(profile.synthetic_run_config, remove_checkpoints=remove_checkpoints),
         downstream_run_config=replace(profile.downstream_run_config, remove_checkpoints=remove_checkpoints),
-        natural_warmup_run_config=replace(profile.natural_warmup_run_config, remove_checkpoints=remove_checkpoints),
     )
 
 
