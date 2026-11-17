@@ -45,11 +45,15 @@ class RunConfig:
     save_steps: int = 100
     eval_steps: int = 100
     warmup_steps: int = 0
+    lr_scheduler_type: str = "linear"
     save_total_limit: int = 2
     dataloader_num_workers: int = 0
     fp16: bool = False
     bf16: bool = False
     gradient_checkpointing: bool = False
+    optim: str = "adamw_torch"
+    optim_args: str | None = None
+    use_liger_kernel: bool = False
     remove_checkpoints: bool = True
     report_to: tuple[str, ...] = field(default_factory=tuple)
 
@@ -69,15 +73,23 @@ class RunConfig:
             save_steps=self.save_steps,
             eval_steps=self.eval_steps,
             warmup_steps=self.warmup_steps,
+            lr_scheduler_type=self.lr_scheduler_type,
             save_total_limit=self.save_total_limit,
             dataloader_num_workers=self.dataloader_num_workers,
             fp16=self.fp16,
             bf16=self.bf16,
             gradient_checkpointing=self.gradient_checkpointing,
+            optim=self.optim,
             report_to=list(self.report_to),
             remove_unused_columns=False,
         )
         signature = inspect.signature(TrainingArguments.__init__)
+        if self.optim_args is not None:
+            kwargs["optim_args"] = self.optim_args
+        if self.use_liger_kernel:
+            if "use_liger_kernel" not in signature.parameters:
+                raise ValueError("use_liger_kernel needs a transformers version with Liger support")
+            kwargs["use_liger_kernel"] = True
         if "evaluation_strategy" in signature.parameters:
             kwargs["evaluation_strategy"] = evaluation_strategy
         else:

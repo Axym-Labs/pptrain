@@ -29,14 +29,15 @@ def test_full_replication_profile_defaults_to_2048_context(tmp_path) -> None:
     assert profile.synthetic_run_config.save_steps == 18
     assert profile.synthetic_run_config.warmup_steps == 4
     assert profile.downstream_run_config.max_steps == 1764
-    assert profile.downstream_run_config.learning_rate == 1e-6
+    assert profile.downstream_run_config.learning_rate == 3e-4
+    assert profile.downstream_run_config.lr_scheduler_type == "cosine"
     assert profile.downstream_run_config.save_steps == 441
-    assert profile.downstream_run_config.warmup_steps == 88
+    assert profile.downstream_run_config.warmup_steps == 35
     simpler_tasks = next(study for study in profile.studies if study.task_name == "simpler_tasks")
     assert simpler_tasks.synthetic_run_config_overrides["learning_rate"] == 1e-6
     assert simpler_tasks.synthetic_run_config_overrides["max_steps"] == 288
     assert simpler_tasks.synthetic_run_config_overrides["warmup_steps"] == 14
-    assert simpler_tasks.downstream_run_config_overrides == {"learning_rate": 1e-6}
+    assert all(not study.downstream_run_config_overrides for study in profile.studies)
     assert profile.synthetic_run_config.remove_checkpoints is True
     assert profile.downstream_run_config.remove_checkpoints is True
     assert profile.seed_values == (11, 23, 37)

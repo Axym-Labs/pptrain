@@ -186,6 +186,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Keep intermediate Trainer checkpoint-* directories instead of pruning them after final model save.",
     )
     replicate_parser.set_defaults(remove_checkpoints=True)
+    for flag, target in (
+        ("--config-overrides", "model config"),
+        ("--synthetic-run-overrides", "RunConfig of every synthetic and natural-text pre-pretraining stage"),
+        ("--downstream-run-overrides", "RunConfig of every downstream stage"),
+    ):
+        replicate_parser.add_argument(flag, type=json.loads, default=None, help=f"JSON object of overrides for the {target}.")
     replicate_parser.add_argument("--json", action="store_true", help="Print the top-level campaign payload as JSON.")
     add_parity_subparser(subparsers)
     return parser
@@ -215,6 +221,9 @@ def main(argv: list[str] | None = None) -> None:
             seeds=seed_values,
             remove_checkpoints=bool(args.remove_checkpoints),
             resume=bool(args.resume),
+            config_overrides=args.config_overrides,
+            synthetic_run_overrides=args.synthetic_run_overrides,
+            downstream_run_overrides=args.downstream_run_overrides,
         )
         if args.json:
             print(json.dumps(payload, indent=2, sort_keys=True))

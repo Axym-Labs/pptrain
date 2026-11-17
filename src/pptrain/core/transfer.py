@@ -106,8 +106,10 @@ class ReinitializeEmbeddingTransferPolicy:
         if output_embeddings is not None and hasattr(output_embeddings, "weight"):
             skip_ids.add(id(output_embeddings.weight))
 
+        # state_dict(keep_vars=True) also lists tied aliases (e.g. lm_head.weight when the
+        # output projection shares the input embedding), which named_parameters() deduplicates.
         names: set[str] = set()
-        for name, parameter in model.named_parameters():
+        for name, parameter in model.state_dict(keep_vars=True).items():
             if id(parameter) in skip_ids:
                 names.add(name)
         return names

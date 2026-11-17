@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import math
 import random
@@ -10,12 +11,13 @@ from typing import Any
 
 import numpy as np
 import torch
+from transformers import AutoModelForCausalLM
 from transformers import set_seed as hf_set_seed
 
 from pptrain.core.config import RunConfig
 from pptrain.core.registry import create_task
 from pptrain.core.runner import PrePreTrainer
-from pptrain.integrations.hf import HFCausalLMAdapter, HFModelConfig
+from pptrain.integrations.hf import HFCausalLMAdapter, HFModelConfig, float32_dtype_kwargs
 from pptrain.replication.data import build_text_train_eval_bundle
 from pptrain.replication.diagnostics import (
     VARIANT_LABELS,
@@ -39,6 +41,7 @@ from pptrain.replication.specs import (
     build_replication_profile,
 )
 from pptrain.replication.training import (
+    DownstreamStageResult,
     apply_transfer_bundle,
     build_random_init_downstream_model,
     load_tokenizer,
@@ -130,6 +133,9 @@ def run_replication_campaign(
     seeds: tuple[int, ...] | None = None,
     remove_checkpoints: bool | None = None,
     resume: bool = False,
+    config_overrides: dict[str, Any] | None = None,
+    synthetic_run_overrides: dict[str, Any] | None = None,
+    downstream_run_overrides: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     output_path = Path(output_dir)
     profile = build_replication_profile(
@@ -142,6 +148,12 @@ def run_replication_campaign(
     seed_values = tuple(seeds or profile.seed_values)
     environment = _collect_environment_info()
     profile = _optimize_profile_for_hardware(profile=profile, environment=environment)
+    profile = apply_profile_overrides(
+        profile,
+        config_overrides=config_overrides,
+        synthetic_run_overrides=synthetic_run_overrides,
+        downstream_run_overrides=downstream_run_overrides,
+    )
     if remove_checkpoints is not None:
         profile = _override_checkpoint_removal(profile=profile, remove_checkpoints=remove_checkpoints)
     existing_payload = (
@@ -174,6 +186,9 @@ def run_replication_campaign(
             "context_length": profile.context_length,
             "test_mode": test_mode,
             "seed_values": list(seed_values),
+            "config_overrides": dict(profile.config_overrides),
+            "synthetic_run_config": asdict(profile.synthetic_run_config),
+            "downstream_run_config": asdict(profile.downstream_run_config),
         },
         "environment": environment,
         "tasks": {},
@@ -301,18 +316,15 @@ def _run_seeded_study(
     )
     variants: dict[str, Any] = {}
 
-    _set_global_seed(seed)
-    scratch_model = build_random_init_downstream_model(
-        model_config=hf_config,
+    scratch_model, scratch_result = _shared_scratch_stage(
+        study=study,
+        profile=profile,
+        hf_config=hf_config,
         tokenizer=tokenizer,
-        context_length=profile.context_length,
-    )
-    scratch_result = train_downstream_stage(
-        model=scratch_model,
-        datasets=downstream_bundle,
-        run_config=_with_auto_precision(downstream_run_config, output_dir / "scratch", seed=seed),
-        output_dir=output_dir / "scratch",
-        metadata={"variant": "scratch", "study": study.task_name, "seed": seed},
+        downstream_bundle=downstream_bundle,
+        downstream_run_config=downstream_run_config,
+        campaign_dir=output_dir.parent.parent,
+        seed=seed,
     )
     variants["scratch"] = _serialize_variant_result(
         stage_result=scratch_result,
@@ -381,6 +393,80 @@ def _run_seeded_study(
     }
     _prune_seed_artifacts(result)
     return result
+
+
+SHARED_SCRATCH_DIRNAME = "_shared_scratch"
+
+
+def _shared_scratch_stage(
+    *,
+    study: TaskStudySpec,
+    profile: ReplicationProfile,
+    hf_config: HFModelConfig,
+    tokenizer,
+    downstream_bundle,
+    downstream_run_config: RunConfig,
+    campaign_dir: Path,
+    seed: int,
+):
+    """Train the random-init baseline once per (dataset, downstream recipe, model, seed).
+
+    Studies on the same downstream dataset with the same downstream recipe share one
+    scratch run instead of retraining an identical baseline; each study still runs its
+    own probes on it. The shared directory is excluded from per-seed pruning.
+    """
+    signature = {
+        "dataset_key": study.dataset_key,
+        "context_length": profile.context_length,
+        "model": hf_config.to_dict(),
+        "downstream_run_config": _run_config_signature(downstream_run_config),
+    }
+    digest = hashlib.sha256(json.dumps(signature, sort_keys=True).encode("utf-8")).hexdigest()[:10]
+    stage_dir = campaign_dir / SHARED_SCRATCH_DIRNAME / f"{study.dataset_key}_{digest}" / f"seed_{seed}"
+    result_path = stage_dir / "stage_result.json"
+    if result_path.exists():
+        cached = json.loads(result_path.read_text(encoding="utf-8"))
+        model = AutoModelForCausalLM.from_pretrained(
+            cached["model_dir"],
+            trust_remote_code=hf_config.trust_remote_code,
+            **float32_dtype_kwargs(),
+        )
+        result = DownstreamStageResult(
+            run_dir=Path(cached["run_dir"]),
+            model_dir=Path(cached["model_dir"]),
+            metrics=cached["metrics"],
+            plot_path=Path(cached["plot_path"]) if cached.get("plot_path") else None,
+            log_history=cached["log_history"],
+        )
+        return model, result
+    _set_global_seed(seed)
+    model = build_random_init_downstream_model(
+        model_config=hf_config,
+        tokenizer=tokenizer,
+        context_length=profile.context_length,
+    )
+    result = train_downstream_stage(
+        model=model,
+        datasets=downstream_bundle,
+        run_config=_with_auto_precision(downstream_run_config, stage_dir, seed=seed),
+        output_dir=stage_dir,
+        metadata={"variant": "scratch", "study": study.task_name, "seed": seed, "shared_signature": signature},
+    )
+    result_path.write_text(
+        json.dumps(
+            {
+                "run_dir": str(result.run_dir),
+                "model_dir": str(result.model_dir),
+                "metrics": result.metrics,
+                "plot_path": str(result.plot_path) if result.plot_path is not None else None,
+                "log_history": result.log_history,
+                "signature": signature,
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+    return model, result
 
 
 def _run_transferred_variant(
@@ -596,6 +682,28 @@ def _run_probes(*, study: TaskStudySpec, profile: ReplicationProfile, model, tok
         result = run_needle_probe(model=model, tokenizer=tokenizer, config=profile.needle_probe)
         probes["algorithmic"] = {"metrics": dict(result.metrics), "artifacts": dict(result.artifacts)}
     return probes
+
+
+def apply_profile_overrides(
+    profile: ReplicationProfile,
+    *,
+    config_overrides: dict[str, Any] | None = None,
+    synthetic_run_overrides: dict[str, Any] | None = None,
+    downstream_run_overrides: dict[str, Any] | None = None,
+) -> ReplicationProfile:
+    """Apply user overrides after the hardware adjustments.
+
+    ``config_overrides`` are set on the model config (e.g. a smaller architecture);
+    the run overrides replace RunConfig fields of every synthetic (and budget-matched
+    natural-text) stage or every downstream stage (e.g. optimizer, gradient checkpointing,
+    per-device batch size).
+    """
+    return replace(
+        profile,
+        config_overrides={**profile.config_overrides, **(config_overrides or {})},
+        synthetic_run_config=_apply_run_config_overrides(profile.synthetic_run_config, synthetic_run_overrides or {}),
+        downstream_run_config=_apply_run_config_overrides(profile.downstream_run_config, downstream_run_overrides or {}),
+    )
 
 
 def _apply_run_config_overrides(run_config: RunConfig, overrides: dict[str, Any]) -> RunConfig:
@@ -1187,7 +1295,9 @@ def _prune_seed_artifacts(seed_result: dict[str, Any]) -> None:
     for variant_name, variant_payload in variants.items():
         if not isinstance(variant_payload, dict):
             continue
-        if variant_name != "transferred":
+        if variant_name != "transferred" and SHARED_SCRATCH_DIRNAME not in Path(
+            str(variant_payload.get("model_dir") or "")
+        ).parts:
             _remove_path_if_exists(variant_payload.get("model_dir"))
             _remove_path_if_exists(variant_payload.get("run_dir"))
         warmup_stage = variant_payload.get("warmup_stage")
@@ -1257,6 +1367,7 @@ def _load_resume_payload(
         "context_length": profile.context_length,
         "test_mode": test_mode,
         "seed_values": list(seed_values),
+        "config_overrides": dict(profile.config_overrides),
     }
     actual = {
         "name": profile_payload.get("name"),
@@ -1264,6 +1375,7 @@ def _load_resume_payload(
         "context_length": profile_payload.get("context_length"),
         "test_mode": profile_payload.get("test_mode"),
         "seed_values": profile_payload.get("seed_values"),
+        "config_overrides": profile_payload.get("config_overrides", {}),
     }
     if actual != expected:
         raise ValueError(

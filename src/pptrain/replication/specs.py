@@ -618,7 +618,6 @@ def _build_paper_proxy_profile(
                 "eval_steps": 72,
                 "warmup_steps": 14,
             },
-            downstream_run_config_overrides={"learning_rate": 1e-6},
             compare_against_natural_warmup=True,
         ),
         TaskStudySpec(
@@ -714,16 +713,20 @@ def _build_paper_proxy_profile(
             warmup_steps=4,
             gradient_accumulation_steps=4,
         ),
+        # Downstream LM training from (partially) random init: a standard small-LM
+        # pretraining schedule (peak lr 3e-4 as in Pythia-410M, Biderman et al. 2023;
+        # cosine decay; 2% warmup). Shared by every arm and curriculum.
         downstream_run_config=RunConfig(
             output_dir=f"{output_dir}/downstream",
             max_steps=1764,
             per_device_train_batch_size=2,
             per_device_eval_batch_size=2,
-            learning_rate=1e-6,
+            learning_rate=3e-4,
+            lr_scheduler_type="cosine",
             logging_steps=10,
             save_steps=441,
             eval_steps=441,
-            warmup_steps=88,
+            warmup_steps=35,
             gradient_accumulation_steps=4,
         ),
         datasets=datasets,
