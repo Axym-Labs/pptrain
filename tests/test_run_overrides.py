@@ -111,3 +111,18 @@ def test_pruning_keeps_shared_scratch(tmp_path) -> None:
     )
     assert (shared / "model" / "model.safetensors").exists()
     assert not own.exists()
+
+
+def test_layer_count_override_survives_save_and_reload(tmp_path) -> None:
+    from transformers import AutoModelForCausalLM
+
+    from pptrain.integrations.hf import apply_config_overrides, causal_lm_from_config
+
+    config = Qwen3Config(vocab_size=50, hidden_size=32, intermediate_size=64, num_hidden_layers=4,
+                         num_attention_heads=4, num_key_value_heads=2, head_dim=8)
+    apply_config_overrides(config, {"num_hidden_layers": 2})
+    assert config.layer_types == ["full_attention"] * 2
+    model = causal_lm_from_config(config)
+    model.save_pretrained(tmp_path)
+    reloaded = AutoModelForCausalLM.from_pretrained(tmp_path)
+    assert reloaded.config.num_hidden_layers == 2

@@ -77,6 +77,7 @@ pptrain replicate --test
 ### 0.3.3
 
 - **Tied embeddings in transfer.** `ReinitializeEmbeddingTransferPolicy` now also skips tied aliases of the embedding (e.g. `lm_head.weight` in Qwen3 or Llama models with `tie_word_embeddings=True`). Before, a source and target with the same vocabulary size copied the source embedding through the alias.
+- **Layer-count overrides.** Overriding `num_hidden_layers` keeps per-layer config lists (`layer_types`, `max_window_layers` in Qwen3) consistent, so the model can be saved and reloaded.
 - **Replication runner.** The paper proxy profile trains downstream stages with a standard pretraining schedule (peak lr `3e-4`, cosine decay, 2% warmup) instead of lr `1e-6`. Studies on the same downstream dataset and recipe share one random-init baseline per seed. `pptrain replicate` accepts `--config-overrides`, `--synthetic-run-overrides` and `--downstream-run-overrides` (JSON), and `RunConfig` exposes `optim`, `optim_args` and `use_liger_kernel`.
 
 ### 0.3.2

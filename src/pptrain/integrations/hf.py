@@ -23,6 +23,25 @@ def float32_dtype_kwargs() -> dict[str, torch.dtype]:
     return {key: torch.float32}
 
 
+def apply_config_overrides(config: Any, overrides: dict[str, Any]) -> Any:
+    """Set config attributes and keep per-layer lists consistent with the layer count.
+
+    Configs such as Qwen3's carry ``layer_types`` with one entry per layer; changing
+    ``num_hidden_layers`` alone produces a config that cannot be saved and reloaded.
+    """
+    for key, value in overrides.items():
+        setattr(config, key, value)
+    layer_types = getattr(config, "layer_types", None)
+    num_layers = getattr(config, "num_hidden_layers", None)
+    if "layer_types" not in overrides and layer_types is not None and num_layers is not None and len(layer_types) != num_layers:
+        if len(set(layer_types)) != 1:
+            raise ValueError("num_hidden_layers override needs an explicit layer_types override for mixed layer types")
+        config.layer_types = [layer_types[0]] * num_layers
+    if "max_window_layers" not in overrides and num_layers is not None and getattr(config, "max_window_layers", None) is not None:
+        config.max_window_layers = min(config.max_window_layers, num_layers)
+    return config
+
+
 def causal_lm_from_config(config: Any, *, trust_remote_code: bool = False) -> torch.nn.Module:
     model = AutoModelForCausalLM.from_config(
         config,
@@ -62,8 +81,7 @@ class HFCausalLMAdapter:
             config.bos_token_id = tokenizer_spec.bos_token_id
         if tokenizer_spec.eos_token_id is not None:
             config.eos_token_id = tokenizer_spec.eos_token_id
-        for key, value in self.config.config_overrides.items():
-            setattr(config, key, value)
+        apply_config_overrides(config, self.config.config_overrides)
         return causal_lm_from_config(config, trust_remote_code=self.config.trust_remote_code)
 
     def load_downstream_model(self):

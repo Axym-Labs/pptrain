@@ -13,7 +13,7 @@ from pptrain.core.checkpoints import find_latest_checkpoint
 from pptrain.core.config import RunConfig, require_float32_trainable_parameters
 from pptrain.core.plotting import save_training_summary_plot
 from pptrain.core.transfer import ReinitializeEmbeddingTransferPolicy, TransferBundle, TransferReport
-from pptrain.integrations.hf import HFModelConfig, causal_lm_from_config
+from pptrain.integrations.hf import HFModelConfig, apply_config_overrides, causal_lm_from_config
 
 
 @dataclass(slots=True)
@@ -52,8 +52,7 @@ def build_random_init_downstream_model(
     if tokenizer.eos_token_id is not None:
         config.eos_token_id = tokenizer.eos_token_id
     _apply_context_length(config, context_length)
-    for key, value in model_config.config_overrides.items():
-        setattr(config, key, value)
+    apply_config_overrides(config, model_config.config_overrides)
     return causal_lm_from_config(config, trust_remote_code=model_config.trust_remote_code)
 
 
