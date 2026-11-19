@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import contextlib
 from pathlib import Path
 from typing import Any
 
@@ -153,13 +154,23 @@ def compute_nca_synthetic_token_accuracy(
     model_dir: str | Path,
     seed: int,
     max_batches: int = 4,
+    sequences_per_batch: int = 4,
 ) -> float | None:
+    """Next-token accuracy on the first ``max_batches * sequences_per_batch`` held-out sequences.
+
+    Sequences are scored one at a time under the training mixed precision. A float32
+    forward of a grouped-query-attention model (e.g. Qwen3) has no fused SDPA kernel and
+    falls back to the math kernel, which materializes batch x heads x L x L scores
+    (36 GiB for 4 x 16 heads at 12288 tokens); one-at-a-time also keeps the full-vocab
+    logits to one sequence.
+    """
     datasets = task.build_datasets(seed=seed)
     if datasets.eval_dataset is None or datasets.data_collator is None:
         return None
+    max_sequences = min(max_batches * sequences_per_batch, len(datasets.eval_dataset))
     dataloader = DataLoader(
         datasets.eval_dataset,
-        batch_size=min(4, len(datasets.eval_dataset)),
+        batch_size=1,
         shuffle=False,
         collate_fn=datasets.data_collator,
     )
@@ -169,9 +180,9 @@ def compute_nca_synthetic_token_accuracy(
     model.eval()
     correct = 0
     total = 0
-    with torch.no_grad():
-        for batch_index, batch in enumerate(dataloader):
-            if batch_index >= max_batches:
+    with torch.no_grad(), _inference_autocast(device):
+        for sequence_index, batch in enumerate(dataloader):
+            if sequence_index >= max_sequences:
                 break
             input_ids = batch["input_ids"].to(device)
             attention_mask = batch["attention_mask"].to(device)
@@ -179,6 +190,7 @@ def compute_nca_synthetic_token_accuracy(
             logits = model(input_ids=input_ids, attention_mask=attention_mask).logits
             # Labels are position-aligned (HF convention): position i predicts labels[i + 1].
             predictions = logits[:, :-1].argmax(dim=-1)
+            del logits
             targets = labels[:, 1:]
             mask = targets != -100
             correct += int((predictions[mask] == targets[mask]).sum().item())
@@ -188,6 +200,14 @@ def compute_nca_synthetic_token_accuracy(
     if total == 0:
         return None
     return correct / total
+
+
+def _inference_autocast(device: torch.device):
+    """Autocast to the dtype the Trainer's mixed precision uses; no-op off CUDA."""
+    dtype = _diagnostic_model_dtype(device)
+    if dtype is None:
+        return contextlib.nullcontext()
+    return torch.autocast(device_type=device.type, dtype=dtype)
 
 
 def _collect_eval_batches(

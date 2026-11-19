@@ -60,3 +60,27 @@ def test_nca_synthetic_token_accuracy_scores_next_token_predictions(monkeypatch)
     )
 
     assert accuracy == pytest.approx(1.0)
+
+
+def test_nca_synthetic_token_accuracy_scores_one_sequence_per_forward(monkeypatch) -> None:
+    """Full-length float32 batches OOM on grouped-query attention (math SDPA kernel),
+    so the diagnostic must forward one sequence at a time over the same sequences."""
+    task = create_task("nca", {"preset": "smoke"})
+    vocab_size = task.tokenizer_spec().vocab_size
+    oracle = _NextTokenOracle(vocab_size)
+    batch_sizes: list[int] = []
+    original_forward = oracle.forward
+
+    def recording_forward(input_ids, attention_mask):
+        batch_sizes.append(int(input_ids.shape[0]))
+        return original_forward(input_ids, attention_mask)
+
+    oracle.forward = recording_forward
+    monkeypatch.setattr(diagnostics.AutoModelForCausalLM, "from_pretrained", lambda *args, **kwargs: oracle)
+    monkeypatch.setattr(diagnostics, "_resolve_device", lambda: torch.device("cpu"))
+
+    accuracy = diagnostics.compute_nca_synthetic_token_accuracy(task=task, model_dir="unused", seed=3, max_batches=2)
+
+    eval_size = len(task.build_datasets(seed=3).eval_dataset)
+    assert accuracy == pytest.approx(1.0)
+    assert batch_sizes == [1] * min(2 * 4, eval_size)
